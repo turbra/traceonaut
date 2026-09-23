@@ -1,9 +1,13 @@
 # Optional CWO integration
 
-Skip this guide for ordinary session monitoring. The session collector, account
-reader, and session dashboards work without Complex Work Orchestration (CWO).
+[Complex Work Orchestration (CWO)](https://github.com/gprocunier/complex-work-orchestration)
+is a Codex skill for planning complex tasks, coordinating coding agents, and
+tracking work across sessions.
 
-This integration observes dispatches owned by a CWO app-server controller. It
+Skip this guide for ordinary session monitoring. The session collector, account
+reader, and session dashboards work without CWO.
+
+This integration observes jobs (dispatches) launched by a CWO app-server controller. It
 adds a private accounting ledger and separate dispatch metrics. Loading the
 observer does not attach it to existing sessions or authorize model work.
 Ordinary session records cannot establish dispatch ownership.

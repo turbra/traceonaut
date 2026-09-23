@@ -118,9 +118,13 @@ retain their `cwo` prefixes for compatibility, not as a dependency on CWO.
 
 ## Related
 
-[CWO integration](references/cwo-integration.md) adds optional owned-dispatch
-telemetry. It is not needed for ordinary Codex session collection. Beads is a
-local maintainer tracker, not a runtime requirement.
+[Complex Work Orchestration (CWO)](https://github.com/gprocunier/complex-work-orchestration)
+is a Codex skill for planning complex tasks, coordinating coding agents, and
+tracking work across sessions. Traceonaut's [optional integration](references/cwo-integration.md)
+exposes metrics for jobs launched by a CWO controller. **You do not need CWO for
+ordinary Codex session collection.**
+
+Beads is a local maintainer tracker, not a runtime requirement.
 
 ## License
 

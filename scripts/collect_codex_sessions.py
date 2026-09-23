@@ -15,7 +15,9 @@ from traceonaut.codex_session_telemetry import (
     SESSION_RETENTION_SECONDS, SessionCollector, render_session_metrics, write_snapshot,
 )
 from traceonaut.codex_account_telemetry import AccountSnapshotMetrics
-from traceonaut.observability_exporter import MetricsEndpoint, build_samples, read_credential, render_prometheus
+from traceonaut.observability_exporter import (
+    MetricsEndpoint, build_samples, metrics_bind_address, read_credential, render_prometheus,
+)
 from traceonaut.observability_ledger import ObservabilityLedger
 
 
@@ -37,7 +39,8 @@ def main(argv=None):
     parser.add_argument("--snapshot-file", type=Path, required=True)
     parser.add_argument("--state-dir", type=Path, help="optional existing owned-dispatch ledger, read-only")
     parser.add_argument("--credential-file", type=Path)
-    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="numeric bind IP (default: 127.0.0.1); use a specific LAN/VPN IP for remote scraping; HTTP only")
     parser.add_argument("--port", type=int, default=9464)
     parser.add_argument("--poll-seconds", type=float, default=5)
     parser.add_argument("--session-retention-seconds", type=int, default=SESSION_RETENTION_SECONDS,
@@ -56,6 +59,10 @@ def main(argv=None):
         parser.error("session export cap must be between 1 and 100000")
     if not args.once and args.credential_file is None:
         parser.error("credential file required when serving metrics")
+    try:
+        metrics_bind_address(args.host, allow_remote=True)
+    except ValueError as error:
+        parser.error(str(error))
     if any(not p.is_absolute() for p in (args.codex_home, args.session_state_dir, args.snapshot_file)):
         parser.error("source, state, and snapshot paths must be absolute")
     source = Path(os.path.abspath(args.codex_home))
@@ -84,7 +91,9 @@ def main(argv=None):
         if args.state_dir:
             ledger = ObservabilityLedger(args.state_dir, readonly=True)
         if not args.once:
-            endpoint = SessionMetricsEndpoint(args.host, args.port, read_credential(args.credential_file))
+            endpoint = SessionMetricsEndpoint(
+                args.host, args.port, read_credential(args.credential_file), allow_remote=True,
+            )
             endpoint.start()
         if args.account_snapshot_file:
             account = AccountSnapshotMetrics(args.account_snapshot_file)
@@ -104,7 +113,8 @@ def main(argv=None):
         return 0
     except Exception:
         # No paths, messages, raw source lines, credential contents, or traceback.
-        print("Session telemetry unavailable; inspect source access and private state.", file=__import__("sys").stderr)
+        print("Session telemetry unavailable; inspect source access, private state, and listener configuration.",
+              file=__import__("sys").stderr)
         return 1
     finally:
         if endpoint:

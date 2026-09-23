@@ -5,12 +5,31 @@ Start with the [three-step setup](deployment.md).
 
 ## Network and credentials
 
-The collector currently accepts **loopback bind addresses only**. It does not
-offer a direct LAN listener. Prometheus must reach that loopback endpoint:
-same-host processes in the same network namespace work; separate containers or
-hosts need your existing shared-namespace, authenticated proxy, or tunnel setup.
-A bridge network alone does not make host loopback reachable. Binding to
-`0.0.0.0` is not supported.
+The **session collector** defaults to `127.0.0.1`. For remote scraping, set
+`--host` to a specific numeric IPv4 or IPv6 address assigned to the workstation's
+LAN/VPN interface. Hostnames, wildcard addresses (`0.0.0.0`, `::`), multicast,
+and the limited-broadcast address are rejected. Prometheus's scrape target can
+use a DNS name resolving to that interface; bracket IPv6 targets, for example
+`[2001:db8::10]:9464` (replace this documentation-only address).
+
+Prometheus initiates the connection. Allow only its server address through the
+workstation firewall to the selected port. A remote or containerized Prometheus
+must have a route to the selected workstation address; its own `127.0.0.1` is not
+that workstation. Changing the bind address does not configure routes, NAT,
+VPNs, container networking, or firewalls.
+
+Bearer authentication controls access but does **not** encrypt the HTTP token
+or metrics. Direct HTTP is for a trusted private LAN or an encrypted VPN.
+For other networks, use an existing HTTPS proxy with a certificate Prometheus
+verifies, set `scheme: https`, and point the scrape target at that proxy. Use
+Prometheus `tls_config.ca_file` for a private CA; do not disable certificate
+verification. Traceonaut does not provide native TLS or deploy a proxy/VPN.
+Do not expose the plain HTTP endpoint to the internet. See
+[Prometheus security guidance](https://prometheus.io/docs/operating/security/) and
+[scrape TLS configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#tls_config).
+
+The optional CWO dispatch endpoint and its query client remain loopback-only;
+the session collector's remote binding does not change those contracts.
 
 Prometheus reads `credentials_file` from its own filesystem. If it runs as
 another user or in a container, supply a protected copy of the same token that
@@ -40,6 +59,8 @@ service manager or provide a service installer.
 
 Do not run a foreground collector and a service against the same state directory.
 Stopping collection does not require deleting source files or the index.
+When the workstation sleeps or disconnects, Prometheus marks the target down.
+Stored samples remain; missed scrape intervals are not backfilled from files.
 
 ## Pinned releases and upgrades
 
@@ -108,10 +129,12 @@ whether removing a source file also removes the dashboard.
 This optional check hides the token, disables proxies/redirects, and reports
 only endpoint readiness. It does not print session metrics. First run
 `export TRACEONAUT_METRICS_CREDENTIAL="/absolute/path/to/traceonaut/metrics.token"`
-with the protected token path used in setup.
+with the protected token path used in setup. Replace the URL below with the
+selected bind address, or the HTTPS proxy URL; bracket IPv6 addresses.
 
 <!-- metrics-check -->
 ```bash
+export TRACEONAUT_METRICS_URL="http://127.0.0.1:9464/metrics"
 python3 - <<'PY'
 import os
 from pathlib import Path
@@ -123,14 +146,14 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 token = Path(os.environ["TRACEONAUT_METRICS_CREDENTIAL"]).read_text(encoding="ascii").strip()
-request = Request("http://127.0.0.1:9464/metrics", headers={"Authorization": "Bearer " + token})
+request = Request(os.environ["TRACEONAUT_METRICS_URL"], headers={"Authorization": "Bearer " + token})
 try:
     with build_opener(ProxyHandler({}), NoRedirect()).open(request, timeout=4) as response:
         payload = response.read()
 except HTTPError as error:
     raise SystemExit(f"Metrics HTTP {error.code}; see Troubleshoot below") from None
 except URLError:
-    raise SystemExit("Metrics connection failed; check process and network namespace") from None
+    raise SystemExit("Metrics connection failed; check listener, network access, and certificate trust") from None
 if b"cwo_codex_collector_scan_timestamp_seconds" not in payload:
     raise SystemExit("Expected collector metrics are absent")
 print("Authenticated metrics: HTTP 200; collector health metrics present")
@@ -157,8 +180,8 @@ of imported session records.
 
 | Symptom | Check |
 | --- | --- |
-| Collector exits | Absolute paths, ownership/modes, source access, no symlinks, and only one writer for the state directory. |
-| Connection refused or target DOWN | Process, port, network namespace, and Prometheus credential-file access. |
+| Collector exits | Source/state permissions, one writer, and a numeric bind address assigned to the workstation. Wildcard binds are rejected. |
+| Connection refused or target DOWN | Workstation awake/online, selected bind address, routing/firewall, port, and Prometheus credential-file access. |
 | HTTP 401 | Missing or mismatched token. Check protected copies without printing their contents. |
 | HTTP 503 | First scan has not produced a payload. If persistent, check source and state access. |
 | UP but no session data | Check source availability, scan age, pending files, time range, and session retention. |

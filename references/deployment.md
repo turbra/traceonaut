@@ -1,11 +1,25 @@
 # Set up Traceonaut
 
-You already have **Prometheus and Grafana**, with a Prometheus datasource in
-Grafana. Traceonaut adds one collector and dashboard JSON. No plugins or Python
-packages are needed. Linux, Bash, and Python 3.13 are the tested environment;
-the dashboards use Grafana 11.5 native panels.
+Run Traceonaut on the **workstation containing your Codex files**. Your existing
+**Prometheus and Grafana can run on a separate server**. Prometheus pulls metrics
+from the workstation; the collector does not push them.
 
-Clone this repository and run the commands from its root:
+## Requirements
+
+- A readable local Codex profile. Linux, Bash, and Python 3.13 are the tested
+  collector environment; no Python packages are needed.
+- Existing Prometheus and Grafana, with a Prometheus datasource in Grafana.
+  Dashboards use Grafana 11.5 native panels, with no plugins.
+- For remote scraping, a workstation LAN/VPN address reachable from Prometheus
+  and a firewall rule allowing only that server to reach TCP port `9464`.
+  A sleeping, disconnected, or unreachable workstation cannot be scraped.
+
+The endpoint uses **HTTP with bearer authentication, not encryption**. Use a
+trusted private LAN or an encrypted VPN. On untrusted networks, use a VPN or your
+existing HTTPS proxy; do not expose the HTTP listener to the internet. See
+[network and credentials](operations.md#network-and-credentials).
+
+Clone this repository **on the workstation** and run commands from its root:
 
 ```bash
 git clone https://github.com/turbra/traceonaut.git
@@ -18,11 +32,17 @@ Set the Codex profile to read. Use the directory containing `sessions/`,
 usually `$HOME/.codex`, **not the sessions directory itself**. Collector data
 stays separate from that profile.
 
+Set `TRACEONAUT_LISTEN_ADDRESS` below to the workstation's **numeric LAN/VPN IP**
+for remote Prometheus. Keep `127.0.0.1` only when Prometheus shares the collector's
+network namespace. A separate container's loopback is not the workstation's.
+Use a specific address assigned to the workstation, not `0.0.0.0` or `::`.
+
 <!-- setup-paths -->
 ```bash
 export TRACEONAUT_SOURCE_HOME="$HOME/.codex"
 export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 export TRACEONAUT_METRICS_CREDENTIAL="$TRACEONAUT_DATA_DIR/metrics.token"
+export TRACEONAUT_LISTEN_ADDRESS="127.0.0.1"
 install -d -m 700 "$TRACEONAUT_DATA_DIR"
 ```
 
@@ -50,20 +70,27 @@ python3 scripts/collect_codex_sessions.py \
   --codex-home "$TRACEONAUT_SOURCE_HOME" \
   --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
-  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" --port 9464
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
 ```
 
-Metrics are served at **http://127.0.0.1:9464/metrics**, using bearer
-authentication. Prometheus must share the collector's network namespace.
-For a container or remote Prometheus, see [network access](operations.md#network-and-credentials);
-a container's loopback is not the host's.
+Metrics are served at `/metrics` on that address and port. Omitting `--host`
+retains the safe default, `127.0.0.1`.
 
 ## 2. Add the Prometheus scrape job
 
-Add this entry under `scrape_configs` in your existing Prometheus configuration.
-Replace the credential path with the absolute path **as seen by Prometheus**;
-it does not expand `$HOME`.
+**On the Prometheus server**, supply a protected copy of the same token, owned
+by its service user and mode `0600`. Transfer it through an encrypted channel;
+do not paste the token into configuration or logs. For a container, mount that
+copy read-only where Prometheus can read it. No Codex files or database are needed
+on this server.
 
+Add this entry under `scrape_configs` in your existing configuration. Replace
+`workstation.example` with the workstation's reachable IP or DNS name, and the
+credential path with its absolute path **as seen by Prometheus**. For same-namespace
+loopback collection, use `127.0.0.1:9464` instead. Prometheus does not expand `$HOME`.
+
+<!-- prometheus-scrape -->
 ```yaml
 scrape_configs:
   - job_name: cwo-supervisor-observability
@@ -73,7 +100,7 @@ scrape_configs:
       type: Bearer
       credentials_file: /absolute/path/to/traceonaut/metrics.token
     static_configs:
-      - targets: ['127.0.0.1:9464']
+      - targets: ['workstation.example:9464']
 ```
 
 Keep your other jobs. Validate with `promtool check config /path/to/prometheus.yml`,
@@ -88,7 +115,8 @@ Allow the first scan to finish. A live endpoint alone does not prove source acce
 
 ## 3. Import a dashboard into Grafana
 
-In a second terminal, from the checkout root, generate Beta's import file.
+In a second terminal **on the workstation**, from the checkout root, generate
+Beta's import file.
 Use the same data directory if you changed it above:
 
 <!-- render-beta -->

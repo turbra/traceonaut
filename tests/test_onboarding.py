@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener
 from uuid import uuid4
@@ -19,6 +20,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from build_release import build_release
+import collect_codex_sessions as session_cli
 from collect_codex_sessions import SessionMetricsEndpoint
 from traceonaut.observability_exporter import read_credential
 
@@ -42,6 +44,7 @@ class OnboardingTests(unittest.TestCase):
         self.token = self.presentation / "metrics.token"
         self.env = {**os.environ, "HOME": str(self.root),
                     "TRACEONAUT_SOURCE_HOME": str(self.source),
+                    "TRACEONAUT_LISTEN_ADDRESS": "127.0.0.1",
                     "TRACEONAUT_DATA_DIR": str(self.presentation),
                     "TRACEONAUT_METRICS_CREDENTIAL": str(self.token)}
         prepared = subprocess.run(["bash", "-eu", "-c", documented_block("setup-paths")],
@@ -100,6 +103,35 @@ class OnboardingTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(read_credential(self.token), value)
         self.assertNotIn(value, result.stdout + result.stderr)
+
+    def test_cli_bind_validation_precedes_state_creation(self):
+        for host in ("workstation.example", "0.0.0.0", "::", "224.0.0.1", "ff02::1"):
+            with self.subTest(host=host):
+                result = subprocess.run(self.command() + ["--once", "--host", host],
+                                        capture_output=True, text=True, timeout=10)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn("metrics host", result.stderr)
+                self.assertFalse(self.state.exists())
+                self.assertFalse(self.snapshot.exists())
+        self.assert_source_unchanged()
+
+    def test_cli_default_and_explicit_host_reach_the_endpoint(self):
+        credential = self.credential()
+        for host in (None, "192.0.2.10", "2001:db8::10"):
+            with self.subTest(host=host), \
+                    patch.object(session_cli, "SessionCollector"), \
+                    patch.object(session_cli, "SessionMetricsEndpoint") as endpoint, \
+                    patch.object(session_cli.threading, "Event") as stopping, \
+                    patch.object(session_cli.signal, "signal"), \
+                    patch.object(session_cli.os, "umask"):
+                stopping.return_value.is_set.return_value = True
+                argv = self.command()[3:] + ["--credential-file", str(self.token)]
+                if host is not None:
+                    argv += ["--host", host]
+                self.assertEqual(session_cli.main(argv), 0)
+                endpoint.assert_called_once_with(host or "127.0.0.1", 9464, credential, allow_remote=True)
+                endpoint.return_value.start.assert_called_once_with()
+                endpoint.return_value.close.assert_called_once_with()
 
     def test_credential_negatives_match_documented_constraints(self):
         value = self.credential()

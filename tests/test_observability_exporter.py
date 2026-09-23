@@ -5,10 +5,12 @@ from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from pathlib import Path
+import socket
 import threading
 import time
 import tempfile
 import unittest
+from unittest.mock import patch
 from urllib.parse import parse_qs
 
 
@@ -33,6 +35,7 @@ from traceonaut.observability_exporter import (  # noqa: E402
     Sample,
     build_samples,
     dispatch_samples,
+    metrics_bind_address,
     read_credential,
 )
 
@@ -710,6 +713,47 @@ class PublicationConfirmationTests(unittest.TestCase):
 
 
 class EndpointAndClientTests(unittest.TestCase):
+    def test_remote_bind_is_explicit_and_keeps_the_selected_address_family(self):
+        credential = b"test-observability-token"
+        for host, family in (("192.0.2.10", socket.AF_INET),
+                             ("2001:db8::10", socket.AF_INET6),
+                             ("::ffff:192.0.2.10", socket.AF_INET6)):
+            with self.subTest(host=host):
+                with self.assertRaisesRegex(ValueError, "must bind loopback"):
+                    MetricsEndpoint(host, 0, credential)
+                # Exercise construction without binding a real LAN interface.
+                with patch.object(HTTPServer, "server_bind"), patch.object(HTTPServer, "server_activate"):
+                    endpoint = MetricsEndpoint(host, 0, credential, allow_remote=True)
+                    try:
+                        self.assertEqual(endpoint.server.server_address, (host, 0))
+                        self.assertEqual(endpoint.server.address_family, family)
+                    finally:
+                        endpoint.close()
+        for host in ("127.0.0.1", "::1"):
+            self.assertTrue(metrics_bind_address(host).is_loopback)
+
+    def test_unsafe_remote_bind_is_rejected_before_opening_a_socket(self):
+        hosts = ("", "localhost", "workstation.example", "not-an-ip", "0.0.0.0", "::",
+                 "224.0.0.1", "ff02::1", "255.255.255.255", "::ffff:0.0.0.0",
+                 "::ffff:224.0.0.1", "::ffff:255.255.255.255")
+        for host in hosts:
+            with self.subTest(host=host), patch.object(HTTPServer, "__init__") as server_init:
+                with self.assertRaisesRegex(ValueError, "metrics host"):
+                    MetricsEndpoint(host, 0, b"test-observability-token", allow_remote=True)
+                server_init.assert_not_called()
+
+    def test_remote_permission_does_not_bypass_authentication(self):
+        credential = b"test-observability-token"
+        endpoint = MetricsEndpoint("127.0.0.1", 0, credential, allow_remote=True)
+        self.addCleanup(endpoint.close)
+        endpoint.update(snapshot([dispatch()]))
+        endpoint.start()
+        for supplied in (None, b"incorrect-token-value"):
+            status, body = self.request(endpoint, "GET", "/metrics", supplied)
+            self.assertEqual(status, 401)
+            self.assertNotIn(credential, body)
+        self.assertEqual(self.request(endpoint, "GET", "/metrics", credential)[0], 200)
+
     @staticmethod
     def request(
         endpoint: MetricsEndpoint,

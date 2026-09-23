@@ -394,13 +394,30 @@ def read_credential(path: Path) -> bytes:
         os.close(fd)
 
 
-class MetricsEndpoint:
-    """Loopback-only authenticated endpoint; update() is called off scrape path."""
-
-    def __init__(self, host: str, port: int, credential: bytes) -> None:
+def metrics_bind_address(
+    host: str, *, allow_remote: bool = False
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+    """Validate an explicit bind address without resolving names or opening a socket."""
+    try:
         address = ipaddress.ip_address(host)
-        if not address.is_loopback:
-            raise ValueError("metrics endpoint must bind loopback")
+    except ValueError:
+        raise ValueError("metrics host must be a numeric IP address") from None
+    if not address.is_loopback and not allow_remote:
+        raise ValueError("metrics endpoint must bind loopback")
+    effective = address.ipv4_mapped if isinstance(address, ipaddress.IPv6Address) else None
+    effective = effective if effective is not None else address
+    if effective.is_unspecified or effective.is_multicast or str(effective) == "255.255.255.255":
+        raise ValueError("metrics host must be a specific unicast address, not a wildcard or broadcast")
+    return address
+
+
+class MetricsEndpoint:
+    """Authenticated endpoint, loopback by default; updates stay off the scrape path."""
+
+    def __init__(
+        self, host: str, port: int, credential: bytes, *, allow_remote: bool = False
+    ) -> None:
+        address = metrics_bind_address(host, allow_remote=allow_remote)
         if not 16 <= len(credential) <= 4096:
             raise ValueError("invalid credential length")
         self._payload: bytes | None = None

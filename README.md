@@ -27,12 +27,15 @@ installed.
 
 Use your **existing Prometheus and Grafana** installation:
 
-1. Run the collector against your local Codex profile.
-2. Add its metrics endpoint to Prometheus.
+1. Run the collector on the workstation containing your Codex profile.
+2. Configure Prometheus, local or on another server, to scrape that workstation.
 3. Generate dashboard JSON and import it into Grafana.
 
 Follow the [three-step setup](references/deployment.md). No release build,
 Grafana provisioning, or extra monitoring service is required.
+Remote scraping needs a reachable LAN/VPN address and access to the collector's
+port. The endpoint uses bearer authentication over HTTP; see the setup guide's
+network and encryption requirements. Loopback remains the default.
 
 By default, session metrics stop being exposed after **30 days of inactivity**,
 with at most **1,000 sessions** exposed at once. This does not delete source files,

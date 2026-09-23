@@ -6,7 +6,7 @@ from check_build import PROJECT_ROOT, validate_build
 
 
 class BuildChecks(unittest.TestCase):
-    def check(self, html, extras=None, public_assets=()):
+    def check(self, html, extras=None, public_assets=(), readme=None):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "index.html").write_text(html)
@@ -14,7 +14,7 @@ class BuildChecks(unittest.TestCase):
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(content if isinstance(content, bytes) else content.encode())
-            return validate_build(root, {"index.html"}, public_assets=public_assets)
+            return validate_build(root, {"index.html"}, public_assets=public_assets, readme=readme)
 
     def test_project_links_assets_fragments_and_external_links(self):
         self.assertEqual(self.check(
@@ -43,6 +43,34 @@ class BuildChecks(unittest.TestCase):
 
     def test_missing_anchor(self):
         self.assertIn("missing anchor", self.check('<a href="#missing">Go</a>')[0])
+
+    def test_readme_html_and_markdown_links_resolve_to_built_pages(self):
+        readme = (
+            '<a href="https://turbra.github.io/traceonaut/">Documentation</a>\n'
+            '[Dashboards](https://turbra.github.io/traceonaut/#dashboards)\n'
+            '[License](LICENSE)\n<img src="assets/traceonaut.png">\n'
+            '[Source](https://github.com/turbra/traceonaut)'
+        )
+        self.assertEqual(self.check('<h2 id="dashboards">Dashboards</h2>', readme=readme), [])
+
+    def test_readme_missing_page_is_rejected(self):
+        errors = self.check("", readme='[Install](https://turbra.github.io/traceonaut/install/)')
+        self.assertEqual(len(errors), 1)
+        self.assertIn("README.md: missing target", errors[0])
+
+    def test_readme_missing_anchor_is_rejected(self):
+        for readme in (
+            '<a href="https://turbra.github.io/traceonaut/#missing">Go</a>',
+            '[Go](https://turbra.github.io/traceonaut/#missing)',
+        ):
+            with self.subTest(readme=readme):
+                errors = self.check("", readme=readme)
+                self.assertEqual(len(errors), 1)
+                self.assertIn("README.md: missing anchor", errors[0])
+
+    def test_readme_base_path_escape_is_rejected(self):
+        errors = self.check("", readme='<a href="https://turbra.github.io/install/">Install</a>')
+        self.assertIn("README.md: link escapes project base", errors[0])
 
     def test_base_path_escape(self):
         for link in ("/getting-started/", "../", "/traceonaut/%2e%2e/private"):

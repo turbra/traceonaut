@@ -1,6 +1,6 @@
 ---
 slug: /
-title: Traceonaut
+title: Traceonaut documentation
 description: Collect Codex session metrics on your workstation, scrape them with Prometheus, and view them in Grafana.
 hide_title: true
 ---
@@ -27,6 +27,12 @@ import LicenseBadge from '@site/../assets/license-apache-2.0.svg';
   </a>
 </div>
 
+## Documentation
+
+New to Traceonaut? [Install the collector](/install/), then follow the
+[Quick Start guide](/getting-started/) to collect metrics and view them in
+Grafana. Dashboard guides and operating instructions are below.
+
 ## How it works
 
 <ol className="traceonaut-flow" aria-label="Metrics flow">
@@ -41,6 +47,8 @@ existing Prometheus and Grafana can run on the same machine or a separate server
 OpenTelemetry, node_exporter, and alerting services are not required.
 
 ## Quick Start
+
+Complete [installation](/install/) first. Then:
 
 <div className="traceonaut-cards">
   <Link className="traceonaut-card" to="/getting-started/#1-run-the-collector">
@@ -60,11 +68,7 @@ OpenTelemetry, node_exporter, and alerting services are not required.
   </Link>
 </div>
 
-<Link className="button button--primary" to="/getting-started/">Follow the three-step setup</Link>
-
-Linux, Bash, and Python 3.13 are the tested environment. The collector uses only
-Python's standard library. You do not need Node.js or the website build tools to
-run Traceonaut.
+<Link className="button button--primary" to="/getting-started/">Open the Quick Start guide</Link>
 
 For a remote Prometheus server, use a specific reachable LAN/VPN address and
 allow only that server through the workstation firewall. Bearer authentication
@@ -72,19 +76,32 @@ does not encrypt HTTP. Read the <Link to="/operations/#network-and-credentials">
 before exposing the endpoint. A sleeping or disconnected workstation cannot be
 scraped, and reconnecting does not backfill missed samples.
 
-## Explore
+## Dashboards
 
 <div className="traceonaut-cards traceonaut-cards--explore">
   <Link className="traceonaut-card" to="/dashboards/beta/">
-    <strong>Codex dashboards</strong>
-    <span>Start with Beta for session activity and health. Use Unified for sessions and agents in one view.</span>
+    <strong>Codex · Work overview · Beta</strong>
+    <span>Start here for session activity, command outcomes, and collector health.</span>
+  </Link>
+  <Link className="traceonaut-card" to="/dashboards/unified/">
+    <strong>Codex · Unified overview</strong>
+    <span>See sessions and agents in one view.</span>
+  </Link>
+  <Link className="traceonaut-card" to="/data-and-limits/#add-the-stable-dashboard">
+    <strong>Codex · All sessions</strong>
+    <span>Use the Stable session view as an alternative to Beta.</span>
   </Link>
   <Link className="traceonaut-card" to="/dashboards/cwo/">
-    <strong>CWO dashboard</strong>
-    <span>View observed CWO app-server dispatches, separate from Codex sessions.</span>
+    <strong>CWO · Observed dispatches</strong>
+    <span>View jobs from the optional CWO integration, separate from Codex sessions.</span>
   </Link>
+</div>
+
+## Explore
+
+<div className="traceonaut-cards traceonaut-cards--explore">
   <Link className="traceonaut-card" to="/data-and-limits/">
-    <strong>Data and limits</strong>
+    <strong>Data and Limits</strong>
     <span>Understand retention, recorded totals, missing data, and what the collector can read.</span>
   </Link>
   <Link className="traceonaut-card" to="/operations/">
@@ -92,13 +109,6 @@ scraped, and reconnecting does not backfill missed samples.
     <span>Keep collection running, refresh dashboard names, upgrade, and troubleshoot.</span>
   </Link>
 </div>
-
-Session exports default to **30 days of inactivity** and **1,000 sessions**.
-These limits do not delete source files or stored Prometheus samples. Recorded
-totals are not interval spending or billing. Missing data is not zero.
-
-Dashboard names and selector choices are captured when JSON is generated.
-Re-render and re-import to add new names, or use <Link to="/operations/#automatic-dashboard-name-updates">automatic updates</Link>.
 
 ## Optional CWO integration
 

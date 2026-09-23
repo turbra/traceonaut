@@ -11,7 +11,7 @@ and native Grafana panels, with no extra plugins.
 CWO app-server dispatches have a separate [CWO dashboard](cwo-dashboard.md).
 They are not part of Beta's session counts.
 
-For installation, follow [Set up Traceonaut](deployment.md#3-import-a-dashboard-into-grafana).
+To import Beta, follow the [Quick Start guide](deployment.md#3-import-a-dashboard-into-grafana).
 
 ## Choose work and time
 

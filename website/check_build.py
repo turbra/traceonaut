@@ -3,12 +3,13 @@
 
 from html.parser import HTMLParser
 from pathlib import Path
+import re
 from urllib.parse import unquote, urljoin, urlsplit
 
 BASE = "https://turbra.github.io/traceonaut/"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PAGES = {
-    "index.html", "404.html", "getting-started/index.html",
+    "index.html", "404.html", "install/index.html", "getting-started/index.html",
     "operations/index.html", "dashboards/beta/index.html",
     "dashboards/cwo/index.html",
     "dashboards/unified/index.html", "data-and-limits/index.html",
@@ -36,7 +37,7 @@ class Page(HTMLParser):
                 self.links.append(attrs[key])
 
 
-def validate_build(root, expected=PAGES, public_assets=()):
+def validate_build(root, expected=PAGES, public_assets=(), readme=None):
     root = Path(root)
     errors = []
     files = {p.relative_to(root).as_posix(): p for p in root.rglob("*") if p.is_file()}
@@ -58,9 +59,15 @@ def validate_build(root, expected=PAGES, public_assets=()):
             errors.append(f"Symlink in artifact: {name}")
         if path.is_file() and name not in expected | set(public_assets) | {"sitemap.xml", ".nojekyll"} and not name.startswith("assets/"):
             errors.append(f"Unexpected artifact file: {name}")
-    for name, page in pages.items():
-        route = name.removesuffix("index.html")
-        for link in page.links:
+    sources = [(name, name.removesuffix("index.html"), page.links) for name, page in pages.items()]
+    if readme is not None:
+        links = Page(readme).links
+        links.extend(re.findall(r"\[[^\]\n]+\]\((https?://[^\s)]+)\)", readme))
+        # Repository-relative links belong to GitHub, not to the Pages artifact.
+        links = [link for link in links if urlsplit(link).netloc == urlsplit(BASE).netloc]
+        sources.append(("README.md", "", links))
+    for name, route, links in sources:
+        for link in links:
             url = urlsplit(urljoin(BASE + route, link))
             if url.scheme not in ("http", "https") or url.netloc != urlsplit(BASE).netloc:
                 continue
@@ -79,7 +86,10 @@ def validate_build(root, expected=PAGES, public_assets=()):
 
 
 if __name__ == "__main__":
-    errors = validate_build(Path(__file__).parent / "build", public_assets=PUBLIC_ASSETS)
+    errors = validate_build(
+        Path(__file__).parent / "build", public_assets=PUBLIC_ASSETS,
+        readme=(PROJECT_ROOT / "README.md").read_text(),
+    )
     if errors:
         raise SystemExit("\n".join(errors))
-    print(f"Validated {len(PAGES)} HTML pages, project-base links, anchors and declared public assets.")
+    print(f"Validated {len(PAGES)} HTML pages, README Pages links, anchors and declared public assets.")

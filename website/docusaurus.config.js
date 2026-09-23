@@ -24,6 +24,7 @@ const config = {
         path: '..',
         include: [
           'website/docs/home.mdx',
+          'references/installation.md',
           'references/deployment.md',
           'references/operations.md',
           'references/codex-beta-dashboard.md',
@@ -48,22 +49,27 @@ const config = {
     navbar: {
       title: 'Traceonaut',
       items: [
-        {to: '/', label: 'Docs', position: 'left', activeBaseRegex: '^/traceonaut/$'},
-        {to: '/getting-started/', label: 'Getting Started', position: 'left'},
-        {to: '/dashboards/beta/', label: 'Codex dashboards', position: 'left'},
-        {to: '/dashboards/cwo/', label: 'CWO dashboard', position: 'left'},
-        {to: '/operations/', label: 'Operations', position: 'left'},
+        {to: '/install/', label: 'Install', position: 'left'},
+        {to: '/getting-started/', label: 'Quick Start', position: 'left'},
+        {to: '/', label: 'Documentation', position: 'left', activeBaseRegex: '^/traceonaut/$'},
+        {label: 'Dashboards', position: 'left', items: [
+          {to: '/dashboards/beta/', label: 'Work overview (Beta)'},
+          {to: '/dashboards/unified/', label: 'Unified overview'},
+          {to: '/data-and-limits/#add-the-stable-dashboard', label: 'All sessions (Stable)'},
+          {to: '/dashboards/cwo/', label: 'CWO observed dispatches'},
+        ]},
         {href: 'https://github.com/turbra/traceonaut', label: 'GitHub', position: 'right'},
       ],
     },
     footer: {
       style: 'light',
       links: [
-        {title: 'Docs', items: [
-          {label: 'Getting Started', to: '/getting-started/'},
-          {label: 'Dashboards', to: '/dashboards/beta/'},
-          {label: 'CWO dashboard', to: '/dashboards/cwo/'},
+        {title: 'Documentation', items: [
+          {label: 'Install', to: '/install/'},
+          {label: 'Quick Start', to: '/getting-started/'},
+          {label: 'Dashboards', to: '/#dashboards'},
           {label: 'Data and Limits', to: '/data-and-limits/'},
+          {label: 'Operations', to: '/operations/'},
         ]},
         {title: 'Project', items: [
           {label: 'GitHub', href: 'https://github.com/turbra/traceonaut'},

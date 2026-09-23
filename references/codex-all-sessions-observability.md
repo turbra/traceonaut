@@ -2,13 +2,13 @@
 slug: /data-and-limits
 ---
 
-# Session collection
+# Data and Limits
 
 The collector discovers everyday Codex conversations, subagents, internal
 agents, and archived sessions in one local profile. It follows new records
 without restarting Codex or launching work through a special runner.
 
-Start with [Set up Traceonaut](deployment.md). This reference explains what the
+Start with [Quick Start](deployment.md). This reference explains what the
 collector reads, what the metrics mean, and what it cannot measure.
 
 ## Source and token accounting

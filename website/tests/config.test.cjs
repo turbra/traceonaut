@@ -12,13 +12,13 @@ test('renders only explicit public documents, directly from source', () => {
   assert.equal(docs.path, '..');
   assert.equal(path.isAbsolute(docs.sidebarPath), false);
   assert.equal(path.isAbsolute(config.presets[0][1].theme.customCss), false);
-  assert.equal(docs.include.length, 9);
+  assert.equal(docs.include.length, 10);
   assert.equal(new Set(docs.include).size, docs.include.length);
   for (const file of docs.include) {
     assert.match(file, /^(references\/[a-z-]+\.md|website\/docs\/home\.mdx)$/);
     assert(fs.lstatSync(path.join(root, file)).isFile());
   }
-  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 8);
+  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 9);
 });
 
 test('sidebar document IDs resolve to the same authoritative files', () => {
@@ -46,20 +46,52 @@ test('Pages routes are unique and broken links fail the build', () => {
   });
   assert.equal(new Set(routes).size, routes.length);
   assert(routes.includes('/'));
+  assert(routes.includes('/install'));
   assert(routes.includes('/getting-started'));
   assert(routes.includes('/dashboards/cwo'));
 });
 
-test('CWO dashboard has direct user-facing navigation', () => {
+test('README and site navigation use matching guide destinations', () => {
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const header = readme.split('\n---\n')[0];
+  const links = [...header.matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)]
+    .map(match => ({label: match[2], href: match[1]}));
+  const expected = [
+    {label: 'Install', href: 'https://turbra.github.io/traceonaut/install/'},
+    {label: 'Quick Start', href: 'https://turbra.github.io/traceonaut/getting-started/'},
+    {label: 'Documentation', href: 'https://turbra.github.io/traceonaut/'},
+  ];
+  assert.deepEqual(links, expected);
+  assert.deepEqual(config.themeConfig.navbar.items.slice(0, 3).map(item => ({
+    label: item.label, href: config.url + config.baseUrl.slice(0, -1) + item.to,
+  })), expected);
+  const start = sidebars.docs.find(item => item.label === 'Getting Started');
+  assert.deepEqual(start.items.map(item => [item.label, item.id]), [
+    ['Install', 'references/installation'], ['Quick Start', 'references/deployment'],
+  ]);
+  assert.match(fs.readFileSync(path.join(root, 'references/installation.md'), 'utf8'), /^# Install Traceonaut$/m);
+  assert.match(fs.readFileSync(path.join(root, 'references/deployment.md'), 'utf8'), /^# Quick Start$/m);
+  assert.match(fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8'), /^## Documentation$/m);
+});
+
+test('CWO is discoverable under Dashboards alongside the session views', () => {
   const dashboards = sidebars.docs.find(item => item.type === 'category' && item.label === 'Dashboards');
   assert(dashboards.items.some(item => item.id === 'references/cwo-dashboard'));
   const home = fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8');
-  assert.match(home, /className="traceonaut-card" to="\/dashboards\/cwo\/"/);
-  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
-  assert.match(readme, /href="https:\/\/turbra\.github\.io\/traceonaut\/dashboards\/cwo\/">CWO Dashboard<\/a>/);
-  assert.doesNotMatch(readme, />Website<\/a>/);
-  assert(config.themeConfig.navbar.items.some(item => item.to === '/dashboards/cwo/'));
-  assert(config.themeConfig.footer.links[0].items.some(item => item.to === '/dashboards/cwo/'));
+  const section = home.split('\n## Dashboards\n')[1].split('\n## ')[0];
+  const routes = [
+    '/dashboards/beta/', '/dashboards/unified/',
+    '/data-and-limits/#add-the-stable-dashboard', '/dashboards/cwo/',
+  ];
+  const menu = config.themeConfig.navbar.items.find(item => item.label === 'Dashboards');
+  assert.deepEqual(menu.items.map(item => item.to), routes);
+  for (const route of routes) assert(section.includes(`to="${route}"`));
+  for (const name of ['codex-work-overview-beta', 'codex-unified-overview', 'codex-all-sessions', 'cwo-observed-dispatches']) {
+    const {title} = JSON.parse(fs.readFileSync(path.join(root, `examples/observability/${name}.json`), 'utf8'));
+    assert(section.includes(`<strong>${title}</strong>`), title);
+  }
+  assert(!config.themeConfig.navbar.items.some(item => item.to === '/dashboards/cwo/'));
+  assert(config.themeConfig.footer.links[0].items.some(item => item.to === '/#dashboards'));
 });
 
 test('committed banner is the site title and share image', () => {
@@ -90,7 +122,9 @@ test('source links go to GitHub while document links and code remain intact', ()
 
 test('source changes trigger Pages and only build output is uploaded', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/pages.yml'), 'utf8');
+  assert.equal((workflow.match(/'README\.md'/g) || []).length, 2);
   assert.equal((workflow.match(/'references\/\*\*'/g) || []).length, 2);
+  assert.equal((workflow.match(/'examples\/observability\/\*\.json'/g) || []).length, 2);
   assert.equal((workflow.match(/'assets\/traceonaut\.png'/g) || []).length, 2);
   assert.match(workflow, /path: website\/build/);
   assert.match(workflow, /persist-credentials: false/);

@@ -2,7 +2,7 @@
 slug: /getting-started
 ---
 
-# Set up Traceonaut
+# Quick Start
 
 Run Traceonaut on the **workstation containing your Codex files**. Your existing
 **Prometheus and Grafana can run on a separate server**. Prometheus pulls metrics
@@ -10,25 +10,17 @@ from the workstation; the collector does not push them.
 
 ## Requirements
 
-- A readable local Codex profile. Linux, Bash, and Python 3.13 are the tested
-  collector environment; no Python packages are needed.
-- Existing Prometheus and Grafana, with a Prometheus datasource in Grafana.
-  Dashboards use Grafana 11.5 native panels, with no plugins.
-- For remote scraping, a workstation LAN/VPN address reachable from Prometheus
-  and a firewall rule allowing only that server to reach TCP port `9464`.
-  A sleeping, disconnected, or unreachable workstation cannot be scraped.
+Complete [installation](installation.md) first, then run the commands below from
+the checkout root.
+
+For remote scraping, you need a workstation LAN/VPN address reachable from
+Prometheus and a firewall rule allowing only that server to reach TCP port `9464`.
+A sleeping, disconnected, or unreachable workstation cannot be scraped.
 
 The endpoint uses **HTTP with bearer authentication, not encryption**. Use a
 trusted private LAN or an encrypted VPN. On untrusted networks, use a VPN or your
 existing HTTPS proxy; do not expose the HTTP listener to the internet. See
 [network and credentials](operations.md#network-and-credentials).
-
-Clone this repository **on the workstation** and run commands from its root:
-
-```bash
-git clone https://github.com/turbra/traceonaut.git
-cd traceonaut
-```
 
 ## 1. Run the collector
 

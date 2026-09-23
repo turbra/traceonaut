@@ -71,6 +71,7 @@ class ReleaseBundleTests(unittest.TestCase):
                     self.assertEqual(build_release(component, root / "releases"), release)
                     manifest = json.loads((release / "manifest.json").read_text())
                     self.assertIn("LICENSE", manifest)
+                    self.assertEqual((release / "LICENSE").read_bytes(), (ROOT / "LICENSE").read_bytes())
                     for name, digest in manifest.items():
                         self.assertEqual(hashlib.sha256((release / name).read_bytes()).hexdigest(), digest)
                         self.assertNotIn("cwo_core", name)

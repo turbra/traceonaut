@@ -1,3 +1,7 @@
+---
+slug: /operations
+---
+
 # Operate Traceonaut
 
 These are optional details for an existing installation.

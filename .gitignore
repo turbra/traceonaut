@@ -14,3 +14,8 @@ __pycache__/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Documentation build output and dependencies
+website/node_modules/
+website/build/
+website/.docusaurus/

@@ -1,3 +1,7 @@
+---
+slug: /integrations/cwo
+---
+
 # Optional CWO integration
 
 [Complex Work Orchestration (CWO)](https://github.com/gprocunier/complex-work-orchestration)

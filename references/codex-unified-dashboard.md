@@ -1,3 +1,7 @@
+---
+slug: /dashboards/unified
+---
+
 # Unified dashboard
 
 Unified combines session and agent inventory, activity, command outcomes, and

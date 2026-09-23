@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="https://turbra.github.io/traceonaut/">Website</a> •
   <a href="#install">Install</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#documentation">Documentation</a> •
@@ -65,6 +66,7 @@ No release build, Grafana file provisioning, or extra monitoring service is need
 
 ## Documentation
 
+- [Project site](https://turbra.github.io/traceonaut/): setup, dashboards, data limits, and operations.
 - [Setup](references/deployment.md): workstation and server requirements, collection, scraping, and dashboard import.
 - [Operations](references/operations.md): services, automatic name updates, upgrades, and troubleshooting.
 - [Session collection](references/codex-all-sessions-observability.md): source formats, retention, and accounting limits.

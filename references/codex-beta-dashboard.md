@@ -1,3 +1,7 @@
+---
+slug: /dashboards/beta
+---
+
 # Beta dashboard
 
 Beta shows local session activity, command outcomes, recorded usage, and

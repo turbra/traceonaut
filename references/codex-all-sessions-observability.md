@@ -1,3 +1,7 @@
+---
+slug: /data-and-limits
+---
+
 # Session collection
 
 The collector discovers everyday Codex conversations, subagents, internal

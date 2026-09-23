@@ -1,3 +1,7 @@
+---
+slug: /integrations/terminal-export
+---
+
 # Export completed dispatch metadata
 
 This optional export reads the [CWO dispatch ledger](cwo-integration.md) and writes

@@ -1,3 +1,7 @@
+---
+slug: /getting-started
+---
+
 # Set up Traceonaut
 
 Run Traceonaut on the **workstation containing your Codex files**. Your existing

@@ -1,0 +1,106 @@
+/* Teal documentation layout, following the scrubctl project site. */
+:root {
+  --ifm-color-primary: #2c7a7b;
+  --ifm-color-primary-dark: #276d6e;
+  --ifm-color-primary-darker: #246768;
+  --ifm-color-primary-darkest: #1e5556;
+  --ifm-color-primary-light: #318788;
+  --ifm-color-primary-lighter: #348d8e;
+  --ifm-color-primary-lightest: #3aa1a2;
+  --ifm-background-color: #fbfcfd;
+  --ifm-font-family-base: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ifm-font-family-monospace: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --ifm-heading-font-weight: 650;
+  --ifm-code-font-size: 0.9rem;
+  --ifm-pre-border-radius: 8px;
+  --ifm-toc-border-color: #e5e7eb;
+  --doc-sidebar-width: 280px;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #45c3c5;
+  --ifm-color-primary-dark: #36b4b6;
+  --ifm-color-primary-darker: #33aaac;
+  --ifm-color-primary-darkest: #2a8c8e;
+  --ifm-color-primary-light: #59cacc;
+  --ifm-color-primary-lighter: #63cdcf;
+  --ifm-color-primary-lightest: #81d7d9;
+  --ifm-background-color: #111827;
+  --ifm-navbar-background-color: #111827;
+  --ifm-background-surface-color: #172033;
+  --ifm-toc-border-color: #334155;
+  --ifm-footer-background-color: #172033;
+}
+
+.navbar {
+  border-bottom: 1px solid var(--ifm-toc-border-color);
+  box-shadow: none;
+}
+
+.theme-doc-sidebar-menu { padding: 0.75rem; }
+.menu__link { border-radius: 6px; font-size: 0.94rem; }
+.table-of-contents { font-size: 0.82rem; }
+.theme-doc-markdown { line-height: 1.72; }
+
+.theme-doc-markdown h2 {
+  border-top: 1px solid var(--ifm-toc-border-color);
+  margin-top: 2.5rem;
+  padding-top: 1.4rem;
+}
+
+.traceonaut-lead {
+  font-size: 1.25rem;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.traceonaut-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+  padding: 0;
+  border: 1px solid var(--ifm-toc-border-color);
+  border-radius: 8px;
+}
+
+.traceonaut-flow li { padding: 0.9rem; }
+.traceonaut-flow li + li { border-left: 1px solid var(--ifm-toc-border-color); }
+.traceonaut-flow strong { display: block; font-size: 0.92rem; }
+.traceonaut-flow span { display: block; font-size: 0.82rem; line-height: 1.5; color: var(--ifm-color-emphasis-700); }
+
+.traceonaut-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin: 1.25rem 0;
+}
+
+.traceonaut-card {
+  border: 1px solid var(--ifm-toc-border-color);
+  border-radius: 8px;
+  color: var(--ifm-font-color-base);
+  padding: 1rem;
+  text-decoration: none;
+}
+
+.traceonaut-card:hover,
+.traceonaut-card:focus-visible {
+  border-color: var(--ifm-color-primary);
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+}
+
+.traceonaut-card strong { display: block; margin-bottom: 0.45rem; }
+.traceonaut-card > span { display: block; color: var(--ifm-color-emphasis-700); font-size: 0.9rem; line-height: 1.5; }
+.traceonaut-card .traceonaut-step { color: var(--ifm-color-primary); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.45rem; }
+.theme-doc-markdown .button { margin-bottom: 1.25rem; }
+.theme-code-block { border: 1px solid var(--ifm-toc-border-color); box-shadow: none !important; }
+
+@media (max-width: 996px) {
+  .traceonaut-cards { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .traceonaut-flow { grid-template-columns: 1fr; }
+  .traceonaut-flow li + li { border-left: 0; border-top: 1px solid var(--ifm-toc-border-color); }
+}

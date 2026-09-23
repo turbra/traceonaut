@@ -103,6 +103,19 @@ test('committed banner is the site title and share image', () => {
   assert(fs.lstatSync(path.join(root, 'assets/traceonaut.png')).isFile());
 });
 
+test('uses the supplied favicon and external Apache license badge', () => {
+  assert.equal(config.favicon, 'traceonaut-favicon.png');
+  assert(fs.lstatSync(path.join(root, 'assets', config.favicon)).isFile());
+  assert(!fs.existsSync(path.join(root, 'assets/license-apache-2.0.svg')));
+  for (const file of ['README.md', 'website/docs/home.mdx']) {
+    const source = fs.readFileSync(path.join(root, file), 'utf8');
+    assert(source.includes('href="https://www.apache.org/licenses/LICENSE-2.0"'));
+    assert(source.includes('src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square"'));
+    assert(source.includes('alt="License: Apache-2.0"'));
+    assert(!source.includes('license-apache-2.0.svg'));
+  }
+});
+
 test('source links go to GitHub while document links and code remain intact', () => {
   const tree = {children: [
     {type: 'link', url: '../scripts/traceonaut/observability_host.py'},
@@ -126,6 +139,7 @@ test('source changes trigger Pages and only build output is uploaded', () => {
   assert.equal((workflow.match(/'references\/\*\*'/g) || []).length, 2);
   assert.equal((workflow.match(/'examples\/observability\/\*\.json'/g) || []).length, 2);
   assert.equal((workflow.match(/'assets\/traceonaut\.png'/g) || []).length, 2);
+  assert.equal((workflow.match(/'assets\/traceonaut-favicon\.png'/g) || []).length, 2);
   assert.match(workflow, /path: website\/build/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /if: github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/);

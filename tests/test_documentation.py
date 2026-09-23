@@ -8,7 +8,6 @@ import subprocess
 import sys
 import unittest
 from urllib.parse import unquote, urlsplit
-from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -76,14 +75,11 @@ class DocumentationTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text()
         self.assertIn('<h1 align="center"><img src="assets/traceonaut.png" '
                       'alt="Traceonaut: Explore every run" width="840"></h1>', readme)
-        self.assertIn('alt="License: Apache-2.0"', readme)
-        badge = ElementTree.parse(ROOT / "assets/license-apache-2.0.svg").getroot()
-        self.assertEqual(badge.find("{http://www.w3.org/2000/svg}title").text, "License: Apache-2.0")
-        self.assertIn('[Apache License 2.0](LICENSE)', readme)
-        sections = ["Install", "Quick Start", "Documentation", "Commands at a Glance",
-                    "Data Scope", "Related", "License"]
-        positions = [readme.index("\n## " + section + "\n") for section in sections]
-        self.assertEqual(positions, sorted(positions))
+        self.assertIn('<a href="https://www.apache.org/licenses/LICENSE-2.0">'
+                      '<img src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square" '
+                      'alt="License: Apache-2.0"></a>', readme)
+        self.assertEqual(re.findall(r"^## (.+)$", readme, re.M),
+                         ["Install", "Quick Start", "Documentation"])
         # Canonical, unmodified text from https://www.apache.org/licenses/LICENSE-2.0.txt.
         self.assertEqual(hashlib.sha256((ROOT / "LICENSE").read_bytes()).hexdigest(),
                          "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30")

@@ -4,6 +4,7 @@ const {themes} = require('prism-react-renderer');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Traceonaut',
+  favicon: 'traceonaut-favicon.png',
   tagline: 'Codex session metrics for your existing Prometheus and Grafana.',
   url: 'https://turbra.github.io',
   baseUrl: '/traceonaut/',

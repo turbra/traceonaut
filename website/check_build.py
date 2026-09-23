@@ -15,7 +15,7 @@ PAGES = {
     "dashboards/unified/index.html", "data-and-limits/index.html",
     "integrations/cwo/index.html", "integrations/terminal-export/index.html",
 }
-PUBLIC_ASSETS = {"license-apache-2.0.svg", "traceonaut.png"}
+PUBLIC_ASSETS = {"traceonaut-favicon.png", "traceonaut.png"}
 
 
 class Page(HTMLParser):

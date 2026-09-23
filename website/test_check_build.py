@@ -27,12 +27,13 @@ class BuildChecks(unittest.TestCase):
         self.assertIn("missing target", self.check('<img src="assets/missing.svg">')[0])
 
     def test_declared_public_asset_matches_source(self):
-        image = (PROJECT_ROOT / "assets/traceonaut.png").read_bytes()
-        self.assertEqual(self.check('<img src="/traceonaut/traceonaut.png">',
-                                    {"traceonaut.png": image}, {"traceonaut.png"}), [])
-        self.assertIn("Missing public asset", self.check("", public_assets={"traceonaut.png"})[0])
-        self.assertIn("differs from source", self.check("", {"traceonaut.png": b"changed"},
-                                                        {"traceonaut.png"})[0])
+        for name in ("traceonaut.png", "traceonaut-favicon.png"):
+            with self.subTest(name=name):
+                image = (PROJECT_ROOT / "assets" / name).read_bytes()
+                self.assertEqual(self.check(f'<img src="/traceonaut/{name}">',
+                                            {name: image}, {name}), [])
+                self.assertIn("Missing public asset", self.check("", public_assets={name})[0])
+                self.assertIn("differs from source", self.check("", {name: b"changed"}, {name})[0])
 
     def test_unlisted_root_asset_is_rejected(self):
         self.assertIn("Unexpected artifact file", self.check("", {"other.png": b"image"})[0])
@@ -40,6 +41,7 @@ class BuildChecks(unittest.TestCase):
     def test_checks_asset_links_not_canonical_metadata(self):
         self.assertEqual(self.check('<link rel="canonical" href="/traceonaut/404.html/">'), [])
         self.assertTrue(self.check('<link rel="stylesheet" href="assets/missing.css">'))
+        self.assertIn("missing target", self.check('<link rel="icon" href="missing.png">')[0])
 
     def test_missing_anchor(self):
         self.assertIn("missing anchor", self.check('<a href="#missing">Go</a>')[0])

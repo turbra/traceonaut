@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="assets/license-apache-2.0.svg" alt="License: Apache-2.0"></a>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square" alt="License: Apache-2.0"></a>
 </p>
 
 <p align="center">
@@ -72,7 +72,3 @@ Browse the [documentation](https://turbra.github.io/traceonaut/) for all guides.
 | [CWO integration](https://turbra.github.io/traceonaut/integrations/cwo/) | Optional job metrics from [Complex Work Orchestration](https://github.com/gprocunier/complex-work-orchestration), a Codex skill for coordinating agents and tracking work across sessions. |
 
 CWO is not required for ordinary Codex session collection.
-
-## License
-
-[Apache License 2.0](LICENSE).

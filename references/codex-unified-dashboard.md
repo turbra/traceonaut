@@ -64,23 +64,23 @@ metadata is unavailable; those events do not create extra inventory rows.
 
 ## Add Unified
 
-Complete [setup](deployment.md) first and retain its shell variables. Build a
-separate presentation release and write a separate provisioned dashboard file:
+With the collector from [setup](deployment.md) running, generate Unified's JSON
+from the checkout root. Use your data directory if different:
 
+<!-- render-unified -->
 ```bash
-TRACEONAUT_UNIFIED_RELEASE="$(python3 "$TRACEONAUT_ROOT/scripts/build_release.py" \
-  --component unified --output-dir "$TRACEONAUT_RELEASES_DIR")"
-python3 "$TRACEONAUT_UNIFIED_RELEASE/scripts/render_codex_unified_dashboard.py" \
-  --template "$TRACEONAUT_UNIFIED_RELEASE/examples/observability/grafana-codex-unified-dashboard.json" \
-  --snapshot-file "$TRACEONAUT_PRESENTATION_DIR/sessions.json" \
-  --datasource-uid "$TRACEONAUT_PROMETHEUS_UID" \
-  --output "$TRACEONAUT_DASHBOARD_DIR/unified.json" --watch-seconds 2
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+python3 scripts/render_codex_unified_dashboard.py \
+  --template examples/observability/grafana-codex-unified-dashboard.json \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --output "$TRACEONAUT_DATA_DIR/unified.json"
 ```
 
-Use your service manager for persistent operation. Grafana's configured file
-provider determines the folder. Keep Stable and Beta's files and renderer
-services unchanged. The renderer rejects output belonging to another dashboard.
+Import `unified.json` into Grafana and select the same Prometheus datasource.
+Leave Beta and Stable's definitions intact; Unified has its own UID.
+Re-render and re-import to refresh names, or use optional
+[automatic updates](operations.md#automatic-dashboard-name-updates) with this
+renderer and template.
 
-Verify names, filters, missing-value explanations, and datasource selection in
-Grafana. The five-second dashboard refresh does not change the optional account
-reader's polling cadence.
+The five-second dashboard refresh does not change the optional account reader's
+polling cadence.

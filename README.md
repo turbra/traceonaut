@@ -25,9 +25,14 @@ installed.
 
 ## Get started
 
-Follow [Set up Traceonaut](references/deployment.md) to connect the collector,
-Prometheus, and the Beta dashboard. You need Linux, Python, an existing
-Prometheus/Grafana installation, and a readable local Codex profile.
+Use your **existing Prometheus and Grafana** installation:
+
+1. Run the collector against your local Codex profile.
+2. Add its metrics endpoint to Prometheus.
+3. Generate dashboard JSON and import it into Grafana.
+
+Follow the [three-step setup](references/deployment.md). No release build,
+Grafana provisioning, or extra monitoring service is required.
 
 By default, session metrics stop being exposed after **30 days of inactivity**,
 with at most **1,000 sessions** exposed at once. This does not delete source files,
@@ -39,7 +44,8 @@ has samples.
 
 | Task | Guide |
 | --- | --- |
-| Set up, troubleshoot, upgrade, or roll back | [Setup](references/deployment.md) |
+| Run the collector, configure scraping, and import a dashboard | [Setup](references/deployment.md) |
+| Run as a service, update names automatically, or troubleshoot | [Operations](references/operations.md) |
 | Understand collected data, retention, and missing values | [Session collection](references/codex-all-sessions-observability.md) |
 | Read health, commands, and recorded usage | [Beta dashboard](references/codex-beta-dashboard.md) |
 | View sessions and agents together | [Unified dashboard](references/codex-unified-dashboard.md) |

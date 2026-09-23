@@ -10,10 +10,11 @@ Ordinary session records cannot establish dispatch ownership.
 
 ## Connect an existing controller
 
-Build a dispatch release using the paths from [setup](deployment.md):
+From the checkout root, build a separate dispatch release:
 
 ```bash
-TRACEONAUT_DISPATCH_RELEASE="$(python3 "$TRACEONAUT_ROOT/scripts/build_release.py" \
+TRACEONAUT_RELEASES_DIR="$HOME/.local/share/traceonaut/releases"
+TRACEONAUT_DISPATCH_RELEASE="$(python3 scripts/build_release.py \
   --component dispatch --output-dir "$TRACEONAUT_RELEASES_DIR")"
 export PYTHONPATH="$TRACEONAUT_DISPATCH_RELEASE/scripts${PYTHONPATH:+:$PYTHONPATH}"
 python3 -c 'from traceonaut.observability_host import open_observability_host'
@@ -43,7 +44,7 @@ unsafe writable ancestors. Do not regenerate a missing key to resume ingestion:
 that would discard the basis for deduplication.
 
 Use a separate endpoint port if the session exporter already uses `9464`.
-Credentials follow the [same protected-file rules](deployment.md#3-create-a-protected-metrics-credential).
+Credentials follow the [same protected-file rules](operations.md#network-and-credentials).
 Never bind the exporter to a public interface.
 
 ## Embedding interface and recovery
@@ -98,7 +99,7 @@ python3 scripts/export_dispatch_observability.py \
 
 Configure a separate Prometheus scrape job and port using the
 [scrape example](../examples/observability/prometheus-scrape.yaml). Keep the
-session job unchanged. The [network and credential boundaries](deployment.md#service-and-container-boundaries)
+session job unchanged. The [network and credential boundaries](operations.md#network-and-credentials)
 still apply.
 
 The standalone exporter cannot establish the owner's monotonic-clock continuity

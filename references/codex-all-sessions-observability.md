@@ -169,23 +169,24 @@ history. Measure Prometheus storage separately for your session volume.
 
 ## Add the Stable dashboard
 
-After [setup](deployment.md#1-choose-paths-and-build-releases), retain its shell
-variables and run:
+With the collector from [setup](deployment.md) running, generate a separate
+import file from the checkout root. Use your data directory if different:
 
+<!-- render-stable -->
 ```bash
-TRACEONAUT_STABLE_RELEASE="$(python3 "$TRACEONAUT_ROOT/scripts/build_release.py" \
-  --component stable --output-dir "$TRACEONAUT_RELEASES_DIR")"
-python3 "$TRACEONAUT_STABLE_RELEASE/scripts/render_codex_sessions_dashboard.py" \
-  --template "$TRACEONAUT_STABLE_RELEASE/examples/observability/grafana-sessions-dashboard.json" \
-  --snapshot-file "$TRACEONAUT_PRESENTATION_DIR/sessions.json" \
-  --datasource-uid "$TRACEONAUT_PROMETHEUS_UID" \
-  --output "$TRACEONAUT_DASHBOARD_DIR/stable.json" --watch-seconds 2
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+python3 scripts/render_codex_sessions_dashboard.py \
+  --template examples/observability/grafana-sessions-dashboard.json \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --output "$TRACEONAUT_DATA_DIR/stable.json"
 ```
 
-Use your service manager for persistent operation. Stable uses UID
-`cwo-supervisor-observability-v1`; do not provision it together with the optional
-dispatch template, which uses the same UID. Keep each renderer with its bundled
-helpers and template.
+Import `stable.json` into Grafana and select the same Prometheus datasource.
+Re-render and re-import to refresh names, or use optional
+[automatic updates](operations.md#automatic-dashboard-name-updates).
+
+Stable uses UID `cwo-supervisor-observability-v1`; do not provision it together
+with the optional dispatch template, which uses the same UID.
 
 [Account allowance](codex-beta-dashboard.md#account-allowance) is optional and
 account-wide. [CWO dispatch collection](cwo-integration.md) is a separate optional

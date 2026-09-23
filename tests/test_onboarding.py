@@ -23,8 +23,8 @@ from collect_codex_sessions import SessionMetricsEndpoint
 from traceonaut.observability_exporter import read_credential
 
 
-def documented_block(marker):
-    guide = (ROOT / "references/deployment.md").read_text()
+def documented_block(marker, guide_name="deployment.md"):
+    guide = (ROOT / "references" / guide_name).read_text()
     return re.search(r"<!-- " + re.escape(marker) + r" -->\s*```bash\n(.*?)\n```", guide, re.S)[1]
 
 
@@ -33,15 +33,21 @@ class OnboardingTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.source = self.root / "codex"
+        self.source = self.root / ".codex"
         (self.source / "sessions").mkdir(parents=True, mode=0o700)
         self.source.chmod(0o700)
-        self.state = self.root / "state"
-        self.presentation = self.root / "presentation"
-        self.presentation.mkdir(mode=0o700)
+        self.presentation = self.root / ".local/share/traceonaut"
+        self.state = self.presentation / "session-state"
         self.snapshot = self.presentation / "sessions.json"
-        self.token = self.root / "metrics.token"
-        self.env = {**os.environ, "TRACEONAUT_METRICS_CREDENTIAL": str(self.token)}
+        self.token = self.presentation / "metrics.token"
+        self.env = {**os.environ, "HOME": str(self.root),
+                    "TRACEONAUT_SOURCE_HOME": str(self.source),
+                    "TRACEONAUT_DATA_DIR": str(self.presentation),
+                    "TRACEONAUT_METRICS_CREDENTIAL": str(self.token)}
+        prepared = subprocess.run(["bash", "-eu", "-c", documented_block("setup-paths")],
+                                  env=self.env, cwd=ROOT, capture_output=True, text=True, timeout=10)
+        self.assertEqual(prepared.returncode, 0, prepared.stderr)
+        self.assertEqual(self.presentation.stat().st_mode & 0o777, 0o700)
         self.sid = str(uuid4())
         stamp = datetime.now(timezone.utc).isoformat()
         records = [
@@ -136,9 +142,11 @@ class OnboardingTests(unittest.TestCase):
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
-        process = subprocess.Popen(self.command() + ["--credential-file", str(self.token),
-                                   "--host", "127.0.0.1", "--port", str(port), "--poll-seconds", "1"],
-                                   cwd=self.root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Run the literal quick-start collector command, with only its port changed.
+        block = documented_block("run-collector")
+        self.assertEqual(block.count("--port 9464"), 1)
+        process = subprocess.Popen(["bash", "-eu", "-c", "exec " + block.replace("--port 9464", f"--port {port}")],
+                                   env=self.env, cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
             opener = build_opener(ProxyHandler({}))
             url = f"http://127.0.0.1:{port}/metrics"
@@ -166,7 +174,7 @@ class OnboardingTests(unittest.TestCase):
                 self.assertEqual(failure.exception.code, 401)
                 failure.exception.close()
             # Only the test port differs from the literal first-use client.
-            block = documented_block("metrics-check")
+            block = documented_block("metrics-check", "operations.md")
             self.assertEqual(block.count("127.0.0.1:9464"), 1)
             result = subprocess.run(["bash", "-eu", "-c", block.replace("127.0.0.1:9464", f"127.0.0.1:{port}")],
                                     env=self.env, cwd=self.root, capture_output=True, timeout=10)
@@ -181,6 +189,28 @@ class OnboardingTests(unittest.TestCase):
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=3)
+
+    def test_documented_dashboard_commands_keep_import_datasource_selection(self):
+        result = subprocess.run(self.command() + ["--once"], cwd=ROOT,
+                                capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for guide, marker, output, uid in (
+            ("deployment.md", "render-beta", "beta.json", "cwo-codex-beta"),
+            ("codex-unified-dashboard.md", "render-unified", "unified.json", "cwo-codex-unified"),
+            ("codex-all-sessions-observability.md", "render-stable", "stable.json", "cwo-supervisor-observability-v1"),
+        ):
+            with self.subTest(dashboard=output):
+                result = subprocess.run(["bash", "-eu", "-c", documented_block(marker, guide)],
+                                        env=self.env, cwd=ROOT, capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                dashboard = json.loads((self.presentation / output).read_text())
+                self.assertEqual(dashboard["uid"], uid)
+                self.assertEqual([item["name"] for item in dashboard["__inputs"]], ["DS_PROMETHEUS"])
+                self.assertIn('"${DS_PROMETHEUS}"', json.dumps(dashboard))
+                work = next(item for item in dashboard["templating"]["list"] if item["name"] == "session")
+                self.assertIn(self.sid, work["query"])
+                self.assertIn("Synthetic work", json.dumps(dashboard))
+        self.assert_source_unchanged()
 
 
 if __name__ == "__main__":

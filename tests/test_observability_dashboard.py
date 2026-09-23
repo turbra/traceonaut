@@ -1,0 +1,278 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import re
+import sys
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from traceonaut.observability_contract import METRIC_FAMILIES  # noqa: E402
+from render_observability_dashboard import walk_panels  # noqa: E402
+
+
+DASHBOARD_PATH = ROOT / "examples" / "observability" / "grafana-dashboard.json"
+SCRAPE_PATH = ROOT / "examples" / "observability" / "prometheus-scrape.yaml"
+
+
+class ObservabilityDashboardTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.dashboard = json.loads(DASHBOARD_PATH.read_text(encoding="utf-8"))
+        cls.scrape = json.loads(SCRAPE_PATH.read_text(encoding="utf-8"))
+
+    def panel(self, title: str) -> dict:
+        return next(
+            panel for panel in walk_panels(self.dashboard["panels"]) if panel["title"] == title
+        )
+
+    @staticmethod
+    def expressions(panel: dict) -> list[str]:
+        return [target["expr"] for target in panel.get("targets", [])]
+
+    def test_dashboard_is_portable_classic_json_with_five_second_refresh(self) -> None:
+        self.assertEqual(self.dashboard["refresh"], "5s")
+        self.assertEqual(self.dashboard["schemaVersion"], 39)
+        self.assertIn("1y", self.dashboard["timepicker"]["time_options"])
+        self.assertNotIn("scenes", self.dashboard)
+        self.assertEqual(self.dashboard["__inputs"][0]["name"], "DS_PROMETHEUS")
+        self.assertEqual(self.dashboard["__inputs"][0]["pluginId"], "prometheus")
+        project = self.dashboard["templating"]["list"][0]
+        self.assertEqual(
+            project["query"]["query"],
+            "label_values(cwo_telemetry_component_state, project_id)",
+        )
+        for panel in walk_panels(self.dashboard["panels"]):
+            if panel["type"] in {"row", "text"}:
+                continue
+            self.assertEqual(panel["datasource"]["uid"], "${DS_PROMETHEUS}")
+            self.assertIn(panel["fieldConfig"]["defaults"]["noValue"], {"Unavailable", "Not reported", "Not connected"})
+            for target in panel.get("targets", []):
+                self.assertEqual(target["datasource"]["uid"], "${DS_PROMETHEUS}")
+
+    def test_all_panel_queries_use_the_frozen_metric_inventory(self) -> None:
+        metric_pattern = re.compile(r"\b(cwo_[a-z0-9_]+)\b")
+        observed = set()
+        for panel in walk_panels(self.dashboard["panels"]):
+            for expression in self.expressions(panel):
+                metrics = set(metric_pattern.findall(expression))
+                self.assertTrue(metrics, expression)
+                observed.update(metrics)
+                self.assertLessEqual(metrics, set(METRIC_FAMILIES), expression)
+                self.assertIn("last_over_time(", expression)
+                if panel["id"] == 130:
+                    self.assertIn("[20s]", expression)
+                    self.assertNotIn("[$__range]", expression)
+                else:
+                    self.assertIn("[$__range]", expression)
+        self.assertIn("cwo_dispatch_state", observed)
+        self.assertIn("cwo_dispatch_field_state", observed)
+        self.assertIn("cwo_dispatch_coverage_state", observed)
+        self.assertIn("cwo_telemetry_component_state", observed)
+
+    def test_stale_elapsed_value_is_suppressed_by_latest_field_state(self) -> None:
+        panel = self.panel("Elapsed allowance and enforced runtime ceiling")
+        elapsed = panel["targets"][0]["expr"]
+
+        self.assertIn("last_over_time(cwo_dispatch_elapsed_seconds", elapsed)
+        self.assertIn("and on (project_id, dispatch_id)", elapsed)
+        self.assertIn(
+            'last_over_time(cwo_dispatch_field_state{project_id=~"$project",dispatch_id=~"$dispatch",field="dispatch_elapsed"}[$__range]) == 1',
+            elapsed,
+        )
+        self.assertEqual(panel["fieldConfig"]["defaults"]["noValue"], "Unavailable")
+
+    def test_stale_token_totals_require_latest_state_and_nonconflicting_coverage(
+        self,
+    ) -> None:
+        panel = self.panel("Observed token totals with provenance")
+        tokens = panel["targets"][0]["expr"]
+
+        self.assertIn("last_over_time(cwo_dispatch_observed_tokens", tokens)
+        self.assertIn("and on (project_id, dispatch_id, token_kind)", tokens)
+        for allowed_state in (1, 2, 4):
+            self.assertIn(f"[$__range]) == {allowed_state}", tokens)
+        self.assertIn("unless on (project_id, dispatch_id)", tokens)
+        self.assertIn("last_over_time(cwo_dispatch_coverage_state", tokens)
+        self.assertIn("[$__range]) == 3", tokens)
+
+        serialized = json.dumps(panel)
+        self.assertIn("Runtime-normalized; upstream presence unknown", serialized)
+        self.assertIn('"2"', serialized)
+
+    def test_allowance_queries_do_not_mix_declared_and_enforced_units(self) -> None:
+        cycle_panel = self.panel("Cycle allowance and enforced tool ceiling")
+        elapsed_panel = self.panel("Elapsed allowance and enforced runtime ceiling")
+        cycle_queries = "\n".join(self.expressions(cycle_panel))
+        elapsed_queries = "\n".join(self.expressions(elapsed_panel))
+
+        self.assertIn("cwo_dispatch_declared_cycle_allowance", cycle_queries)
+        self.assertIn("cwo_dispatch_enforced_tool_call_limit", cycle_queries)
+        self.assertNotIn("cwo_dispatch_enforced_runtime_limit_seconds", cycle_queries)
+        self.assertIn(
+            "cwo_dispatch_declared_elapsed_allowance_seconds", elapsed_queries
+        )
+        self.assertIn("cwo_dispatch_enforced_runtime_limit_seconds", elapsed_queries)
+        self.assertNotIn("cwo_dispatch_enforced_tool_call_limit", elapsed_queries)
+
+        remaining = cycle_panel["targets"][1]["expr"]
+        overrun = cycle_panel["targets"][2]["expr"]
+        self.assertIn("cwo_dispatch_coverage_state", remaining)
+        self.assertIn("[$__range]) == 1", remaining)
+        self.assertIn("cwo_dispatch_coverage_state", overrun)
+        self.assertIn("[$__range]) == 1", overrun)
+        self.assertNotIn("[$__range]) == 2", overrun)
+        self.assertEqual(
+            cycle_panel["targets"][2]["legendFormat"], "Exact cycle overrun"
+        )
+
+        for target in elapsed_panel["targets"]:
+            if (
+                "_remaining_seconds" not in target["expr"]
+                and "_overrun_seconds" not in target["expr"]
+            ):
+                continue
+            self.assertIn('field="dispatch_elapsed"}[$__range]) == 1', target["expr"])
+
+    def test_agent_and_dispatch_counts_use_distinct_identities(self) -> None:
+        active = self.panel("Active distinct agents")["targets"][0]["expr"]
+        terminal = self.panel("Terminal dispatches in selected range")["targets"][0][
+            "expr"
+        ]
+
+        self.assertIn("count by (project_id, agent_id)", active)
+        self.assertIn("cwo_agent_state", active)
+        self.assertIn("<= 2", active)
+        self.assertIn("cwo_dispatch_state", terminal)
+        self.assertIn(">= 3", terminal)
+
+    def test_requested_and_configured_views_are_separate_and_claim_no_attribution(
+        self,
+    ) -> None:
+        requested = self.panel("Requested dispatch configuration")
+        configured = self.panel("Acknowledged configured model and effort")
+
+        self.assertEqual(
+            {"cwo_dispatch_info"},
+            set(re.findall(r"\b(cwo_[a-z0-9_]+)\b", requested["targets"][0]["expr"])),
+        )
+        self.assertEqual(
+            {
+                "cwo_dispatch_configured_model_info",
+                "cwo_dispatch_configured_effort_info",
+                "cwo_dispatch_field_state",
+            },
+            {
+                metric
+                for expression in self.expressions(configured)
+                for metric in re.findall(r"\b(cwo_[a-z0-9_]+)\b", expression)
+            },
+        )
+        self.assertIn(
+            'field="configured_model"}[$__range]) == 1',
+            configured["targets"][0]["expr"],
+        )
+        self.assertIn(
+            'field="configured_effort"}[$__range]) == 1',
+            configured["targets"][1]["expr"],
+        )
+        serialized = json.dumps(self.dashboard).lower()
+        for unsupported in (
+            "actual_model",
+            "actual_effort",
+            "agent_model_calls",
+            "per_response_duration_seconds",
+            "tool_response_link",
+        ):
+            self.assertNotIn(unsupported, serialized)
+        self.assertNotIn("estimated_completion", serialized)
+
+    def test_default_view_joins_work_and_hides_technical_diagnostics(self) -> None:
+        overview = self.dashboard["panels"]
+        details = next(panel for panel in overview if panel["id"] == 90)
+        self.assertTrue(details["collapsed"])
+        self.assertGreaterEqual(len(details["panels"]), 15)
+        self.assertTrue(all(panel["id"] >= 100 for panel in overview if panel["type"] != "row"))
+        work = self.panel("Work and results")
+        # Each query returns at most one row per dispatch. Grafana 11.5's
+        # outerTabular mode combines pairs of frames into duplicate rows.
+        self.assertEqual(work["transformations"][0]["options"]["mode"], "outer")
+        shown = work["transformations"][1]["options"]["include"]["names"]
+        for technical_field in ("Time", "job", "instance", "agent_id", "project_id", "__name__"):
+            self.assertNotIn(technical_field, shown)
+        fields = work["transformations"][2]["options"]["renameByName"].values()
+        self.assertEqual(set(fields), {"Task", "Worker", "Status", "Model", "Effort", "Elapsed", "Responses", "Tokens"})
+        task_field = next(o for o in work["fieldConfig"]["overrides"] if o["matcher"]["options"] == "Task")
+        links = next(p["value"] for p in task_field["properties"] if p["id"] == "links")
+        self.assertTrue(links[0]["url"].startswith("/d/" + self.dashboard["uid"] + "?"))
+        self.assertIn("var-dispatch=${__value.raw}", links[0]["url"])
+        self.assertIn("from=${__from}&to=${__to}", links[0]["url"])
+        # Coverage has no token_kind label. Filtering it would silently disable
+        # conflict suppression in the summary and comparison views.
+        for panel in overview:
+            for expression in self.expressions(panel):
+                for selector in re.findall(r"cwo_dispatch_coverage_state\{([^}]+)\}", expression):
+                    self.assertNotIn("token_kind", selector)
+
+    def test_overview_uses_observed_history_and_distinct_task_outcomes(self) -> None:
+        sections = [p["title"] for p in self.dashboard["panels"]
+                    if p["type"] == "row" and not p["collapsed"]]
+        self.assertEqual(sections, ["Overview", "Work and outcomes", "Tokens and time"])
+        activity = self.panel("Observed agent activity")
+        self.assertTrue(activity["targets"][0]["range"])
+        self.assertFalse(activity["targets"][0]["instant"])
+        # Prometheus rejects a range with more than 11,000 points per series.
+        self.assertLessEqual(activity["maxDataPoints"], 10000)
+        self.assertFalse(activity["fieldConfig"]["defaults"]["custom"]["spanNulls"])
+        activity_query = activity["targets"][0]["expr"]
+        self.assertIn("count by (project_id, agent_id)", activity_query)
+        self.assertIn("max by (project_id, dispatch_id)", activity_query)
+        self.assertIn("<= 2", activity_query)
+        self.assertIn("[20s]", activity_query)
+        self.assertNotIn("$__range", activity_query)
+        outcomes = self.panel("Task outcomes")
+        self.assertEqual(outcomes["options"]["pieType"], "donut")
+        self.assertEqual({t["legendFormat"] for t in outcomes["targets"]},
+                         {"Completed", "Stopped / failed", "In progress", "Unknown"})
+        for query in self.expressions(outcomes):
+            self.assertIn("cwo_dispatch_state", query)
+            self.assertNotIn("agent_id", query)
+            self.assertNotIn("vector(0)", query)
+            self.assertIn("max by (project_id, dispatch_id)", query)
+            self.assertTrue(query.endswith("> 0"))
+
+    def test_token_cards_preserve_kind_provenance_and_conflict_gates(self) -> None:
+        for kind, title in (("input", "Input tokens reported"), ("output", "Output tokens reported")):
+            expression = self.panel(title)["targets"][0]["expr"]
+            self.assertIn('token_kind="' + kind + '"', expression)
+            self.assertNotIn('token_kind="total"', expression)
+            self.assertIn("cwo_dispatch_token_state", expression)
+            self.assertIn("unless on (project_id, dispatch_id)", expression)
+            self.assertIn("cwo_dispatch_coverage_state", expression)
+            self.assertNotIn("vector(0)", expression)
+        responses = self.panel("Completed model responses")
+        self.assertIn("cwo_dispatch_completed_cycles_total", responses["targets"][0]["expr"])
+        self.assertIn("cwo_dispatch_coverage_state", responses["targets"][0]["expr"])
+        self.assertIn("max by (project_id, dispatch_id)", responses["targets"][0]["expr"])
+
+    def test_scrape_example_is_json_compatible_loopback_and_authenticated(self) -> None:
+        self.assertEqual(set(self.scrape), {"scrape_configs"})
+        self.assertEqual(len(self.scrape["scrape_configs"]), 1)
+        job = self.scrape["scrape_configs"][0]
+
+        self.assertEqual(job["scrape_interval"], "5s")
+        self.assertEqual(job["scrape_timeout"], "4s")
+        self.assertEqual(job["static_configs"], [{"targets": ["127.0.0.1:9464"]}])
+        self.assertEqual(job["authorization"]["type"], "Bearer")
+        self.assertEqual(
+            job["authorization"]["credentials_file"],
+            "/replace/with/protected/cwo-observability.token",
+        )
+        self.assertNotIn("credentials", job["authorization"])
+
+
+if __name__ == "__main__":
+    unittest.main()

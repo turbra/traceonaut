@@ -1,0 +1,187 @@
+"""Exercise the documented credentials and file-collector flow on synthetic data."""
+
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+from urllib.error import HTTPError, URLError
+from urllib.request import ProxyHandler, Request, build_opener
+from uuid import uuid4
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from build_release import build_release
+from collect_codex_sessions import SessionMetricsEndpoint
+from traceonaut.observability_exporter import read_credential
+
+
+def documented_block(marker):
+    guide = (ROOT / "references/deployment.md").read_text()
+    return re.search(r"<!-- " + re.escape(marker) + r" -->\s*```bash\n(.*?)\n```", guide, re.S)[1]
+
+
+class OnboardingTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.source = self.root / "codex"
+        (self.source / "sessions").mkdir(parents=True, mode=0o700)
+        self.source.chmod(0o700)
+        self.state = self.root / "state"
+        self.presentation = self.root / "presentation"
+        self.presentation.mkdir(mode=0o700)
+        self.snapshot = self.presentation / "sessions.json"
+        self.token = self.root / "metrics.token"
+        self.env = {**os.environ, "TRACEONAUT_METRICS_CREDENTIAL": str(self.token)}
+        self.sid = str(uuid4())
+        stamp = datetime.now(timezone.utc).isoformat()
+        records = [
+            {"timestamp": stamp, "type": "session_meta", "payload": {
+                "id": self.sid, "cwd": "/workspace/example", "timestamp": stamp, "name": "Synthetic work"}},
+            {"timestamp": stamp, "type": "token_usage_record", "payload": {
+                "thread_id": self.sid, "turn_id": "turn-1", "session_id": "connection",
+                "root_turn_id": "root-turn", "response_id": "response-1",
+                "usage": {"input_tokens": 20, "cached_input_tokens": 5, "cache_write_input_tokens": 0,
+                          "output_tokens": 10, "reasoning_output_tokens": 2, "total_tokens": 30}}},
+        ]
+        self.rollout = self.source / "sessions" / ("rollout-" + self.sid + ".jsonl")
+        self.rollout.write_text("".join(json.dumps(record) + "\n" for record in records))
+        self.original = hashlib.sha256(self.rollout.read_bytes()).hexdigest()
+        self.release = build_release("sessions", self.root / "releases")
+
+    def credential(self):
+        result = subprocess.run(["bash", "-eu", "-c", documented_block("credential-create")],
+                                env=self.env, cwd=self.root, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(self.token.stat().st_mode & 0o777, 0o600)
+        return read_credential(self.token)
+
+    def command(self):
+        return [sys.executable, "-B", str(self.release / "scripts/collect_codex_sessions.py"),
+                "--codex-home", str(self.source), "--session-state-dir", str(self.state),
+                "--snapshot-file", str(self.snapshot)]
+
+    def assert_source_unchanged(self):
+        self.assertEqual(hashlib.sha256(self.rollout.read_bytes()).hexdigest(), self.original)
+        self.assertEqual(sorted(p.relative_to(self.source).as_posix() for p in self.source.rglob("*") if p.is_file()),
+                         [self.rollout.relative_to(self.source).as_posix()])
+
+    def test_once_requires_available_source_and_reports_backlog(self):
+        result = subprocess.run(self.command() + ["--once"], cwd=self.root, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), {"sessions": 1, "pending_files": 0, "source_available": 1})
+        snapshot = json.loads(self.snapshot.read_text())
+        self.assertEqual(snapshot["sessions"][0]["usage"]["total"], 30)
+        self.assertEqual(snapshot["sessions"][0]["session_id"], self.sid)
+        self.assertEqual(self.snapshot.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.state.stat().st_mode & 0o777, 0o700)
+        self.assert_source_unchanged()
+
+    def test_documented_credential_creation_does_not_overwrite(self):
+        value = self.credential()
+        result = subprocess.run(["bash", "-eu", "-c", documented_block("credential-create")],
+                                env=self.env, cwd=self.root, capture_output=True, timeout=10)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(read_credential(self.token), value)
+        self.assertNotIn(value, result.stdout + result.stderr)
+
+    def test_credential_negatives_match_documented_constraints(self):
+        value = self.credential()
+        for mode in (0o644, 0o640, 0o400):
+            with self.subTest(mode=mode):
+                self.token.chmod(mode)
+                with self.assertRaisesRegex(ValueError, "owner-only regular file"):
+                    read_credential(self.token)
+        self.token.chmod(0o600)
+        for data in (b"short", b"abcdefgh\nijklmnopqrst", b"abcd efghijklmnopq", b"x" * 4097):
+            with self.subTest(length=len(data)):
+                self.token.write_bytes(data)
+                with self.assertRaisesRegex(ValueError, "encoding or length"):
+                    read_credential(self.token)
+        self.token.write_bytes(value)
+        link = self.root / "symlink.token"
+        link.symlink_to(self.token)
+        with self.assertRaises(OSError):
+            read_credential(link)
+        self.root.chmod(0o770)
+        try:
+            with self.assertRaisesRegex(ValueError, "writable credential ancestor"):
+                read_credential(self.token)
+        finally:
+            self.root.chmod(0o700)
+
+    def test_endpoint_before_payload_is_503_not_ready_or_dead(self):
+        value = self.credential()
+        endpoint = SessionMetricsEndpoint("127.0.0.1", 0, value)
+        self.addCleanup(endpoint.close)
+        endpoint.start()
+        url = f"http://127.0.0.1:{endpoint.server.server_port}/metrics"
+        with self.assertRaises(HTTPError) as failure:
+            build_opener(ProxyHandler({})).open(Request(url, headers={"Authorization": "Bearer " + value.decode()}), timeout=4)
+        self.assertEqual(failure.exception.code, 503)
+        failure.exception.close()
+
+    def test_continuous_cli_authenticated_client_and_invalid_credentials(self):
+        value = self.credential()
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+        process = subprocess.Popen(self.command() + ["--credential-file", str(self.token),
+                                   "--host", "127.0.0.1", "--port", str(port), "--poll-seconds", "1"],
+                                   cwd=self.root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            opener = build_opener(ProxyHandler({}))
+            url = f"http://127.0.0.1:{port}/metrics"
+            request = Request(url, headers={"Authorization": "Bearer " + value.decode()})
+            deadline = time.monotonic() + 15
+            while True:
+                self.assertIsNone(process.poll(), "collector exited before readiness")
+                try:
+                    with opener.open(request, timeout=2) as response:
+                        payload = response.read()
+                    break
+                except HTTPError as error:
+                    error.close()
+                    if error.code != 503:
+                        raise
+                except URLError:
+                    pass
+                self.assertLess(time.monotonic(), deadline, "synthetic collector did not become ready")
+                time.sleep(0.05)
+            self.assertIn(b"cwo_codex_collector_source_available{} 1", payload.splitlines())
+            self.assertIn(self.sid.encode(), payload)
+            for headers in ({}, {"Authorization": "Bearer synthetic-invalid-token"}):
+                with self.assertRaises(HTTPError) as failure:
+                    opener.open(Request(url, headers=headers), timeout=4)
+                self.assertEqual(failure.exception.code, 401)
+                failure.exception.close()
+            # Only the test port differs from the literal first-use client.
+            block = documented_block("metrics-check")
+            self.assertEqual(block.count("127.0.0.1:9464"), 1)
+            result = subprocess.run(["bash", "-eu", "-c", block.replace("127.0.0.1:9464", f"127.0.0.1:{port}")],
+                                    env=self.env, cwd=self.root, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(b"HTTP 200", result.stdout)
+            self.assertNotIn(value, result.stdout + result.stderr)
+            self.assert_source_unchanged()
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=3)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Supervisor Telemetry Health v1",
+  "description": "Bounded telemetry health record without free-form diagnostics.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "not": {"const": "00000000-0000-0000-0000-000000000000"}
+    },
+    "count": {"type": "integer", "minimum": 0}
+  },
+  "required": [
+    "record_type",
+    "project_id",
+    "connection_state",
+    "schema_state",
+    "ledger_state",
+    "queue_state",
+    "disk_state",
+    "publication_state",
+    "reason_counts",
+    "unassigned_count",
+    "conflict_count",
+    "rejected_count",
+    "queue_depth",
+    "ledger_bytes",
+    "last_event_timestamp_seconds",
+    "known_coverage_gaps"
+  ],
+  "properties": {
+    "record_type": {"const": "telemetry_health.v1"},
+    "project_id": {"$ref": "#/$defs/uuid"},
+    "connection_state": {"enum": ["disabled", "connected", "disconnected"]},
+    "schema_state": {"enum": ["unqualified", "compatible", "incompatible"]},
+    "ledger_state": {"enum": ["healthy", "fault", "recovery"]},
+    "queue_state": {"enum": ["healthy", "overloaded"]},
+    "disk_state": {"enum": ["unknown", "healthy", "pressure", "full"]},
+    "publication_state": {"type": "integer", "minimum": 0, "maximum": 4},
+    "reason_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "invalid-identity",
+        "invalid-usage",
+        "schema-incompatible",
+        "binding-ambiguous",
+        "binding-conflict",
+        "accounting-conflict",
+        "pending-expired",
+        "queue-overflow",
+        "disk-full",
+        "key-unavailable",
+        "source-disconnected",
+        "unsupported-state-version",
+        "collector-write-failure",
+        "collector-hook-failure",
+        "shutdown-with-pending-events"
+      ],
+      "properties": {
+        "invalid-identity": {"$ref": "#/$defs/count"},
+        "invalid-usage": {"$ref": "#/$defs/count"},
+        "schema-incompatible": {"$ref": "#/$defs/count"},
+        "binding-ambiguous": {"$ref": "#/$defs/count"},
+        "binding-conflict": {"$ref": "#/$defs/count"},
+        "accounting-conflict": {"$ref": "#/$defs/count"},
+        "pending-expired": {"$ref": "#/$defs/count"},
+        "queue-overflow": {"$ref": "#/$defs/count"},
+        "disk-full": {"$ref": "#/$defs/count"},
+        "key-unavailable": {"$ref": "#/$defs/count"},
+        "source-disconnected": {"$ref": "#/$defs/count"},
+        "unsupported-state-version": {"$ref": "#/$defs/count"},
+        "collector-write-failure": {"$ref": "#/$defs/count"},
+        "collector-hook-failure": {"$ref": "#/$defs/count"},
+        "shutdown-with-pending-events": {"$ref": "#/$defs/count"}
+      }
+    },
+    "unassigned_count": {"$ref": "#/$defs/count"},
+    "conflict_count": {"$ref": "#/$defs/count"},
+    "rejected_count": {"$ref": "#/$defs/count"},
+    "queue_depth": {"$ref": "#/$defs/count"},
+    "ledger_bytes": {"$ref": "#/$defs/count"},
+    "last_event_timestamp_seconds": {"type": ["number", "null"], "minimum": 0},
+    "known_coverage_gaps": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "crash-before-commit",
+          "source-disconnect",
+          "queue-overflow",
+          "unsupported-source",
+          "key-loss",
+          "unassigned-binding",
+          "timing-epoch-gap",
+          "automatic-compaction-unqualified",
+          "concurrent-binding-unqualified",
+          "publication-unconfirmed",
+          "collector-write-failure",
+          "collector-hook-failure",
+          "shutdown-with-pending-events"
+        ]
+      }
+    }
+  }
+}

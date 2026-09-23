@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Supervisor Runtime Binding v1",
+  "description": "Normalized trusted acknowledgement binding. Hash and UUID shape checks do not establish controller authority or ownership.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "not": {"const": "00000000-0000-0000-0000-000000000000"}
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "alias": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "boundedLabel": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+/-]{0,127}$"},
+    "nullableBoundedLabel": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+/-]{0,127}$"},
+    "nullableConfigurationProvenance": {
+      "enum": ["acknowledged-thread-configuration", null]
+    }
+  },
+  "required": [
+    "record_type",
+    "binding_id",
+    "project_id",
+    "registration_generation",
+    "connection_id",
+    "dispatch_id",
+    "agent_id",
+    "packet_ref",
+    "packet_sha256",
+    "supervisor_submission_ref",
+    "thread_fingerprint",
+    "turn_fingerprint",
+    "acknowledgement_receipt_sha256",
+    "acknowledgement_provenance",
+    "state",
+    "configured_model",
+    "configured_model_provenance",
+    "configured_effort",
+    "configured_effort_provenance"
+  ],
+  "properties": {
+    "record_type": {"const": "runtime_binding.v1"},
+    "binding_id": {"$ref": "#/$defs/uuid"},
+    "project_id": {"$ref": "#/$defs/uuid"},
+    "registration_generation": {"type": "integer", "minimum": 1},
+    "connection_id": {"$ref": "#/$defs/uuid"},
+    "dispatch_id": {"$ref": "#/$defs/uuid"},
+    "agent_id": {"$ref": "#/$defs/uuid"},
+    "packet_ref": {"$ref": "#/$defs/alias"},
+    "packet_sha256": {"$ref": "#/$defs/sha256"},
+    "supervisor_submission_ref": {"$ref": "#/$defs/alias"},
+    "thread_fingerprint": {"$ref": "#/$defs/sha256"},
+    "turn_fingerprint": {"$ref": "#/$defs/sha256"},
+    "acknowledgement_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "acknowledgement_provenance": {"const": "trusted-controller-receipt"},
+    "state": {"enum": ["active", "closed", "revoked"]},
+    "configured_model": {"$ref": "#/$defs/nullableBoundedLabel"},
+    "configured_model_provenance": {"$ref": "#/$defs/nullableConfigurationProvenance"},
+    "configured_effort": {"$ref": "#/$defs/nullableBoundedLabel"},
+    "configured_effort_provenance": {"$ref": "#/$defs/nullableConfigurationProvenance"}
+  }
+}

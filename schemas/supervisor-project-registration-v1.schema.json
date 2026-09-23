@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Supervisor Project Registration v1",
+  "description": "Normalized additive project registration. UUID syntax does not prove controller issuance or randomness.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "not": {"const": "00000000-0000-0000-0000-000000000000"}
+    }
+  },
+  "required": [
+    "record_type",
+    "project_id",
+    "owning_principal_id",
+    "runtime_owner_id",
+    "state",
+    "generation",
+    "resource_limits"
+  ],
+  "properties": {
+    "record_type": {"const": "project_registration.v1"},
+    "project_id": {"$ref": "#/$defs/uuid"},
+    "owning_principal_id": {"type": "integer", "minimum": 0},
+    "runtime_owner_id": {"$ref": "#/$defs/uuid"},
+    "state": {"enum": ["enabled", "revoked"]},
+    "generation": {"type": "integer", "minimum": 1},
+    "resource_limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_disk_bytes",
+        "max_frame_bytes",
+        "max_json_depth",
+        "max_normalized_record_bytes",
+        "max_pending_records",
+        "max_queue_records",
+        "max_registrations",
+        "pending_binding_deadline_seconds"
+      ],
+      "properties": {
+        "max_disk_bytes": {"type": "integer", "minimum": 1},
+        "max_frame_bytes": {"type": "integer", "minimum": 1, "maximum": 8388608},
+        "max_json_depth": {"type": "integer", "minimum": 1, "maximum": 32},
+        "max_normalized_record_bytes": {"type": "integer", "minimum": 1, "maximum": 16384},
+        "max_pending_records": {"type": "integer", "minimum": 1, "maximum": 1024},
+        "max_queue_records": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "max_registrations": {"type": "integer", "minimum": 1},
+        "pending_binding_deadline_seconds": {"type": "integer", "minimum": 1, "maximum": 60}
+      }
+    }
+  }
+}

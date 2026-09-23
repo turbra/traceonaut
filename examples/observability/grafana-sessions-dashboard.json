@@ -1,0 +1,2477 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Existing Prometheus datasource",
+      "description": "Select the existing Prometheus datasource that scrapes the CWO exporter.",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Local Codex sessions and subagents collected from normalized protected session metadata. Names are added only by the local renderer.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "id": 150,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 100,
+      "type": "stat",
+      "title": "Collection status",
+      "description": "Reader health combines a recent scan with source availability. It does not depend on whether users produced a recent event.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 12,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Reader unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Reader stale · source unavailable",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Reader fresh · source unavailable",
+                  "color": "orange"
+                },
+                "2": {
+                  "text": "Reader stale · source available",
+                  "color": "orange"
+                },
+                "3": {
+                  "text": "Reader fresh · source available",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max(cwo_codex_collector_source_available) * 2) + on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < bool 20)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Collection status"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "text": {
+          "valueSize": 28
+        }
+      }
+    },
+    {
+      "id": 105,
+      "type": "stat",
+      "title": "Latest source event age",
+      "description": "Age of the newest source event. A large age can be valid when Codex is quiet; Collection status reports reader health separately.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 12,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No source events observed",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "s",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "time() - max(cwo_codex_collector_last_event_timestamp_seconds)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Latest source event age"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "text": {
+          "valueSize": 44
+        }
+      }
+    },
+    {
+      "id": 90,
+      "type": "text",
+      "title": "Account allowance · at range end · all projects",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 1
+      },
+      "transparent": true,
+      "options": {
+        "mode": "html",
+        "content": ""
+      }
+    },
+    {
+      "id": 91,
+      "type": "stat",
+      "title": "Resets available",
+      "description": "Account-wide shared Codex allowance at the selected range end. Project and Work filters do not apply. Read approximately every 60 seconds; values older than 150 seconds are unavailable. History starts when account collection is enabled. Uses the service-provided available count, never the number of returned credit details. Zero means no resets available; null stays unavailable. Monitoring does not redeem resets.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 5,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "decimals": 0,
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "text": {
+          "valueSize": 28,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max(cwo_codex_account_reset_credits_available) and on () ((max(cwo_codex_account_available) == 1) and on () (count(cwo_codex_account_available) == 1) and on () ((time() - max(cwo_codex_account_last_success_timestamp_seconds)) >= 0) and on () ((time() - max(cwo_codex_account_last_success_timestamp_seconds)) < 150))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Earned resets"
+        }
+      ]
+    },
+    {
+      "id": 92,
+      "type": "stat",
+      "title": "Weekly remaining",
+      "description": "Account-wide shared Codex allowance at the selected range end. Project and Work filters do not apply. Read approximately every 60 seconds; values older than 150 seconds are unavailable. History starts when account collection is enabled. 100 minus the reported used percentage, rounded by the upstream service and floored at zero when usage reaches or exceeds 100%. Only a uniquely identified 10080-minute shared Codex window qualifies. This is not token headroom or a guarantee that requests are permitted.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 5,
+        "y": 5,
+        "w": 5,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "decimals": 0,
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "text": {
+          "valueSize": 28,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "clamp_min(100 - max(cwo_codex_account_window_used_percent and on (job, instance, window) (cwo_codex_account_window_minutes == 10080)), 0) and on () (((max(cwo_codex_account_available) == 1) and on () (count(cwo_codex_account_available) == 1) and on () ((time() - max(cwo_codex_account_last_success_timestamp_seconds)) >= 0) and on () ((time() - max(cwo_codex_account_last_success_timestamp_seconds)) < 150)) and on () (count((cwo_codex_account_window_minutes == 10080)) == 1))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Shared weekly allowance"
+        }
+      ]
+    },
+    {
+      "id": 93,
+      "type": "stat",
+      "title": "Next weekly reset",
+      "description": "Account-wide shared Codex allowance at the selected range end. Project and Work filters do not apply. Read approximately every 60 seconds; values older than 150 seconds are unavailable. History starts when account collection is enabled. The date uses the dashboard timezone. The countdown is measured from the selected range end. A passed reset time means an updated observation is needed; it does not establish restored allowance.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 5,
+        "w": 8,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "decimals": 0,
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Scheduled reset"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "time:MMM D, HH:mm"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "From range end"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "range",
+                    "options": {
+                      "from": -9007199254740991,
+                      "to": 0,
+                      "result": {
+                        "text": "Awaiting update",
+                        "color": "#D8D9DA"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "text": {
+          "valueSize": 18,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max(cwo_codex_account_window_reset_timestamp_seconds and on (job, instance, window) (cwo_codex_account_window_minutes == 10080)) * 1000) and on () (((max(cwo_codex_account_available) == 1) and on () (count(cwo_codex_account_available) == 1) and on () ((time() - max(cwo_codex_account_last_success_timestamp_seconds)) >= 0) and on () ((time() - max(cwo_codex_account_last_success_timestamp_seconds)) < 150)) and on () (count((cwo_codex_account_window_minutes == 10080)) == 1))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Scheduled reset"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max(cwo_codex_account_window_reset_timestamp_seconds and on (job, instance, window) (cwo_codex_account_window_minutes == 10080)) - time()) and on () (((max(cwo_codex_account_available) == 1) and on () (count(cwo_codex_account_available) == 1) and on () ((time() - max(cwo_codex_account_last_success_timestamp_seconds)) >= 0) and on () ((time() - max(cwo_codex_account_last_success_timestamp_seconds)) < 150)) and on () (count((cwo_codex_account_window_minutes == 10080)) == 1))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "From range end"
+        }
+      ]
+    },
+    {
+      "id": 94,
+      "type": "stat",
+      "title": "Allowance checked",
+      "description": "Account-wide shared Codex allowance at the selected range end. Project and Work filters do not apply. Read approximately every 60 seconds; values older than 150 seconds are unavailable. History starts when account collection is enabled. Current means the account endpoint returned a recent valid response; individual fields can still be unavailable. Unavailable means the latest read failed or no read has succeeded. Stale means the latest successful response is too old.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 5,
+        "w": 6,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "decimals": 0,
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Read status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unavailable",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "Stale",
+                        "color": "yellow"
+                      },
+                      "2": {
+                        "text": "Current",
+                        "color": "#D8D9DA"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Since last success"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "text": {
+          "valueSize": 18,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((max(cwo_codex_account_available) * (1 + (((time() - max(cwo_codex_account_last_success_timestamp_seconds)) >= bool 0) * ((time() - max(cwo_codex_account_last_success_timestamp_seconds)) < bool 150)))) or (max(cwo_codex_account_available) * 0)) and on () (count(cwo_codex_account_available) == 1)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Read status"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(time() - max(cwo_codex_account_last_success_timestamp_seconds)) and on () (count(cwo_codex_account_available) == 1)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Since last success"
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "stat",
+      "title": "Sessions active in range",
+      "description": "Sessions whose latest observed event falls inside the selected time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count((max by (project_id, session_id) (cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Sessions active in range"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "stat",
+      "title": "Working now",
+      "description": "Sessions in the selected range with an open turn and an event observed in the last 120 seconds.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 8,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Working now"
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "type": "stat",
+      "title": "Recorded session tokens",
+      "description": "Deduplicated tokens from observed response records for sessions active in the selected range. Values cover available session history and may omit older usage; they are not tokens spent within the selected range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Recorded session tokens"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "type": "stat",
+      "title": "Subagents in range",
+      "description": "Subagent sessions whose latest observed event falls inside the selected time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 8,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count((max by (project_id, session_id) (cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\",kind=\"subagent\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Subagents in range"
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "type": "text",
+      "title": "Selected range and recorded history",
+      "description": "How the selected range and available observed-history totals relate.",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Sessions are included when their **latest observed event** falls inside the selected range. Token, response, turn, and duration totals cover **available observed session history**, not activity spent within the selected range, and may omit older usage or records."
+      }
+    },
+    {
+      "id": 130,
+      "type": "timeseries",
+      "title": "Working sessions over time",
+      "description": "Observed working-state samples while the collector source is available and its scan heartbeat is under 20 seconds old. History begins at collector installation; missing heartbeat periods remain gaps.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 16,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 2,
+            "fillOpacity": 16,
+            "gradientMode": "opacity",
+            "spanNulls": false,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "axisPlacement": "auto",
+            "axisLabel": "Sessions",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(sum((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"})) == 1) or (0 * count(max by (project_id, session_id) (cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\"})))) and on () ((max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20))",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "Working sessions",
+          "interval": "5s"
+        }
+      ],
+      "maxDataPoints": 8000,
+      "interval": "5s"
+    },
+    {
+      "id": 131,
+      "type": "piechart",
+      "title": "Current session states",
+      "description": "Latest state of sessions active in the selected range. Waiting means the last observed turn completed; it does not claim the session is finished.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 16,
+        "w": 8,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "noValue": "Not reported",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Stopped / failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "In progress"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unknown"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "gray"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) > 0",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Working"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 2)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) > 0",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Waiting"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 3)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) > 0",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Stopped / failed"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) > 0",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "No recent signal"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 0)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) > 0",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Unknown"
+        }
+      ]
+    },
+    {
+      "id": 151,
+      "type": "row",
+      "title": "Sessions",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 110,
+      "type": "table",
+      "title": "Sessions and latest activity",
+      "description": "The range includes a session when its latest observed event is inside it. Recorded tokens, responses, turns, and observed turn time cover available observed session history and may omit older records. Model and effort are the latest selected settings, not per-model lifetime attribution.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 24,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Session"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 210
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {}
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^.+$",
+                      "result": {
+                        "text": "Name unavailable"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Focus on this session",
+                    "url": "/d/cwo-supervisor-observability-v1?var-project=$__all&var-session=${__value.raw}&from=${__from}&to=${__to}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unknown",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "Working",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "Waiting",
+                        "color": "blue"
+                      },
+                      "3": {
+                        "text": "Stopped / failed",
+                        "color": "orange"
+                      },
+                      "4": {
+                        "text": "No recent signal",
+                        "color": "yellow"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last seen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Recorded tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Project"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {}
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^.+$",
+                      "result": {
+                        "text": "Name unavailable"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Agent"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {}
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^.+$",
+                      "result": {
+                        "text": "Name unavailable"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Latest selected model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Latest selected effort"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Responses"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 105
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed turn time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 135
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Usage source"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unavailable",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "Response records",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "Runtime snapshot only",
+                        "color": "blue"
+                      },
+                      "3": {
+                        "text": "Usage invalid or conflicted",
+                        "color": "red"
+                      },
+                      "4": {
+                        "text": "Partial backfill",
+                        "color": "yellow"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Runtime reported"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 135
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kind"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "session": {
+                        "text": "Session"
+                      },
+                      "subagent": {
+                        "text": "Subagent"
+                      },
+                      "internal": {
+                        "text": "Internal"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id, project, agent, kind, model, effort) (label_replace(label_replace(cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\"}, \"project\", \"$1\", \"project_id\", \"(.+)\"), \"agent\", \"$1\", \"session_id\", \"(.+)\"))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_reported_tokens{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((max by (project_id, session_id) (cwo_codex_session_response_count{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_completed_turns{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_failed_turns{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_observed_turn_seconds{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"})) * 1000) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "session_id",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "session_id",
+                "project",
+                "agent",
+                "kind",
+                "model",
+                "effort",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #E",
+                "Value #F",
+                "Value #G",
+                "Value #H",
+                "Value #I",
+                "Value #J"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "session_id": 0,
+              "Value #B": 1,
+              "Value #I": 2,
+              "Value #C": 3,
+              "project": 4,
+              "agent": 5,
+              "model": 6,
+              "effort": 7,
+              "Value #E": 8,
+              "Value #H": 9,
+              "Value #J": 10,
+              "Value #D": 11,
+              "kind": 12,
+              "Value #F": 13,
+              "Value #G": 14
+            },
+            "renameByName": {
+              "session_id": "Session",
+              "project": "Project",
+              "agent": "Agent",
+              "kind": "Kind",
+              "model": "Latest selected model",
+              "effort": "Latest selected effort",
+              "Value #B": "State",
+              "Value #C": "Recorded tokens",
+              "Value #D": "Runtime reported",
+              "Value #E": "Responses",
+              "Value #F": "Completed turns",
+              "Value #G": "Failed turns",
+              "Value #H": "Observed turn time",
+              "Value #I": "Last seen",
+              "Value #J": "Usage source"
+            }
+          }
+        }
+      ],
+      "options": {
+        "cellHeight": "md",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Last seen",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        },
+        "enablePagination": true
+      }
+    },
+    {
+      "id": 152,
+      "type": "row",
+      "title": "Usage and time",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 160,
+      "type": "stat",
+      "title": "Input tokens recorded",
+      "description": "Deduplicated input tokens from observed response records for sessions active in the selected range. Values cover available session history and may omit older usage.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 8,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"input\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Input tokens recorded"
+        }
+      ]
+    },
+    {
+      "id": 161,
+      "type": "stat",
+      "title": "Output tokens recorded",
+      "description": "Deduplicated output tokens from observed response records for sessions active in the selected range. Values cover available session history and may omit older usage.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 36,
+        "w": 8,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"output\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Output tokens recorded"
+        }
+      ]
+    },
+    {
+      "id": 162,
+      "type": "stat",
+      "title": "Observed responses",
+      "description": "Unique response records across sessions active in the selected range. Values cover available observed session history and may omit older responses.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 36,
+        "w": 8,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(((max by (project_id, session_id) (cwo_codex_session_response_count{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Observed responses"
+        }
+      ]
+    },
+    {
+      "id": 111,
+      "type": "bargauge",
+      "title": "Recorded tokens by session",
+      "description": "Deduplicated tokens from observed response records in available session history. Sessions are selected by latest activity in the range; older usage may be omitted.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 1,
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*/"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Session name unavailable"
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "session_id",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "session_id": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "session_id": "Session",
+              "Value": "Recorded tokens"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Recorded tokens",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Session",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Recorded tokens",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "namePlacement": "top",
+        "valueMode": "text",
+        "showUnfilled": false,
+        "sizing": "manual",
+        "minVizHeight": 24,
+        "maxVizHeight": 60,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 18
+        },
+        "legend": {
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "id": 112,
+      "type": "bargauge",
+      "title": "Observed turn time by session",
+      "description": "Sum of supplied completed-turn durations in available observed session history. Missing and older turn durations stay missing.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "unit": "s",
+          "decimals": 1,
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*/"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Session name unavailable"
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_observed_turn_seconds{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "session_id",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "session_id": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "session_id": "Session",
+              "Value": "Observed turn time"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Observed turn time",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Session",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Observed turn time",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "namePlacement": "top",
+        "valueMode": "text",
+        "showUnfilled": false,
+        "sizing": "manual",
+        "minVizHeight": 24,
+        "maxVizHeight": 60,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 18
+        },
+        "legend": {
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "id": 153,
+      "type": "row",
+      "title": "Collection coverage",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 170,
+      "type": "stat",
+      "title": "Sessions indexed",
+      "description": "Session records in the latest completed collector scan.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 49,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max(cwo_codex_collector_sessions)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Sessions indexed"
+        }
+      ]
+    },
+    {
+      "id": 171,
+      "type": "stat",
+      "title": "Pending source files",
+      "description": "Source files waiting to be scanned. Zero is healthy.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 49,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max(cwo_codex_collector_pending_files)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Pending source files"
+        }
+      ]
+    },
+    {
+      "id": 172,
+      "type": "text",
+      "title": "",
+      "description": "Coverage and interpretation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 49,
+        "w": 12,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "transparent": true,
+      "options": {
+        "mode": "markdown",
+        "content": "### How to read this dashboard\n\nThe selected range includes sessions by **latest observed event**. Token, response, turn, and duration values cover **available observed session history**, not activity spent within the selected range, and may omit older usage or records. Recorded tokens come from deduplicated observed response records; runtime-reported tokens remain separate because they can be estimated. Model and effort are latest selected settings without per-model attribution. Activity history begins when the collector starts and is not backfilled."
+      }
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": [
+    "codex",
+    "sessions",
+    "observability"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(cwo_codex_session_info, project_id)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "Project",
+        "multi": true,
+        "name": "project",
+        "options": [],
+        "query": {
+          "query": "label_values(cwo_codex_session_info, project_id)",
+          "refId": "PrometheusVariableQueryEditor-Project"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(cwo_codex_session_info{project_id=~\"$project\"}, session_id)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "Session",
+        "multi": true,
+        "name": "session",
+        "options": [],
+        "query": {
+          "query": "label_values(cwo_codex_session_info{project_id=~\"$project\"}, session_id)",
+          "refId": "PrometheusVariableQueryEditor-Session"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "3h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d",
+      "90d",
+      "1y"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Codex · All sessions",
+  "uid": "cwo-supervisor-observability-v1",
+  "version": 1,
+  "weekStart": ""
+}

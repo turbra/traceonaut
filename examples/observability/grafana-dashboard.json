@@ -1,0 +1,2817 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Existing Prometheus datasource",
+      "description": "Select the existing Prometheus datasource that scrapes the CWO exporter.",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Readable tasks, worker status, selected model and effort, time and reported tokens. Explicit task names are supplied by the monitored runner; technical identities stay in the expandable diagnostics.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 150,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 101,
+      "type": "stat",
+      "title": "Agents working",
+      "description": "Active workers in the selected work. Zero means observed work has finished; missing history stays unavailable.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(count by (project_id, agent_id) (last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) <= 2))) or (0 * count(last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "stat",
+      "title": "Completed tasks",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3) or (0 * count(last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "type": "stat",
+      "title": "Stopped or failed",
+      "description": "Stopped, failed or disconnected tasks in the selected history. These are outcomes, not necessarily unresolved problems.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count((last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 4) or (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 5) or (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 6)) or (0 * count(last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "type": "stat",
+      "title": "Tokens reported",
+      "description": "Sum of reported total usage. Missing usage is excluded and remains visible in the work table. This is not a billing estimate.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 130,
+      "type": "timeseries",
+      "title": "Observed agent activity",
+      "description": "Freshly observed agents whose task state is starting or running. Each point requires a sample within 20 seconds. Retired tasks and missing observations leave gaps. This is recorded activity, not model compute time; short bursts may be missed at coarse time ranges.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 16,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 2,
+            "fillOpacity": 16,
+            "gradientMode": "opacity",
+            "spanNulls": false,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "axisPlacement": "auto",
+            "axisLabel": "Agents",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(count by (project_id, agent_id) (max by (project_id, dispatch_id, agent_id) (last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[20s])) and on (project_id, dispatch_id) (max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[20s])) <= 2))) or (0 * count(max by (project_id, dispatch_id, agent_id) (last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[20s]))))",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "Observed working agents",
+          "interval": "5s"
+        }
+      ],
+      "maxDataPoints": 8000,
+      "interval": "5s"
+    },
+    {
+      "id": 131,
+      "type": "piechart",
+      "title": "Task outcomes",
+      "description": "One outcome per observed task run. Stopped / failed includes interruptions, failures and lost control. In progress counts task runs, whereas the agent card deduplicates workers. Unknown remains a separate category. Only outcomes present in the selected history are shown.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 5,
+        "w": 8,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "noValue": "Not reported",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Stopped / failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "In progress"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unknown"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "gray"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])) == 3) or (0 * count(max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))))) > 0",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Completed"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])) == 4) or (max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])) == 5) or (max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])) == 6)) or (0 * count(max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))))) > 0",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Stopped / failed"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])) <= 2) or (0 * count(max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))))) > 0",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "In progress"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])) == 7) or (0 * count(max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))))) > 0",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Unknown"
+        }
+      ]
+    },
+    {
+      "id": 151,
+      "type": "row",
+      "title": "Work and outcomes",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 110,
+      "type": "table",
+      "title": "Work and results",
+      "description": "One row per task run. Names are supplied by the task launcher. Model and effort are the selected settings. Click a task to focus the dashboard; expand Technical details for identity and accounting evidence.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Task"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$",
+                      "result": {
+                        "text": "Task name not provided"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 210
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Focus on this task",
+                    "url": "/d/cwo-supervisor-observability-v1?${project:queryparam}&var-dispatch=${__value.raw}&from=${__from}&to=${__to}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Worker"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$",
+                      "result": {
+                        "text": "Worker name not provided"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Starting",
+                        "color": "blue"
+                      },
+                      "1": {
+                        "text": "Starting",
+                        "color": "blue"
+                      },
+                      "2": {
+                        "text": "Working",
+                        "color": "blue"
+                      },
+                      "3": {
+                        "text": "Completed",
+                        "color": "green"
+                      },
+                      "4": {
+                        "text": "Failed",
+                        "color": "red"
+                      },
+                      "5": {
+                        "text": "Stopped",
+                        "color": "orange"
+                      },
+                      "6": {
+                        "text": "Connection lost",
+                        "color": "red"
+                      },
+                      "7": {
+                        "text": "Unknown",
+                        "color": "gray"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "gpt-5.6-sol": {
+                        "text": "GPT-5.6 Sol"
+                      },
+                      "gpt-6-astra": {
+                        "text": "GPT-6 Astra"
+                      },
+                      "gpt-5.6-terra": {
+                        "text": "GPT-5.6 Terra"
+                      },
+                      "gpt-5.6-luna": {
+                        "text": "GPT-5.6 Luna"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 135
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Effort"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "minimal": {
+                        "text": "Minimal"
+                      },
+                      "low": {
+                        "text": "Low"
+                      },
+                      "medium": {
+                        "text": "Medium"
+                      },
+                      "high": {
+                        "text": "High"
+                      },
+                      "xhigh": {
+                        "text": "Extra high"
+                      },
+                      "max": {
+                        "text": "Maximum"
+                      },
+                      "ultra": {
+                        "text": "Ultra"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 105
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Elapsed"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Responses"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 105
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (dispatch_id, worker, requested_model, requested_effort) (label_replace(last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]), \"worker\", \"$1\", \"dispatch_id\", \"(.+)\"))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_elapsed_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"dispatch_elapsed\"}[$__range]) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_completed_cycles_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (dispatch_id) ((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "dispatch_id",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "dispatch_id",
+                "worker",
+                "requested_model",
+                "requested_effort",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #E"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "dispatch_id": 0,
+              "Value #B": 1,
+              "Value #C": 2,
+              "Value #E": 3,
+              "requested_model": 4,
+              "requested_effort": 5,
+              "worker": 6,
+              "Value #D": 7
+            },
+            "renameByName": {
+              "dispatch_id": "Task",
+              "worker": "Worker",
+              "Value #B": "Status",
+              "requested_model": "Model",
+              "requested_effort": "Effort",
+              "Value #C": "Elapsed",
+              "Value #D": "Responses",
+              "Value #E": "Tokens"
+            }
+          }
+        }
+      ],
+      "options": {
+        "cellHeight": "md",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Status",
+            "desc": false
+          }
+        ],
+        "footer": {
+          "show": false
+        },
+        "enablePagination": true
+      }
+    },
+    {
+      "id": 152,
+      "type": "row",
+      "title": "Tokens and time",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 160,
+      "type": "stat",
+      "title": "Input tokens reported",
+      "description": "Sum of reported input token usage for the selected tasks. Partial values are included and missing values excluded; these are reported contributions, not a complete-usage guarantee. Cached input and reasoning output are subsets, not additional totals.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 8,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"input\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"input\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"input\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"input\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Input tokens reported"
+        }
+      ]
+    },
+    {
+      "id": 161,
+      "type": "stat",
+      "title": "Output tokens reported",
+      "description": "Sum of reported output token usage for the selected tasks. Partial values are included and missing values excluded; these are reported contributions, not a complete-usage guarantee. Cached input and reasoning output are subsets, not additional totals.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 23,
+        "w": 8,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"output\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"output\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"output\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"output\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Output tokens reported"
+        }
+      ]
+    },
+    {
+      "id": 162,
+      "type": "stat",
+      "title": "Completed model responses",
+      "description": "Observed completed model responses, including responses in tasks that later stopped or failed. This is not the number of upstream requests or retry attempts. Accounting conflicts are excluded. After a known source gap, this can be a lower bound.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 23,
+        "w": 8,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 62
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_completed_cycles_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Completed model responses"
+        }
+      ]
+    },
+    {
+      "id": 111,
+      "type": "bargauge",
+      "title": "Where tokens went",
+      "description": "Reported token usage by task. Tasks without usage are excluded from this comparison and marked Not reported in the work table.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 1,
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Task name not provided"
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (dispatch_id) ((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "dispatch_id",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "dispatch_id": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "dispatch_id": "Task",
+              "Value": "Tokens"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Tokens",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Task",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Tokens",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "namePlacement": "top",
+        "valueMode": "text",
+        "showUnfilled": false,
+        "sizing": "manual",
+        "minVizHeight": 24,
+        "maxVizHeight": 60,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 18
+        },
+        "legend": {
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "id": 112,
+      "type": "bargauge",
+      "title": "Time spent by task",
+      "description": "Elapsed task time from the controller clock. This is wall time, not model compute time or an estimate of time remaining.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 27,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "unit": "s",
+          "decimals": 1,
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Task name not provided"
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_elapsed_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"dispatch_elapsed\"}[$__range]) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "dispatch_id",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "dispatch_id": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "dispatch_id": "Task",
+              "Value": "Elapsed"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Elapsed",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Task",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Elapsed",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "namePlacement": "top",
+        "valueMode": "text",
+        "showUnfilled": false,
+        "sizing": "manual",
+        "minVizHeight": 24,
+        "maxVizHeight": 60,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 18
+        },
+        "legend": {
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "id": 120,
+      "type": "text",
+      "title": "",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 18,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "transparent": true,
+      "options": {
+        "mode": "markdown",
+        "content": "**Coverage:** CWO-monitored runs only; other Codex sessions are not included.\n\nModel and effort are selected settings. Missing usage stays missing. Elapsed is wall time, not an ETA."
+      }
+    },
+    {
+      "id": 121,
+      "type": "stat",
+      "title": "Telemetry freshness",
+      "description": "Live scrape freshness and ledger health. Finished tasks do not need an active model connection.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 35,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not connected",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Up to date",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "Check collector",
+                  "color": "red"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "min(last_over_time(cwo_telemetry_component_state{project_id=~\"$project\",component=\"ledger\",state=\"healthy\"}[$__range])) and on () ((time() - max(timestamp(cwo_telemetry_component_state{project_id=~\"$project\",component=\"ledger\",state=\"healthy\"}))) < 20)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "text": {
+          "valueSize": 24
+        }
+      }
+    },
+    {
+      "id": 90,
+      "type": "row",
+      "title": "Technical details · identities, coverage and accounting",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "Active distinct agents",
+          "description": "Distinct agent instances whose latest selected-range lifecycle state is submitted, acknowledged, or running. Shows zero when all observed agents are terminal; no agent history remains unavailable.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 0,
+            "y": 40
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "count(count by (project_id, agent_id) (last_over_time(cwo_agent_state{project_id=~\"$project\"}[$__range]) <= 2)) or (0 * count(last_over_time(cwo_agent_state{project_id=~\"$project\"}[$__range])))",
+              "instant": true,
+              "legendFormat": "active agents",
+              "range": false,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Terminal dispatches in selected range",
+          "description": "Dispatch identities whose latest selected-range state is terminal. This is dispatch history, not an agent count.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 6,
+            "y": 40
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "count(last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) >= 3)",
+              "instant": true,
+              "legendFormat": "terminal dispatches",
+              "range": false,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Publication backlog",
+          "description": "Terminal dispatches still awaiting exact-series publication confirmation.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 12,
+            "y": 40
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum(last_over_time(cwo_telemetry_publication_pending_dispatches{project_id=~\"$project\"}[$__range]))",
+              "instant": true,
+              "legendFormat": "pending dispatches",
+              "range": false,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Collector freshness",
+          "description": "Seconds since the latest accepted local telemetry event. This is observation freshness, not provider latency.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 18,
+            "y": 40
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "time() - max(last_over_time(cwo_telemetry_last_event_timestamp_seconds{project_id=~\"$project\"}[$__range]))",
+              "instant": true,
+              "legendFormat": "freshness",
+              "range": false,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "table",
+          "title": "Requested dispatch configuration",
+          "description": "Immutable request metadata. Requested configuration is not per-response attribution.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 45
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable"
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "request",
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "table",
+          "title": "Acknowledged configured model and effort",
+          "description": "Configured model and effort remain independent observations. Neither identifies what served an individual response.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 45
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable"
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_configured_model_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"configured_model\"}[$__range]) == 1)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "configured model",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_configured_effort_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"configured_effort\"}[$__range]) == 1)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "configured effort",
+              "range": false,
+              "refId": "B"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "type": "table",
+          "title": "Completed cycles and coverage",
+          "description": "Observed unique completions remain visible with their latest coverage state. Accounting conflicts suppress the numeric total.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 53
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "short"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Coverage state"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {
+                            "text": "Unknown"
+                          },
+                          "1": {
+                            "text": "Observed stream; no known gap"
+                          },
+                          "2": {
+                            "text": "Known gap"
+                          },
+                          "3": {
+                            "text": "Accounting conflict"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_completed_cycles_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Completed cycles",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Coverage state",
+              "range": false,
+              "refId": "B"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "type": "table",
+          "title": "Observed token totals with provenance",
+          "description": "Only present, runtime-normalized, or partial latest values render. State 2 means upstream presence is unknown for optional subsets, including nonzero values. Coverage conflict suppresses numeric totals.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 53
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "short"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Token state"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {
+                            "text": "Unavailable"
+                          },
+                          "1": {
+                            "text": "Runtime value"
+                          },
+                          "2": {
+                            "text": "Runtime-normalized; upstream presence unknown"
+                          },
+                          "3": {
+                            "text": "Invalid"
+                          },
+                          "4": {
+                            "text": "Partial present values"
+                          },
+                          "5": {
+                            "text": "Unqualified"
+                          },
+                          "6": {
+                            "text": "Clock gap"
+                          },
+                          "7": {
+                            "text": "Export overflow"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Coverage state"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {
+                            "text": "Unknown"
+                          },
+                          "1": {
+                            "text": "Observed stream; no known gap"
+                          },
+                          "2": {
+                            "text": "Known gap"
+                          },
+                          "3": {
+                            "text": "Accounting conflict"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "(last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Tokens",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Token state",
+              "range": false,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Coverage state",
+              "range": false,
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_token_cycles{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Covered cycles",
+              "range": false,
+              "refId": "D"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "type": "table",
+          "title": "Cycle detail and observed order",
+          "description": "Cycle ordinal is first accepted bound observation order. Timestamp is local observation time, not response duration or provider compute time.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 24,
+            "x": 0,
+            "y": 61
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable"
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_cycle_present{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Cycle present",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_cycle_observed_timestamp_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Observed timestamp",
+              "range": false,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "(last_over_time(cwo_cycle_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id, cycle_ordinal, token_kind) ((last_over_time(cwo_cycle_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 1) or (last_over_time(cwo_cycle_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 2))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Cycle tokens",
+              "range": false,
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_cycle_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Cycle token state",
+              "range": false,
+              "refId": "D"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "type": "table",
+          "title": "Cycle allowance and enforced tool ceiling",
+          "description": "Declared completed-cycle allowance and derived use are display-only. The enforced tool-call ceiling is a separate authoritative unit.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 0,
+            "y": 70
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_declared_cycle_allowance{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"declared_cycle_allowance\"}[$__range]) == 1)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Declared cycles",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_declared_cycle_remaining{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"declared_cycle_allowance\"}[$__range]) == 1) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 1)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Remaining cycles",
+              "range": false,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_declared_cycle_overrun{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"declared_cycle_allowance\"}[$__range]) == 1) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 1)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Exact cycle overrun",
+              "range": false,
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_enforced_tool_call_limit{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Enforced tool calls",
+              "range": false,
+              "refId": "D"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Coverage state",
+              "range": false,
+              "refId": "E"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "type": "table",
+          "title": "Elapsed allowance and enforced runtime ceiling",
+          "description": "Elapsed values require qualified supervisor timing. Declared elapsed allowance and enforced runtime ceiling remain separate.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 12,
+            "y": 70
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_elapsed_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"dispatch_elapsed\"}[$__range]) == 1)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Elapsed",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_declared_elapsed_allowance_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"declared_elapsed_allowance\"}[$__range]) == 1)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Declared elapsed",
+              "range": false,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_declared_elapsed_remaining_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"declared_elapsed_allowance\"}[$__range]) == 1) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"dispatch_elapsed\"}[$__range]) == 1)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Remaining elapsed",
+              "range": false,
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_declared_elapsed_overrun_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"declared_elapsed_allowance\"}[$__range]) == 1) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"dispatch_elapsed\"}[$__range]) == 1)",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Elapsed overrun",
+              "range": false,
+              "refId": "D"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_enforced_runtime_limit_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Enforced runtime",
+              "range": false,
+              "refId": "E"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "table",
+          "title": "Dispatch state and field availability",
+          "description": "Latest lifecycle, coverage, and field-state codes make unavailable, partial, unqualified, clock-gap, and overflow values explicit.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 24,
+            "x": 0,
+            "y": 79
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable"
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Lifecycle state",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Coverage state",
+              "range": false,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Field state",
+              "range": false,
+              "refId": "C"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "type": "table",
+          "title": "Observed outcomes and bounded tool activity",
+          "description": "Retry notices and turn outcomes are observations, not exact request attempts. Tool categories have no response association.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 0,
+            "y": 88
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_retry_notices_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Retry notices",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_turn_outcomes_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Turn outcome",
+              "range": false,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_dispatch_tool_events_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Tool events",
+              "range": false,
+              "refId": "C"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "type": "table",
+          "title": "Telemetry components and publication state",
+          "description": "Each component exposes one active bounded state. Publication health is independent of collection and dispatch coverage.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 12,
+            "y": 88
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable"
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_telemetry_component_state{project_id=~\"$project\"}[$__range]) == 1",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Active component state",
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_telemetry_publication_state{project_id=~\"$project\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Publication state",
+              "range": false,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_telemetry_queue_depth{project_id=~\"$project\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Queue depth",
+              "range": false,
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_telemetry_ledger_bytes{project_id=~\"$project\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "Ledger bytes",
+              "range": false,
+              "refId": "D"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "type": "table",
+          "title": "Telemetry event dispositions",
+          "description": "Collector event dispositions. These counters are not provider request counts.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 97
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(cwo_telemetry_events_total{project_id=~\"$project\"}[$__range])",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "{{disposition}}",
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": [
+    "cwo",
+    "supervisor",
+    "observability"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(cwo_telemetry_component_state, project_id)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "Project",
+        "multi": true,
+        "name": "project",
+        "options": [],
+        "query": {
+          "query": "label_values(cwo_telemetry_component_state, project_id)",
+          "refId": "PrometheusVariableQueryEditor-Project"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(cwo_dispatch_info{project_id=~\"$project\"}, dispatch_id)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "Task",
+        "multi": true,
+        "name": "dispatch",
+        "options": [],
+        "query": {
+          "query": "label_values(cwo_dispatch_info{project_id=~\"$project\"}, dispatch_id)",
+          "refId": "PrometheusVariableQueryEditor-Dispatch"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "24h",
+      "7d",
+      "30d",
+      "90d",
+      "1y"
+    ]
+  },
+  "timezone": "browser",
+  "title": "CWO · Work overview",
+  "uid": "cwo-supervisor-observability-v1",
+  "version": 3,
+  "weekStart": ""
+}

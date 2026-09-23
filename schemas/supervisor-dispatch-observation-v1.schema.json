@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Supervisor Dispatch Observation v1",
+  "description": "Normalized dispatch metadata from an independently authenticated controller receipt. Schema validation does not authenticate that receipt.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "not": {"const": "00000000-0000-0000-0000-000000000000"}
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "alias": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "boundedLabel": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+/-]{0,127}$"},
+    "nullableBoundedLabel": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+/-]{0,127}$"},
+    "nullableInteger": {"type": ["integer", "null"], "minimum": 0},
+    "nullableNumber": {"type": ["number", "null"], "minimum": 0}
+  },
+  "required": [
+    "record_type",
+    "project_id",
+    "dispatch_id",
+    "agent_id",
+    "packet_ref",
+    "packet_sha256",
+    "supervisor_submission_ref",
+    "requested_executor",
+    "requested_model",
+    "requested_effort",
+    "declared_cycle_allowance",
+    "declared_elapsed_allowance_seconds",
+    "enforced_tool_call_limit",
+    "enforced_runtime_limit_seconds",
+    "lifecycle_state",
+    "timing",
+    "coverage_state"
+  ],
+  "properties": {
+    "record_type": {"const": "dispatch_observation.v1"},
+    "project_id": {"$ref": "#/$defs/uuid"},
+    "dispatch_id": {"$ref": "#/$defs/uuid"},
+    "agent_id": {"$ref": "#/$defs/uuid"},
+    "packet_ref": {"$ref": "#/$defs/alias"},
+    "packet_sha256": {"$ref": "#/$defs/sha256"},
+    "supervisor_submission_ref": {"$ref": "#/$defs/alias"},
+    "requested_executor": {"$ref": "#/$defs/boundedLabel"},
+    "requested_model": {"$ref": "#/$defs/nullableBoundedLabel"},
+    "requested_effort": {"$ref": "#/$defs/nullableBoundedLabel"},
+    "declared_cycle_allowance": {"$ref": "#/$defs/nullableInteger"},
+    "declared_elapsed_allowance_seconds": {"$ref": "#/$defs/nullableNumber"},
+    "enforced_tool_call_limit": {"$ref": "#/$defs/nullableInteger"},
+    "enforced_runtime_limit_seconds": {"$ref": "#/$defs/nullableNumber"},
+    "lifecycle_state": {
+      "enum": ["submitted", "acknowledged", "running", "completed", "failed", "interrupted", "control-lost", "unknown"]
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "clock_source",
+        "clock_epoch_id",
+        "provenance",
+        "submitted_seconds",
+        "acknowledged_seconds",
+        "running_seconds",
+        "terminal_seconds",
+        "elapsed_seconds",
+        "elapsed_state"
+      ],
+      "properties": {
+        "clock_source": {"const": "supervisor-monotonic"},
+        "clock_epoch_id": {"anyOf": [{"$ref": "#/$defs/uuid"}, {"type": "null"}]},
+        "provenance": {"const": "supervisor-lifecycle-receipt"},
+        "submitted_seconds": {"$ref": "#/$defs/nullableNumber"},
+        "acknowledged_seconds": {"$ref": "#/$defs/nullableNumber"},
+        "running_seconds": {"$ref": "#/$defs/nullableNumber"},
+        "terminal_seconds": {"$ref": "#/$defs/nullableNumber"},
+        "elapsed_seconds": {"$ref": "#/$defs/nullableNumber"},
+        "elapsed_state": {"type": "integer", "minimum": 0, "maximum": 7}
+      }
+    },
+    "coverage_state": {"type": "integer", "minimum": 0, "maximum": 3}
+  }
+}

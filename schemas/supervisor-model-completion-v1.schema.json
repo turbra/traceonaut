@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Supervisor Model Completion v1",
+  "description": "Normalized bound completion. Cross-field token relationships and export overflow are enforced by traceonaut.observability_contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "not": {"const": "00000000-0000-0000-0000-000000000000"}
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableNumber": {"type": ["number", "null"], "minimum": 0},
+    "tokenEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "state", "provenance"],
+      "properties": {
+        "value": {"type": ["integer", "null"], "minimum": 0},
+        "state": {"type": "integer", "minimum": 0, "maximum": 7},
+        "provenance": {
+          "enum": [
+            "unavailable",
+            "runtime-reported",
+            "runtime-normalized-upstream-presence-unknown",
+            "invalid"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "record_type",
+    "binding_id",
+    "project_id",
+    "dispatch_id",
+    "thread_fingerprint",
+    "turn_fingerprint",
+    "response_fingerprint",
+    "cycle_ordinal",
+    "usage",
+    "purpose",
+    "source_compatibility_sha256",
+    "observed_at_seconds",
+    "runtime_emitted_at_seconds"
+  ],
+  "properties": {
+    "record_type": {"const": "model_completion.v1"},
+    "binding_id": {"$ref": "#/$defs/uuid"},
+    "project_id": {"$ref": "#/$defs/uuid"},
+    "dispatch_id": {"$ref": "#/$defs/uuid"},
+    "thread_fingerprint": {"$ref": "#/$defs/sha256"},
+    "turn_fingerprint": {"$ref": "#/$defs/sha256"},
+    "response_fingerprint": {"$ref": "#/$defs/sha256"},
+    "cycle_ordinal": {"type": "integer", "minimum": 1},
+    "usage": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input", "cached_input", "cache_write_input", "output", "reasoning_output", "total"],
+          "properties": {
+            "input": {"$ref": "#/$defs/tokenEntry"},
+            "cached_input": {"$ref": "#/$defs/tokenEntry"},
+            "cache_write_input": {"$ref": "#/$defs/tokenEntry"},
+            "output": {"$ref": "#/$defs/tokenEntry"},
+            "reasoning_output": {"$ref": "#/$defs/tokenEntry"},
+            "total": {"$ref": "#/$defs/tokenEntry"}
+          }
+        }
+      ]
+    },
+    "purpose": {"enum": ["unknown", "model-response", "manual-compaction", "automatic-compaction", "auxiliary"]},
+    "source_compatibility_sha256": {"$ref": "#/$defs/sha256"},
+    "observed_at_seconds": {"type": "number", "minimum": 0},
+    "runtime_emitted_at_seconds": {"$ref": "#/$defs/nullableNumber"}
+  }
+}

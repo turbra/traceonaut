@@ -15,7 +15,7 @@ from render_codex_unified_dashboard import (  # noqa: E402
 )
 from render_codex_sessions_dashboard import walk_panels  # noqa: E402
 
-TEMPLATE = ROOT / 'examples/observability/grafana-codex-unified-dashboard.json'
+TEMPLATE = ROOT / 'examples/observability/codex-unified-overview.json'
 
 
 class UnifiedDashboardTests(unittest.TestCase):

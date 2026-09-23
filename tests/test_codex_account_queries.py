@@ -23,7 +23,7 @@ from traceonaut.observability_exporter import MetricsEndpoint, PrometheusQueryCl
 class AccountPanelContractTests(unittest.TestCase):
     def test_stable_and_beta_share_account_scope_and_missing_data_handling(self) -> None:
         contracts = []
-        for name in ("grafana-sessions-dashboard.json", "grafana-codex-beta-dashboard.json"):
+        for name in ("codex-all-sessions.json", "codex-work-overview-beta.json"):
             dashboard = json.loads(
                 (ROOT / "examples" / "observability" / name).read_text(encoding="utf-8")
             )
@@ -126,7 +126,7 @@ class AccountQueryIntegrationTests(unittest.TestCase):
             raise AssertionError("temporary Prometheus did not scrape both fixtures")
 
         dashboard = json.loads(
-            (ROOT / "examples/observability/grafana-codex-beta-dashboard.json").read_text(
+            (ROOT / "examples/observability/codex-work-overview-beta.json").read_text(
                 encoding="utf-8"
             )
         )

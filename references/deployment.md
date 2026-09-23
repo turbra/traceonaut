@@ -127,7 +127,7 @@ Use the same data directory if you changed it above:
 ```bash
 export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 python3 scripts/render_codex_beta_dashboard.py \
-  --template examples/observability/grafana-codex-beta-dashboard.json \
+  --template examples/observability/codex-work-overview-beta.json \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
   --output "$TRACEONAUT_DATA_DIR/beta.json"
 ```
@@ -148,5 +148,5 @@ stored Prometheus history are not deleted.
 
 Other views: [Unified](codex-unified-dashboard.md#add-unified) or
 [Stable](codex-all-sessions-observability.md#add-the-stable-dashboard).
-Observed CWO jobs use a [separate optional dashboard](cwo-integration.md#add-the-cwo-dashboard).
+Observed CWO jobs use a [separate optional dashboard](cwo-dashboard.md).
 For services, upgrades, or problems, see [Operations](operations.md).

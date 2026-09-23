@@ -105,7 +105,7 @@ TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 TRACEONAUT_DASHBOARD_DIR="$TRACEONAUT_DATA_DIR/dashboards"
 install -d -m 700 "$TRACEONAUT_DASHBOARD_DIR"
 python3 scripts/render_codex_beta_dashboard.py \
-  --template examples/observability/grafana-codex-beta-dashboard.json \
+  --template examples/observability/codex-work-overview-beta.json \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
   --datasource-uid "replace-with-existing-prometheus-uid" \
   --output "$TRACEONAUT_DASHBOARD_DIR/beta.json" --watch-seconds 2

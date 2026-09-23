@@ -22,7 +22,7 @@ def encoded(value):
 
 class RenderCacheTests(unittest.TestCase):
     def test_complete_real_dashboard_matches_uncached_and_hit_skips_render(self):
-        draft = json.loads((ROOT / "examples/observability/grafana-codex-beta-dashboard.json").read_text())
+        draft = json.loads((ROOT / "examples/observability/codex-work-overview-beta.json").read_text())
         source = snapshot()
         aliases = {"version": 1, "sessions": {"parent": "Named work"}}
         expected = encoded(beta.render_dashboard(draft, source, "prometheus", aliases))

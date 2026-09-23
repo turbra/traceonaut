@@ -12,13 +12,13 @@ test('renders only explicit public documents, directly from source', () => {
   assert.equal(docs.path, '..');
   assert.equal(path.isAbsolute(docs.sidebarPath), false);
   assert.equal(path.isAbsolute(config.presets[0][1].theme.customCss), false);
-  assert.equal(docs.include.length, 8);
+  assert.equal(docs.include.length, 9);
   assert.equal(new Set(docs.include).size, docs.include.length);
   for (const file of docs.include) {
     assert.match(file, /^(references\/[a-z-]+\.md|website\/docs\/home\.mdx)$/);
     assert(fs.lstatSync(path.join(root, file)).isFile());
   }
-  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 7);
+  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 8);
 });
 
 test('sidebar document IDs resolve to the same authoritative files', () => {
@@ -47,6 +47,19 @@ test('Pages routes are unique and broken links fail the build', () => {
   assert.equal(new Set(routes).size, routes.length);
   assert(routes.includes('/'));
   assert(routes.includes('/getting-started'));
+  assert(routes.includes('/dashboards/cwo'));
+});
+
+test('CWO dashboard has direct user-facing navigation', () => {
+  const dashboards = sidebars.docs.find(item => item.type === 'category' && item.label === 'Dashboards');
+  assert(dashboards.items.some(item => item.id === 'references/cwo-dashboard'));
+  const home = fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8');
+  assert.match(home, /className="traceonaut-card" to="\/dashboards\/cwo\/"/);
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  assert.match(readme, /href="https:\/\/turbra\.github\.io\/traceonaut\/dashboards\/cwo\/">CWO Dashboard<\/a>/);
+  assert.doesNotMatch(readme, />Website<\/a>/);
+  assert(config.themeConfig.navbar.items.some(item => item.to === '/dashboards/cwo/'));
+  assert(config.themeConfig.footer.links[0].items.some(item => item.to === '/dashboards/cwo/'));
 });
 
 test('committed banner is the site title and share image', () => {

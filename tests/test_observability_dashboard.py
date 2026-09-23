@@ -14,7 +14,7 @@ from traceonaut.observability_contract import METRIC_FAMILIES  # noqa: E402
 from render_observability_dashboard import walk_panels  # noqa: E402
 
 
-DASHBOARD_PATH = ROOT / "examples" / "observability" / "grafana-dashboard.json"
+DASHBOARD_PATH = ROOT / "examples" / "observability" / "cwo-observed-dispatches.json"
 SCRAPE_PATH = ROOT / "examples" / "observability" / "prometheus-scrape.yaml"
 
 
@@ -39,9 +39,9 @@ class ObservabilityDashboardTests(unittest.TestCase):
         self.assertIn("Observed CWO app-server dispatches only", self.dashboard["description"])
         self.assertEqual(self.dashboard["time"], {"from": "now-30d", "to": "now"})
         for other in (
-            "grafana-sessions-dashboard.json",
-            "grafana-codex-beta-dashboard.json",
-            "grafana-codex-unified-dashboard.json",
+            "codex-all-sessions.json",
+            "codex-work-overview-beta.json",
+            "codex-unified-overview.json",
         ):
             session = json.loads((DASHBOARD_PATH.parent / other).read_text())
             self.assertNotEqual(self.dashboard["uid"], session["uid"])

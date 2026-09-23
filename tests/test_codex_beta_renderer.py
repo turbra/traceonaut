@@ -61,7 +61,7 @@ def grafana_11_5_custom_options(query: str) -> list[tuple[str, str]]:
 
 class CodexBetaRendererTests(unittest.TestCase):
     def test_ranked_bars_have_friendly_labels_and_scoped_work_links(self):
-        draft = json.loads((ROOT / "examples/observability/grafana-codex-beta-dashboard.json").read_text())
+        draft = json.loads((ROOT / "examples/observability/codex-work-overview-beta.json").read_text())
         original = copy.deepcopy(draft)
         source = snapshot()
         source["sessions"][1]["prompt"] = "PRIVATE PROMPT MUST NOT LEAK"

@@ -27,7 +27,7 @@ from render_codex_sessions_dashboard import (  # noqa: E402
 )
 
 
-DASHBOARD_PATH = ROOT / "examples" / "observability" / "grafana-sessions-dashboard.json"
+DASHBOARD_PATH = ROOT / "examples" / "observability" / "codex-all-sessions.json"
 RENDERER_PATH = ROOT / "scripts" / "render_codex_sessions_dashboard.py"
 METRICS = {
     "cwo_codex_session_info",

@@ -14,10 +14,23 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from build_release import build_release
+from build_release import COMPONENTS, build_release
 
 
 class ReleaseBundleTests(unittest.TestCase):
+    def test_dashboard_assets_match_their_titles_and_release_components(self):
+        templates = {
+            "stable": ("codex-all-sessions.json", "Codex · All sessions"),
+            "beta": ("codex-work-overview-beta.json", "Codex · Work overview · Beta"),
+            "unified": ("codex-unified-overview.json", "Codex · Unified overview"),
+            "dispatch": ("cwo-observed-dispatches.json", "CWO · Observed dispatches"),
+        }
+        for component, (filename, title) in templates.items():
+            with self.subTest(component=component):
+                path = ROOT / "examples" / "observability" / filename
+                self.assertEqual(json.loads(path.read_text())["title"], title)
+                self.assertIn(f"examples/observability/{filename}", COMPONENTS[component])
+
     def test_beta_and_unified_render_nonempty_metadata_from_their_bundles(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -30,7 +43,11 @@ class ReleaseBundleTests(unittest.TestCase):
             snapshot.chmod(0o600)
             self.assertEqual(build_release("sessions", root / "releases"),
                              build_release("account", root / "releases"))
-            for component in ("beta", "unified"):
+            templates = {
+                "beta": "codex-work-overview-beta.json",
+                "unified": "codex-unified-overview.json",
+            }
+            for component, template_name in templates.items():
                 with self.subTest(component=component):
                     release = build_release(component, root / "releases")
                     output = root / f"{component}.json"
@@ -40,7 +57,7 @@ class ReleaseBundleTests(unittest.TestCase):
                         "sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name='__main__')",
                         str(release / "scripts"),
                         str(release / f"scripts/render_codex_{component}_dashboard.py"),
-                        "--template", str(release / f"examples/observability/grafana-codex-{component}-dashboard.json"),
+                        "--template", str(release / "examples" / "observability" / template_name),
                         "--snapshot-file", str(snapshot), "--datasource-uid", "synthetic-prometheus",
                         "--output", str(output),
                     ], cwd=root, capture_output=True, text=True, timeout=15)
@@ -94,7 +111,7 @@ class ReleaseBundleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             releases = Path(temporary)
             release = build_release("unified", releases)
-            template = release / "examples/observability/grafana-codex-unified-dashboard.json"
+            template = release / "examples/observability/codex-unified-overview.json"
             template.write_text("changed")
             with self.assertRaisesRegex(ValueError, "content changed"):
                 build_release("unified", releases)

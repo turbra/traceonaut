@@ -84,7 +84,7 @@ class CollectorHealthQueryTests(unittest.TestCase):
                         process.wait(timeout=5)
             cleanup.callback(stop)
             client = PrometheusQueryClient(f'http://127.0.0.1:{port}')
-            dashboard = json.loads((ROOT / 'examples/observability/grafana-codex-beta-dashboard.json').read_text())
+            dashboard = json.loads((ROOT / 'examples/observability/codex-work-overview-beta.json').read_text())
             panels = {p['id']: p for row in dashboard['panels'] for p in [row, *row.get('panels', [])]}
             def query(expression, at=None):
                 return client.query(expression, time.time() if at is None else at)

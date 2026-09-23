@@ -8,6 +8,7 @@ module.exports = {
         {type: 'doc', id: 'references/codex-beta-dashboard', label: 'Beta'},
         {type: 'doc', id: 'references/codex-unified-dashboard', label: 'Unified'},
         {type: 'link', label: 'Stable', href: '/data-and-limits/#add-the-stable-dashboard'},
+        {type: 'doc', id: 'references/cwo-dashboard', label: 'CWO observed dispatches'},
       ],
     },
     {type: 'doc', id: 'references/codex-all-sessions-observability', label: 'Data and Limits'},

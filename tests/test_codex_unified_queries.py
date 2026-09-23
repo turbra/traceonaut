@@ -22,8 +22,8 @@ from traceonaut.observability_exporter import MetricsEndpoint, PrometheusQueryCl
 
 
 OBSERVABILITY = ROOT / "examples" / "observability"
-UNIFIED = OBSERVABILITY / "grafana-codex-unified-dashboard.json"
-BETA = OBSERVABILITY / "grafana-codex-beta-dashboard.json"
+UNIFIED = OBSERVABILITY / "codex-unified-overview.json"
+BETA = OBSERVABILITY / "codex-work-overview-beta.json"
 
 
 def panels_by_id(dashboard: dict) -> dict[int, dict]:

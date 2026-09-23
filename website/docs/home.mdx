@@ -74,10 +74,14 @@ scraped, and reconnecting does not backfill missed samples.
 
 ## Explore
 
-<div className="traceonaut-cards">
+<div className="traceonaut-cards traceonaut-cards--explore">
   <Link className="traceonaut-card" to="/dashboards/beta/">
-    <strong>Dashboards</strong>
+    <strong>Codex dashboards</strong>
     <span>Start with Beta for session activity and health. Use Unified for sessions and agents in one view.</span>
+  </Link>
+  <Link className="traceonaut-card" to="/dashboards/cwo/">
+    <strong>CWO dashboard</strong>
+    <span>View observed CWO app-server dispatches, separate from Codex sessions.</span>
   </Link>
   <Link className="traceonaut-card" to="/data-and-limits/">
     <strong>Data and limits</strong>
@@ -101,5 +105,5 @@ Re-render and re-import to add new names, or use <Link to="/operations/#automati
 [Complex Work Orchestration (CWO)](https://github.com/gprocunier/complex-work-orchestration)
 is a Codex skill for planning complex tasks, coordinating coding agents, and
 tracking work across sessions. Traceonaut's <Link to="/integrations/cwo/">optional integration</Link>
-adds dispatch metrics and a separate dashboard for jobs launched by a CWO
-controller. **You do not need CWO for ordinary Codex session collection.**
+adds dispatch metrics for the <Link to="/dashboards/cwo/">separate CWO dashboard</Link>.
+**You do not need CWO for ordinary Codex session collection.**

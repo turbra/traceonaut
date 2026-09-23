@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_PATH = (
-    ROOT / "examples" / "observability" / "grafana-codex-beta-dashboard.json"
+    ROOT / "examples" / "observability" / "codex-work-overview-beta.json"
 )
 
 ALLOWED_METRICS = {

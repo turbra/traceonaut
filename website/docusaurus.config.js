@@ -28,6 +28,7 @@ const config = {
           'references/operations.md',
           'references/codex-beta-dashboard.md',
           'references/codex-unified-dashboard.md',
+          'references/cwo-dashboard.md',
           'references/codex-all-sessions-observability.md',
           'references/cwo-integration.md',
           'references/terminal-observation-export.md',
@@ -49,7 +50,8 @@ const config = {
       items: [
         {to: '/', label: 'Docs', position: 'left', activeBaseRegex: '^/traceonaut/$'},
         {to: '/getting-started/', label: 'Getting Started', position: 'left'},
-        {to: '/dashboards/beta/', label: 'Dashboards', position: 'left', activeBasePath: 'dashboards'},
+        {to: '/dashboards/beta/', label: 'Codex dashboards', position: 'left'},
+        {to: '/dashboards/cwo/', label: 'CWO dashboard', position: 'left'},
         {to: '/operations/', label: 'Operations', position: 'left'},
         {href: 'https://github.com/turbra/traceonaut', label: 'GitHub', position: 'right'},
       ],
@@ -60,6 +62,7 @@ const config = {
         {title: 'Docs', items: [
           {label: 'Getting Started', to: '/getting-started/'},
           {label: 'Dashboards', to: '/dashboards/beta/'},
+          {label: 'CWO dashboard', to: '/dashboards/cwo/'},
           {label: 'Data and Limits', to: '/data-and-limits/'},
         ]},
         {title: 'Project', items: [

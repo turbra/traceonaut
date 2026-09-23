@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PAGES = {
     "index.html", "404.html", "getting-started/index.html",
     "operations/index.html", "dashboards/beta/index.html",
+    "dashboards/cwo/index.html",
     "dashboards/unified/index.html", "data-and-limits/index.html",
     "integrations/cwo/index.html", "integrations/terminal-export/index.html",
 }

@@ -180,7 +180,7 @@ import file from the checkout root. Use your data directory if different:
 ```bash
 export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 python3 scripts/render_codex_sessions_dashboard.py \
-  --template examples/observability/grafana-sessions-dashboard.json \
+  --template examples/observability/codex-all-sessions.json \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
   --output "$TRACEONAUT_DATA_DIR/stable.json"
 ```
@@ -190,7 +190,7 @@ Re-render and re-import to refresh names, or use optional
 [automatic updates](operations.md#automatic-dashboard-name-updates).
 
 Stable uses UID `cwo-supervisor-observability-v1`. The optional
-[CWO dashboard](cwo-integration.md#add-the-cwo-dashboard) has its own UID and
+[CWO dashboard](cwo-dashboard.md) has its own UID and
 can be imported alongside Stable.
 
 [Account allowance](codex-beta-dashboard.md#account-allowance) is optional and

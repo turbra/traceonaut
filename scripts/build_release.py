@@ -20,26 +20,26 @@ COMPONENTS = {
     "account": ("scripts/collect_codex_sessions.py", "scripts/collect_codex_account.py"),
     "stable": (
         "scripts/render_codex_sessions_dashboard.py",
-        TEMPLATES + "grafana-sessions-dashboard.json",
+        TEMPLATES + "codex-all-sessions.json",
     ),
     "beta": (
         "scripts/render_codex_sessions_dashboard.py",
         "scripts/render_codex_beta_dashboard.py",
-        TEMPLATES + "grafana-codex-beta-dashboard.json",
+        TEMPLATES + "codex-work-overview-beta.json",
     ),
     "unified": (
         "scripts/render_codex_sessions_dashboard.py",
         "scripts/render_codex_beta_dashboard.py",
         "scripts/render_codex_unified_dashboard.py",
-        TEMPLATES + "grafana-codex-beta-dashboard.json",
-        TEMPLATES + "grafana-codex-unified-dashboard.json",
+        TEMPLATES + "codex-work-overview-beta.json",
+        TEMPLATES + "codex-unified-overview.json",
     ),
     "dispatch": (
         "scripts/run_observed_codex.py",
         "scripts/export_dispatch_observability.py",
         "scripts/export_terminal_observations.py",
         "scripts/render_observability_dashboard.py",
-        TEMPLATES + "grafana-dashboard.json",
+        TEMPLATES + "cwo-observed-dispatches.json",
     ),
 }
 

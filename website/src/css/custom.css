@@ -78,6 +78,8 @@
   margin: 1.25rem 0;
 }
 
+.traceonaut-cards--explore { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
 .traceonaut-card {
   border: 1px solid var(--ifm-toc-border-color);
   border-radius: 8px;

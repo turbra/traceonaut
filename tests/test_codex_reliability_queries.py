@@ -171,7 +171,7 @@ class CommandQueryIntegrationTests(unittest.TestCase):
         else:
             raise AssertionError("temporary Prometheus did not scrape fixture")
         cls.query_at = time.time()
-        dashboard = json.loads((ROOT / "examples/observability/grafana-codex-beta-dashboard.json").read_text())
+        dashboard = json.loads((ROOT / "examples/observability/codex-work-overview-beta.json").read_text())
         panels = dashboard["panels"] + [child for p in dashboard["panels"] for child in p.get("panels", [])]
         cls.panels = {p["title"]: p for p in panels if p.get("targets")}
         cls.panel_ids = {p["id"]: p for p in panels if p.get("targets")}

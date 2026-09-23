@@ -75,7 +75,7 @@ from the checkout root. Use your data directory if different:
 ```bash
 export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 python3 scripts/render_codex_unified_dashboard.py \
-  --template examples/observability/grafana-codex-unified-dashboard.json \
+  --template examples/observability/codex-unified-overview.json \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
   --output "$TRACEONAUT_DATA_DIR/unified.json"
 ```

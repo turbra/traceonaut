@@ -9,7 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://turbra.github.io/traceonaut/">Website</a> •
+  <a href="https://turbra.github.io/traceonaut/getting-started/">Setup Guide</a> •
+  <a href="https://turbra.github.io/traceonaut/dashboards/cwo/">CWO Dashboard</a> •
   <a href="#install">Install</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#documentation">Documentation</a> •
@@ -31,6 +32,9 @@ Codex files -> collector on your workstation -> Prometheus -> Grafana
 Prometheus pulls metrics; the collector does not push them. A separate renderer
 adds readable names to the dashboard JSON, not metric samples. No Codex telemetry
 changes, OpenTelemetry, node_exporter, or alerting services are required.
+
+Observed CWO jobs use a [separate CWO dashboard](references/cwo-dashboard.md).
+They are not part of ordinary Codex session metrics.
 
 ## Install
 
@@ -66,13 +70,13 @@ No release build, Grafana file provisioning, or extra monitoring service is need
 
 ## Documentation
 
-- [Project site](https://turbra.github.io/traceonaut/): setup, dashboards, data limits, and operations.
+- [Online setup and dashboard guides](https://turbra.github.io/traceonaut/): installation, dashboard use, data limits, and operations.
 - [Setup](references/deployment.md): workstation and server requirements, collection, scraping, and dashboard import.
 - [Operations](references/operations.md): services, automatic name updates, upgrades, and troubleshooting.
 - [Session collection](references/codex-all-sessions-observability.md): source formats, retention, and accounting limits.
 - [Beta dashboard](references/codex-beta-dashboard.md): session activity, command outcomes, and collector health.
 - [Unified dashboard](references/codex-unified-dashboard.md): sessions and agents in one view.
-- [CWO dashboard](references/cwo-integration.md#add-the-cwo-dashboard): optional observed app-server jobs, separate from session views.
+- [CWO dashboard](references/cwo-dashboard.md): optional observed app-server jobs, separate from session views.
 - [Account allowance](references/codex-beta-dashboard.md#account-allowance): optional account-wide collection.
 
 ## Commands at a Glance

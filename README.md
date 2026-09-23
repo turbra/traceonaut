@@ -1,4 +1,4 @@
-<h1 align="center">Traceonaut</h1>
+<h1 align="center"><img src="assets/traceonaut.png" alt="Traceonaut: Explore every run" width="840"></h1>
 
 <p align="center">
   <strong>Codex session metrics for your existing Prometheus and Grafana.</strong>

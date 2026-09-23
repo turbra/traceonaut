@@ -6,15 +6,15 @@ from check_build import PROJECT_ROOT, validate_build
 
 
 class BuildChecks(unittest.TestCase):
-    def check(self, html, extras=None):
+    def check(self, html, extras=None, public_assets=()):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "index.html").write_text(html)
             for name, content in (extras or {}).items():
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(content)
-            return validate_build(root, {"index.html"})
+                path.write_bytes(content if isinstance(content, bytes) else content.encode())
+            return validate_build(root, {"index.html"}, public_assets=public_assets)
 
     def test_project_links_assets_fragments_and_external_links(self):
         self.assertEqual(self.check(
@@ -25,6 +25,17 @@ class BuildChecks(unittest.TestCase):
 
     def test_missing_asset(self):
         self.assertIn("missing target", self.check('<img src="assets/missing.svg">')[0])
+
+    def test_declared_public_asset_matches_source(self):
+        image = (PROJECT_ROOT / "assets/traceonaut.png").read_bytes()
+        self.assertEqual(self.check('<img src="/traceonaut/traceonaut.png">',
+                                    {"traceonaut.png": image}, {"traceonaut.png"}), [])
+        self.assertIn("Missing public asset", self.check("", public_assets={"traceonaut.png"})[0])
+        self.assertIn("differs from source", self.check("", {"traceonaut.png": b"changed"},
+                                                        {"traceonaut.png"})[0])
+
+    def test_unlisted_root_asset_is_rejected(self):
+        self.assertIn("Unexpected artifact file", self.check("", {"other.png": b"image"})[0])
 
     def test_checks_asset_links_not_canonical_metadata(self):
         self.assertEqual(self.check('<link rel="canonical" href="/traceonaut/404.html/">'), [])

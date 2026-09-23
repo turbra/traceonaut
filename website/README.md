@@ -2,8 +2,10 @@
 
 The site follows [scrubctl's documentation design](https://turbra.github.io/scrubctl/):
 Docusaurus, a task-oriented sidebar, light/dark themes, and GitHub Actions publishing.
-Traceonaut uses a text title instead of scrubctl's logo and does not invent a demo
-or release downloads. Build dependencies are separate from the Python collector.
+Traceonaut uses its own image as a README banner, landing-page title, and site
+share image. The navbar remains text-only so it stays readable at small sizes.
+The site does not invent a demo or release downloads. Build dependencies are
+separate from the Python collector.
 The dependency overrides keep the build tools on patched serializer and UUID
 versions; retain them until upstream dependencies include those fixes.
 
@@ -12,6 +14,9 @@ versions; retain them until upstream dependencies include those fixes.
 - Edit the existing guides in [`references/`](../references). Docusaurus renders
   those files directly; their front matter sets the website routes.
 - Edit [`docs/home.mdx`](docs/home.mdx) for the landing page.
+- Replace [`../assets/traceonaut.png`](../assets/traceonaut.png) to update the
+  README, landing page, and site share image from one source. The artifact check
+  permits only declared public root assets and rejects others before upload.
 - Change [`sidebars.js`](sidebars.js) for navigation and
   [`src/css/custom.css`](src/css/custom.css) for styling.
 - The explicit document list in [`docusaurus.config.js`](docusaurus.config.js)
@@ -38,7 +43,7 @@ Check desktop/mobile navigation and light/dark themes before publishing.
 
 GitHub Pages must use **GitHub Actions** as its source. The
 [`pages` workflow](../.github/workflows/pages.yml) validates relevant pull requests
-without deploying them. Changes to the site, public guides, or badge on `main`
+without deploying them. Changes to the site, public guides, badge, or banner on `main`
 build and deploy `website/build/`. It can also be run manually on `main`.
 No custom domain, deployment key, or extra secret is required.
 

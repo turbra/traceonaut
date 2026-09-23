@@ -74,7 +74,8 @@ class DocumentationTests(unittest.TestCase):
 
     def test_readme_layout_and_apache_license(self):
         readme = (ROOT / "README.md").read_text()
-        self.assertIn('<h1 align="center">Traceonaut</h1>', readme)
+        self.assertIn('<h1 align="center"><img src="assets/traceonaut.png" '
+                      'alt="Traceonaut: Explore every run" width="840"></h1>', readme)
         self.assertIn('alt="License: Apache-2.0"', readme)
         badge = ElementTree.parse(ROOT / "assets/license-apache-2.0.svg").getroot()
         self.assertEqual(badge.find("{http://www.w3.org/2000/svg}title").text, "License: Apache-2.0")

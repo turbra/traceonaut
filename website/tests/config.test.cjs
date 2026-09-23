@@ -49,6 +49,15 @@ test('Pages routes are unique and broken links fail the build', () => {
   assert(routes.includes('/getting-started'));
 });
 
+test('committed banner is the site title and share image', () => {
+  assert.deepEqual(config.staticDirectories, ['static', '../assets']);
+  assert.equal(config.themeConfig.image, 'traceonaut.png');
+  const home = fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8');
+  assert.match(home, /^hide_title: true$/m);
+  assert.match(home, /<h1 className="traceonaut-hero">\s*<img src=\{useBaseUrl\('\/traceonaut\.png'\)\} alt="Traceonaut: Explore every run" \/>\s*<\/h1>/);
+  assert(fs.lstatSync(path.join(root, 'assets/traceonaut.png')).isFile());
+});
+
 test('source links go to GitHub while document links and code remain intact', () => {
   const tree = {children: [
     {type: 'link', url: '../scripts/traceonaut/observability_host.py'},
@@ -69,6 +78,7 @@ test('source links go to GitHub while document links and code remain intact', ()
 test('source changes trigger Pages and only build output is uploaded', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/pages.yml'), 'utf8');
   assert.equal((workflow.match(/'references\/\*\*'/g) || []).length, 2);
+  assert.equal((workflow.match(/'assets\/traceonaut\.png'/g) || []).length, 2);
   assert.match(workflow, /path: website\/build/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /if: github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/);

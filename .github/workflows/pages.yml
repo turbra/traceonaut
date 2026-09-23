@@ -7,12 +7,14 @@ on:
       - 'website/**'
       - 'references/**'
       - 'assets/license-apache-2.0.svg'
+      - 'assets/traceonaut.png'
       - '.github/workflows/pages.yml'
   pull_request:
     paths:
       - 'website/**'
       - 'references/**'
       - 'assets/license-apache-2.0.svg'
+      - 'assets/traceonaut.png'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 

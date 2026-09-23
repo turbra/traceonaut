@@ -13,6 +13,7 @@ PAGES = {
     "dashboards/unified/index.html", "data-and-limits/index.html",
     "integrations/cwo/index.html", "integrations/terminal-export/index.html",
 }
+PUBLIC_ASSETS = {"license-apache-2.0.svg", "traceonaut.png"}
 
 
 class Page(HTMLParser):
@@ -34,13 +35,18 @@ class Page(HTMLParser):
                 self.links.append(attrs[key])
 
 
-def validate_build(root, expected=PAGES):
+def validate_build(root, expected=PAGES, public_assets=()):
     root = Path(root)
     errors = []
     files = {p.relative_to(root).as_posix(): p for p in root.rglob("*") if p.is_file()}
     pages = {name: Page(path.read_text()) for name, path in files.items() if name.endswith(".html")}
     if set(pages) != expected:
         errors.append(f"Unexpected page set: missing={expected - set(pages)}, extra={set(pages) - expected}")
+    for name in public_assets:
+        if name not in files:
+            errors.append(f"Missing public asset: {name}")
+        elif files[name].read_bytes() != (PROJECT_ROOT / "assets" / name).read_bytes():
+            errors.append(f"Public asset differs from source: {name}")
     for name, path in files.items():
         if path.suffix in {".html", ".js", ".css", ".json", ".svg", ".xml"}:
             if str(PROJECT_ROOT) in path.read_text():
@@ -49,7 +55,7 @@ def validate_build(root, expected=PAGES):
         name = path.relative_to(root).as_posix()
         if path.is_symlink():
             errors.append(f"Symlink in artifact: {name}")
-        if path.is_file() and name not in expected | {"sitemap.xml", ".nojekyll"} and not name.startswith("assets/"):
+        if path.is_file() and name not in expected | set(public_assets) | {"sitemap.xml", ".nojekyll"} and not name.startswith("assets/"):
             errors.append(f"Unexpected artifact file: {name}")
     for name, page in pages.items():
         route = name.removesuffix("index.html")
@@ -72,7 +78,7 @@ def validate_build(root, expected=PAGES):
 
 
 if __name__ == "__main__":
-    errors = validate_build(Path(__file__).parent / "build")
+    errors = validate_build(Path(__file__).parent / "build", public_assets=PUBLIC_ASSETS)
     if errors:
         raise SystemExit("\n".join(errors))
-    print(f"Validated {len(PAGES)} HTML pages, project-base links, anchors and local assets.")
+    print(f"Validated {len(PAGES)} HTML pages, project-base links, anchors and declared public assets.")

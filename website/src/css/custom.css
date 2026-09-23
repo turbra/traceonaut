@@ -48,6 +48,9 @@
   padding-top: 1.4rem;
 }
 
+.traceonaut-hero { margin: 0 0 1.5rem; }
+.traceonaut-hero img { display: block; width: 100%; height: auto; border-radius: 8px; }
+
 .traceonaut-lead {
   font-size: 1.25rem;
   font-weight: 550;

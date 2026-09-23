@@ -10,6 +10,7 @@ const config = {
   trailingSlash: true,
   organizationName: 'turbra',
   projectName: 'traceonaut',
+  staticDirectories: ['static', '../assets'],
   onBrokenLinks: 'throw',
   onBrokenAnchors: 'throw',
   markdown: {
@@ -41,6 +42,7 @@ const config = {
     }],
   ],
   themeConfig: {
+    image: 'traceonaut.png',
     colorMode: {defaultMode: 'light', respectPrefersColorScheme: true},
     navbar: {
       title: 'Traceonaut',

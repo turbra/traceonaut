@@ -8,6 +8,9 @@ Beta shows local session activity, command outcomes, recorded usage, and
 collector health. Its UID is `cwo-codex-beta`. It uses the file-based collector
 and native Grafana panels, with no extra plugins.
 
+CWO app-server dispatches have a separate [CWO dashboard](cwo-integration.md#add-the-cwo-dashboard).
+They are not part of Beta's session counts.
+
 For installation, follow [Set up Traceonaut](deployment.md#3-import-a-dashboard-into-grafana).
 
 ## Choose work and time

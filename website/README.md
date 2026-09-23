@@ -1,30 +1,23 @@
-# Build the documentation site
+# Website development
 
-The site follows [scrubctl's documentation design](https://turbra.github.io/scrubctl/):
-Docusaurus, a task-oriented sidebar, light/dark themes, and GitHub Actions publishing.
-Traceonaut uses its own image as a README banner, landing-page title, and site
-share image. The navbar remains text-only so it stays readable at small sizes.
-The site does not invent a demo or release downloads. Build dependencies are
-separate from the Python collector.
-The dependency overrides keep the build tools on patched serializer and UUID
-versions; retain them until upstream dependencies include those fixes.
+The site publishes the landing page in `docs/home.mdx` and selected guides from
+[`references/`](../references). The public URL is <https://turbra.github.io/traceonaut/>.
 
-## Edit content
+## Edit
 
-- Edit the existing guides in [`references/`](../references). Docusaurus renders
-  those files directly; their front matter sets the website routes.
-- Edit [`docs/home.mdx`](docs/home.mdx) for the landing page.
-- Replace [`../assets/traceonaut.png`](../assets/traceonaut.png) to update the
-  README, landing page, and site share image from one source. The artifact check
-  permits only declared public root assets and rejects others before upload.
-- Change [`sidebars.js`](sidebars.js) for navigation and
+- Edit [`docs/home.mdx`](docs/home.mdx) for the landing page and
+  [`references/`](../references) for guides.
+- Add or remove public guides in the `include` list in
+  [`docusaurus.config.js`](docusaurus.config.js). Set each guide's route in its
+  front matter.
+- Edit [`sidebars.js`](sidebars.js) for navigation and
   [`src/css/custom.css`](src/css/custom.css) for styling.
-- The explicit document list in [`docusaurus.config.js`](docusaurus.config.js)
-  controls what gets published. Do not replace it with a repository-wide glob.
+- Replace [`../assets/traceonaut.png`](../assets/traceonaut.png) to update the
+  site image and root README banner.
 
-## Preview and validate
+## Validate locally
 
-Use Node.js 22 or newer and Python 3. From this directory:
+Requires Node.js 22 or newer and Python 3. From `website/`:
 
 ```bash
 npm ci --ignore-scripts
@@ -34,22 +27,17 @@ python3 check_build.py
 npm run serve
 ```
 
-Open `http://127.0.0.1:3000/traceonaut/`. The preview listens on loopback only.
-For live editing, use `npm start`. The build fails on broken document links or
-anchors; `check_build.py` also checks the emitted pages, local assets, and routes.
-Check desktop/mobile navigation and light/dark themes before publishing.
+Open <http://127.0.0.1:3000/traceonaut/>. Use `npm start` for live editing.
+The build checks links and anchors; `check_build.py` checks the generated pages,
+routes, and assets. Check desktop and mobile navigation before publishing.
 
 ## Publish
 
-GitHub Pages must use **GitHub Actions** as its source. The
-[`pages` workflow](../.github/workflows/pages.yml) validates relevant pull requests
-without deploying them. Changes to the site, public guides, badge, or banner on `main`
-build and deploy `website/build/`. It can also be run manually on `main`.
-No custom domain, deployment key, or extra secret is required.
+Set the repository's GitHub Pages source to **GitHub Actions**. The
+[`pages` workflow](../.github/workflows/pages.yml) validates relevant pull
+requests and deploys site changes from `main`. It can also be run manually on
+`main`.
 
-The public URL is <https://turbra.github.io/traceonaut/>. Build output, dependencies,
-local session data, and private work records are not source files and must not be
-committed. The site does not contain live metrics, analytics, or dashboard exports.
-
-To roll back, revert the site change on `main` and let the workflow republish the
-previous source. This does not change any collector or Grafana deployment.
+Do not commit generated `build/`, `node_modules/`, session data, or private records.
+To roll back a published site change, revert its source change on `main` and let
+the workflow republish it.

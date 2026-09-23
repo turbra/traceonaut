@@ -72,8 +72,8 @@ No release build, Grafana file provisioning, or extra monitoring service is need
 - [Session collection](references/codex-all-sessions-observability.md): source formats, retention, and accounting limits.
 - [Beta dashboard](references/codex-beta-dashboard.md): session activity, command outcomes, and collector health.
 - [Unified dashboard](references/codex-unified-dashboard.md): sessions and agents in one view.
+- [CWO dashboard](references/cwo-integration.md#add-the-cwo-dashboard): optional observed app-server jobs, separate from session views.
 - [Account allowance](references/codex-beta-dashboard.md#account-allowance): optional account-wide collection.
-- [Development](AGENTS.md): repository conventions and validation commands.
 
 ## Commands at a Glance
 
@@ -125,8 +125,6 @@ is a Codex skill for planning complex tasks, coordinating coding agents, and
 tracking work across sessions. Traceonaut's [optional integration](references/cwo-integration.md)
 exposes metrics for jobs launched by a CWO controller. **You do not need CWO for
 ordinary Codex session collection.**
-
-Beads is a local maintainer tracker, not a runtime requirement.
 
 ## License
 

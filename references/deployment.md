@@ -148,4 +148,5 @@ stored Prometheus history are not deleted.
 
 Other views: [Unified](codex-unified-dashboard.md#add-unified) or
 [Stable](codex-all-sessions-observability.md#add-the-stable-dashboard).
+Observed CWO jobs use a [separate optional dashboard](cwo-integration.md#add-the-cwo-dashboard).
 For services, upgrades, or problems, see [Operations](operations.md).

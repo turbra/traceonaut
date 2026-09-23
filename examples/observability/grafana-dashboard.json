@@ -12,7 +12,7 @@
   "annotations": {
     "list": []
   },
-  "description": "Readable tasks, worker status, selected model and effort, time and reported tokens. Explicit task names are supplied by the monitored runner; technical identities stay in the expandable diagnostics.",
+  "description": "Observed CWO app-server dispatches only, not ordinary Codex sessions or all CWO work. Shows readable tasks, worker status, selected model and effort, time, and reported tokens. Explicit task names come from the private presentation registry; technical identities stay in expandable diagnostics.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -608,7 +608,7 @@
                 "value": [
                   {
                     "title": "Focus on this task",
-                    "url": "/d/cwo-supervisor-observability-v1?${project:queryparam}&var-dispatch=${__value.raw}&from=${__from}&to=${__to}",
+                    "url": "/d/cwo-dispatch-observability-v1?${project:queryparam}&var-dispatch=${__value.raw}&from=${__from}&to=${__to}",
                     "targetBlank": false
                   }
                 ]
@@ -2783,7 +2783,7 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-30d",
     "to": "now"
   },
   "timepicker": {
@@ -2810,8 +2810,8 @@
     ]
   },
   "timezone": "browser",
-  "title": "CWO · Work overview",
-  "uid": "cwo-supervisor-observability-v1",
+  "title": "CWO · Observed dispatches",
+  "uid": "cwo-dispatch-observability-v1",
   "version": 3,
   "weekStart": ""
 }

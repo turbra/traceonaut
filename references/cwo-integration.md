@@ -105,10 +105,19 @@ python3 scripts/export_dispatch_observability.py \
   --host 127.0.0.1 --port 9465
 ```
 
+If the session collector already serves `/metrics`, it can instead read this
+same existing ledger with `--state-dir "$CWO_OBSERVABILITY_STATE"`. That adds
+dispatch and telemetry-health samples to the session endpoint without another
+listener or scrape job. It does not create the ledger or connect CWO jobs to the
+observer. Do not start the standalone exporter on the session collector's port.
+The separate [CWO dashboard](#add-the-cwo-dashboard) uses these same metric
+families, whichever endpoint exposes them.
+
 Configure a separate Prometheus scrape job and port using the
 [scrape example](../examples/observability/prometheus-scrape.yaml). Keep the
-session job unchanged. The [network and credential boundaries](operations.md#network-and-credentials)
-still apply.
+session job unchanged **if using the standalone exporter**. The
+[network and credential boundaries](operations.md#network-and-credentials)
+still apply to either mode.
 
 The standalone exporter cannot establish the owner's monotonic-clock continuity
 or write publication confirmations. Active elapsed time therefore remains
@@ -119,7 +128,17 @@ HTTP scrape alone does not prove the required final samples were stored.
 
 For offline JSON, use [completed dispatch export](terminal-observation-export.md).
 
-## Add the dispatch dashboard
+## Add the CWO dashboard
+
+The standalone dashboard has UID `cwo-dispatch-observability-v1` and can be
+imported alongside the Stable, Beta, and Unified Codex dashboards. It shows
+observed app-server dispatches only, not ordinary Codex sessions, direct agent
+work, Beads, native pools, or report-only activity.
+
+If Prometheus already scrapes the dispatch metrics, import
+`examples/observability/grafana-dashboard.json` into Grafana and select that
+Prometheus datasource. The charts work without the name registry, but task and
+worker names show as unavailable.
 
 Use the protected name registry maintained by the controller or observed runner.
 It supplies display names without adding them to metric labels. From the
@@ -137,9 +156,16 @@ python3 scripts/render_observability_dashboard.py \
   --output "$CWO_GRAFANA_DASHBOARD_FILE" --watch-seconds 2
 ```
 
-**Do not provision this template and the Stable session dashboard together.**
-Both use UID `cwo-supervisor-observability-v1`. Beta and Unified have separate
-UIDs. Without the name registry, dispatch names remain unavailable.
+The renderer updates the dashboard JSON when names change. Import the output
+into Grafana and select the Prometheus datasource, or place it in an existing
+Grafana file-provisioning directory. Re-import after a manual render; a
+provisioned file is picked up automatically. Without the name registry, the
+metric queries still work, but readable dispatch names remain unavailable.
+The default view looks back 30 days. Summary values use the last stored sample
+per dispatch in the selected range, not events that started in that range. A
+published terminal dispatch can disappear from current exporter output while
+its Prometheus history remains available. Shorten or move the time range to
+inspect a different retained window.
 
 Dispatches, agents, and completed responses are different units. Requested and
 acknowledged settings are not actual response-model evidence. Token totals can

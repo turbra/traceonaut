@@ -89,6 +89,12 @@ class CodexBetaDashboardTests(unittest.TestCase):
     def panel_id(self, identity: int) -> dict:
         return next(panel for panel in self.panels if panel.get("id") == identity)
 
+    def test_cwo_dispatches_use_a_separate_dashboard(self) -> None:
+        self.assertNotIn("CWO observed dispatches", {p.get("title") for p in self.panels})
+        serialized = json.dumps(self.dashboard)
+        self.assertNotIn("cwo_dispatch_", serialized)
+        self.assertNotIn("cwo_telemetry_", serialized)
+
     def test_is_a_distinct_portable_native_grafana_11_5_dashboard(self) -> None:
         self.assertEqual(self.dashboard["uid"], "cwo-codex-beta")
         self.assertEqual(self.dashboard["title"], "Codex · Work overview · Beta")

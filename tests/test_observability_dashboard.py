@@ -34,6 +34,17 @@ class ObservabilityDashboardTests(unittest.TestCase):
         return [target["expr"] for target in panel.get("targets", [])]
 
     def test_dashboard_is_portable_classic_json_with_five_second_refresh(self) -> None:
+        self.assertEqual(self.dashboard["uid"], "cwo-dispatch-observability-v1")
+        self.assertEqual(self.dashboard["title"], "CWO · Observed dispatches")
+        self.assertIn("Observed CWO app-server dispatches only", self.dashboard["description"])
+        self.assertEqual(self.dashboard["time"], {"from": "now-30d", "to": "now"})
+        for other in (
+            "grafana-sessions-dashboard.json",
+            "grafana-codex-beta-dashboard.json",
+            "grafana-codex-unified-dashboard.json",
+        ):
+            session = json.loads((DASHBOARD_PATH.parent / other).read_text())
+            self.assertNotEqual(self.dashboard["uid"], session["uid"])
         self.assertEqual(self.dashboard["refresh"], "5s")
         self.assertEqual(self.dashboard["schemaVersion"], 39)
         self.assertIn("1y", self.dashboard["timepicker"]["time_options"])

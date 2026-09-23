@@ -189,8 +189,9 @@ Import `stable.json` into Grafana and select the same Prometheus datasource.
 Re-render and re-import to refresh names, or use optional
 [automatic updates](operations.md#automatic-dashboard-name-updates).
 
-Stable uses UID `cwo-supervisor-observability-v1`; do not provision it together
-with the optional dispatch template, which uses the same UID.
+Stable uses UID `cwo-supervisor-observability-v1`. The optional
+[CWO dashboard](cwo-integration.md#add-the-cwo-dashboard) has its own UID and
+can be imported alongside Stable.
 
 [Account allowance](codex-beta-dashboard.md#account-allowance) is optional and
 account-wide. [CWO dispatch collection](cwo-integration.md) is a separate optional

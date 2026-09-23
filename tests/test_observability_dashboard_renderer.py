@@ -37,6 +37,7 @@ class WorkDashboardRendererTests(unittest.TestCase):
     def test_readable_names_do_not_change_queries_or_accounting(self):
         before = copy.deepcopy(self.template)
         result = render_dashboard(self.template, self.registry, datasource_uid="existing-prometheus")
+        self.assertEqual(result["uid"], "cwo-dispatch-observability-v1")
         self.assertEqual(self.template, before)
         original = [(p["id"], t["expr"]) for p in walk_panels(before["panels"]) for t in p.get("targets", [])]
         rendered = [(p["id"], t["expr"]) for p in walk_panels(result["panels"]) for t in p.get("targets", [])]

@@ -11,9 +11,9 @@ description: Dashboard titles, stable UIDs, templates and renderer entry points.
 | [Work Overview](../dashboards/work-overview.md) | `cwo-codex-beta` | `codex-work-overview-beta.json` | `render_codex_beta_dashboard.py` |
 | [Unified](../dashboards/unified.md) | `cwo-codex-unified` | `codex-unified-overview.json` | `render_codex_unified_dashboard.py` |
 | [All Sessions](../dashboards/all-sessions.md) | `cwo-supervisor-observability-v1` | `codex-all-sessions.json` | `render_codex_sessions_dashboard.py` |
-| [CWO Overview](../dashboards/cwo.md) | `cwo-dispatch-observability-v1` | `cwo-observed-dispatches.json` | `render_observability_dashboard.py` |
+| [CWO Overview](../dashboards/cwo.md) | `cwo-dispatch-observability-v1` | `cwo-overview.json` | `render_observability_dashboard.py` |
 
-UIDs and script/template filenames retain their historical identifiers for compatibility. User-facing titles match their guide and navigation labels.
+Dashboard UIDs and renderer script names remain stable for compatibility. User-facing titles match their guide and navigation labels.
 
 Session renderers read the protected session snapshot; the CWO renderer reads a presentation registry. Without `--datasource-uid`, output retains Grafana's import-time datasource picker. File provisioning needs an explicit datasource UID.
 

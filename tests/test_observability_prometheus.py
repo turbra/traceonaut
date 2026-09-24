@@ -171,7 +171,7 @@ class StoredSampleIntegrationTests(unittest.TestCase):
         endpoint.update(ledger.snapshot())
         confirm_current()
         dashboard = json.loads(
-            (ROOT / "examples/observability/cwo-observed-dispatches.json").read_text()
+            (ROOT / "examples/observability/cwo-overview.json").read_text()
         )
         query_count = 0
         for panel in walk_panels(dashboard["panels"]):

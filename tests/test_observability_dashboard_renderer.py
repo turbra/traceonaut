@@ -25,7 +25,7 @@ from render_observability_dashboard import render_dashboard, walk_panels, write_
 
 class WorkDashboardRendererTests(unittest.TestCase):
     def setUp(self):
-        self.template = json.loads((ROOT / "examples/observability/cwo-observed-dispatches.json").read_text())
+        self.template = json.loads((ROOT / "examples/observability/cwo-overview.json").read_text())
         self.project = str(uuid4())
         self.dispatch = str(uuid4())
         self.registry = {
@@ -89,7 +89,7 @@ class WorkDashboardRendererTests(unittest.TestCase):
             source=root/'snapshot.json';source.write_text(json.dumps(snapshot));source.chmod(0o600)
             output=root/'dashboard.json'
             args=[sys.executable,str(ROOT/'scripts/render_observability_dashboard.py'),
-                '--template',str(ROOT/'examples/observability/cwo-observed-dispatches.json'),
+                '--template',str(ROOT/'examples/observability/cwo-overview.json'),
                 '--session-snapshot-file',str(source),'--output',str(output)]
             completed=subprocess.run(args,capture_output=True,text=True)
             self.assertEqual(completed.returncode,0,completed.stdout+completed.stderr)
@@ -191,7 +191,7 @@ raise SystemExit(1)
             output = root / "dashboard.json"
             process = subprocess.Popen(
                 [sys.executable, str(ROOT / "scripts/render_observability_dashboard.py"),
-                 "--template", str(ROOT / "examples/observability/cwo-observed-dispatches.json"),
+                 "--template", str(ROOT / "examples/observability/cwo-overview.json"),
                  "--presentation-file", str(registry), "--output", str(output),
                  "--watch-seconds", "1"],
                 stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,

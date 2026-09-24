@@ -14,7 +14,7 @@ This dashboard has three independent sections: **CWO-associated sessions** from 
 
 ## Import
 
-Import [cwo-observed-dispatches.json](../../examples/observability/cwo-observed-dispatches.json) and select your Prometheus datasource.
+Import [cwo-overview.json](../../examples/observability/cwo-overview.json) and select your Prometheus datasource.
 
 For readable session names, use the existing private session snapshot:
 
@@ -23,9 +23,9 @@ TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 CWO_DASHBOARD_DIR="$HOME/.local/share/traceonaut/dashboards"
 install -d -m 700 "$CWO_DASHBOARD_DIR"
 python3 scripts/render_observability_dashboard.py \
-  --template examples/observability/cwo-observed-dispatches.json \
+  --template examples/observability/cwo-overview.json \
   --session-snapshot-file "$TRACEONAUT_DATA_DIR/sessions-snapshot.json" \
-  --output "$CWO_DASHBOARD_DIR/cwo-observed-dispatches.json"
+  --output "$CWO_DASHBOARD_DIR/cwo-overview.json"
 ```
 
 For observed-job names, also pass `--presentation-file /absolute/path/to/private/presentation.json` from the controller or observed-job runner. Either input can be used alone.

@@ -16,7 +16,7 @@ from traceonaut.cwo_session_telemetry import METRICS as CWO_SESSION_METRICS
 from render_observability_dashboard import walk_panels  # noqa: E402
 
 
-DASHBOARD_PATH = ROOT / "examples" / "observability" / "cwo-observed-dispatches.json"
+DASHBOARD_PATH = ROOT / "examples" / "observability" / "cwo-overview.json"
 SCRAPE_PATH = ROOT / "examples" / "observability" / "prometheus-scrape.yaml"
 
 

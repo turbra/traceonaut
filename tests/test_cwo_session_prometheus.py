@@ -13,7 +13,7 @@ BINARY = os.environ.get('CWO_TEST_PROMETHEUS_BINARY')
 @unittest.skipUnless(BINARY, 'separately verified Prometheus binary not supplied')
 class CwoSessionQueryTests(unittest.TestCase):
     def test_population_usage_commands_and_unavailable_states(self):
-        dashboard=json.loads((ROOT/'examples/observability/cwo-observed-dispatches.json').read_text())
+        dashboard=json.loads((ROOT/'examples/observability/cwo-overview.json').read_text())
         queries={p['id']:p['targets'][0]['expr'].replace('$__range','1h').replace('$__from','3600000').replace('$__to','7200000')
                  for p in dashboard['panels'] if p.get('targets') and p['id']>=300}
         for panel in dashboard['panels']:

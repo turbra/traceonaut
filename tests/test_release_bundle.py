@@ -23,13 +23,40 @@ class ReleaseBundleTests(unittest.TestCase):
             "stable": ("codex-all-sessions.json", "All Sessions"),
             "beta": ("codex-work-overview-beta.json", "Work Overview"),
             "unified": ("codex-unified-overview.json", "Unified"),
-            "dispatch": ("cwo-observed-dispatches.json", "CWO Overview"),
+            "dispatch": ("cwo-overview.json", "CWO Overview"),
         }
         for component, (filename, title) in templates.items():
             with self.subTest(component=component):
                 path = ROOT / "examples" / "observability" / filename
                 self.assertEqual(json.loads(path.read_text())["title"], title)
                 self.assertIn(f"examples/observability/{filename}", COMPONENTS[component])
+
+    def test_cwo_overview_renders_from_the_standalone_dispatch_bundle(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            release = build_release("dispatch", root / "releases")
+            templates = release / "examples/observability"
+            self.assertEqual({p.name for p in templates.glob("*.json")}, {"cwo-overview.json"})
+            snapshot = root / "sessions.json"
+            snapshot.write_text(json.dumps({"version": 1, "sessions": []}))
+            snapshot.chmod(0o600)
+            output = root / "cwo-overview.json"
+            result = subprocess.run([
+                sys.executable, "-I", "-B", "-c",
+                "import runpy,sys; p=sys.argv.pop(1); sys.path.insert(0,p); "
+                "sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name='__main__')",
+                str(release / "scripts"),
+                str(release / "scripts/render_observability_dashboard.py"),
+                "--template", str(templates / "cwo-overview.json"),
+                "--session-snapshot-file", str(snapshot),
+                "--datasource-uid", "synthetic-prometheus", "--output", str(output),
+            ], cwd=root, capture_output=True, text=True, timeout=15)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            dashboard = json.loads(output.read_text())
+            self.assertEqual(dashboard["title"], "CWO Overview")
+            self.assertEqual(dashboard["uid"], "cwo-dispatch-observability-v1")
+            self.assertNotIn("${DS_PROMETHEUS}", output.read_text())
+            self.assertGreater(len(dashboard["panels"]), 0)
 
     def test_beta_and_unified_render_nonempty_metadata_from_their_bundles(self):
         with tempfile.TemporaryDirectory() as temporary:

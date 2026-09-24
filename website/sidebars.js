@@ -152,7 +152,7 @@ module.exports = {
         {
           "type": "doc",
           "id": "references/dashboards/cwo",
-          "label": "CWO Dispatches"
+          "label": "CWO Overview"
         },
         {
           "type": "doc",

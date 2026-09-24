@@ -9,7 +9,7 @@ DASHBOARDS = {
     "codex-work-overview-beta": ("Work Overview", "cwo-codex-beta"),
     "codex-unified-overview": ("Unified", "cwo-codex-unified"),
     "codex-all-sessions": ("All Sessions", "cwo-supervisor-observability-v1"),
-    "cwo-observed-dispatches": ("CWO Dispatches", "cwo-dispatch-observability-v1"),
+    "cwo-observed-dispatches": ("CWO Overview", "cwo-dispatch-observability-v1"),
 }
 TOKEN_PANELS = {
     "codex-work-overview-beta": {32, 33, 35, 80},

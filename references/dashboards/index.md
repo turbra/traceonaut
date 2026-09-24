@@ -11,7 +11,7 @@ description: Compare the four views and find their import guides.
 | [Work Overview](work-overview.md) | Daily session activity, usage, commands and collector health. Start here. | Codex session files |
 | [Unified](unified.md) | Session and agent inventory alongside usage and execution. | Codex session files |
 | [All Sessions](all-sessions.md) | A compact, session-centered alternative. | Codex session files |
-| [CWO Dispatches](cwo.md) | CWO-associated sessions, workflow audits and separately observed jobs. | Codex records, optional CWO audit logs and dispatch ledger |
+| [CWO Overview](cwo.md) | CWO sessions, agents, usage and workflow activity. | Codex records, optional CWO audit logs and dispatch ledger |
 
 Each view has a separate UID, so they can coexist. The [Dashboard Reference](../reference/dashboards.md) lists template and renderer paths.
 

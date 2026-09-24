@@ -32,7 +32,7 @@ All four require `--template` and `--output`. Session renderers also require `--
 | `render_codex_beta_dashboard.py` | Work Overview; optional `--labels-file` aliases. |
 | `render_codex_unified_dashboard.py` | Unified, using collected names. |
 | `render_codex_sessions_dashboard.py` | All Sessions. |
-| `render_observability_dashboard.py` | CWO Dispatches. |
+| `render_observability_dashboard.py` | CWO Overview. |
 
 All accept `--datasource-uid` for provisioning and `--watch-seconds` (1–60). Omitting the watch option renders once. Omitting the datasource keeps the import picker.
 

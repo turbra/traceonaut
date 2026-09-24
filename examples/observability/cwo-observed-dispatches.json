@@ -4430,7 +4430,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "CWO Dispatches",
+  "title": "CWO Overview",
   "uid": "cwo-dispatch-observability-v1",
   "version": 3,
   "weekStart": ""

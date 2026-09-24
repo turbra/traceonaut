@@ -112,9 +112,12 @@ test('all dashboards are discoverable and CWO setup stays optional', () => {
   const menu = config.themeConfig.navbar.items.find(item => item.label === 'Dashboards');
   assert.deepEqual(menu.items.map(item => item.to), routes);
   for (const route of routes) assert(section.includes(`to="${route}"`));
-  for (const name of ['codex-work-overview-beta', 'codex-unified-overview', 'codex-all-sessions', 'cwo-observed-dispatches']) {
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  for (const [index, name] of ['codex-work-overview-beta', 'codex-unified-overview', 'codex-all-sessions', 'cwo-observed-dispatches'].entries()) {
     const {title} = JSON.parse(fs.readFileSync(path.join(root, `examples/observability/${name}.json`), 'utf8'));
     assert(section.includes(`<strong>${title}</strong>`), title);
+    assert.equal(menu.items[index].label, title);
+    assert(readme.includes(`[${title}](https://turbra.github.io/traceonaut${routes[index]})`), title);
   }
   assert(!config.themeConfig.navbar.items.some(item => item.to === '/dashboards/cwo/'));
   assert(config.themeConfig.footer.links[0].items.some(item => item.to === '/dashboards/'));

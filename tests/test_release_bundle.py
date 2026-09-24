@@ -23,7 +23,7 @@ class ReleaseBundleTests(unittest.TestCase):
             "stable": ("codex-all-sessions.json", "All Sessions"),
             "beta": ("codex-work-overview-beta.json", "Work Overview"),
             "unified": ("codex-unified-overview.json", "Unified"),
-            "dispatch": ("cwo-observed-dispatches.json", "CWO Dispatches"),
+            "dispatch": ("cwo-observed-dispatches.json", "CWO Overview"),
         }
         for component, (filename, title) in templates.items():
             with self.subTest(component=component):

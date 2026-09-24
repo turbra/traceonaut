@@ -37,7 +37,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
 
     def test_dashboard_is_portable_classic_json_with_five_second_refresh(self) -> None:
         self.assertEqual(self.dashboard["uid"], "cwo-dispatch-observability-v1")
-        self.assertEqual(self.dashboard["title"], "CWO Dispatches")
+        self.assertEqual(self.dashboard["title"], "CWO Overview")
         self.assertIn("CWO-associated Codex sessions", self.dashboard["description"])
         self.assertEqual(self.dashboard["time"], {"from": "now-30d", "to": "now"})
         for other in (

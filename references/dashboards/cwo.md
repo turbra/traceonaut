@@ -1,12 +1,12 @@
 ---
 slug: /dashboards/cwo
-title: CWO Dispatches
-description: View CWO-associated sessions and agents, workflow audit activity and observed jobs.
+title: CWO Overview
+description: View CWO sessions, agents, usage and workflow activity.
 ---
 
-# CWO Dispatches
+# CWO Overview
 
-![CWO Dispatches with synthetic example data](../../assets/screenshots/cwo-dispatches.png)
+![CWO Overview with synthetic example data](../../assets/screenshots/cwo-dispatches.png)
 
 *Synthetic data in the current dashboard layout. Counts depend on enabled sources and the selected time range.*
 

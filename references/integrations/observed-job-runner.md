@@ -6,7 +6,7 @@ description: Launch authorized read-only Codex jobs and record their dispatch me
 
 # Observed Job Runner
 
-The [Observed Job Runner](../../scripts/run_observed_codex.py) starts one or two fresh Codex jobs and records their metrics for [CWO Dispatches](../dashboards/cwo.md).
+The [Observed Job Runner](../../scripts/run_observed_codex.py) starts one or two fresh Codex jobs and records their metrics for [CWO Overview](../dashboards/cwo.md).
 
 **Running it starts model work and can incur usage.** Obtain authorization for the tasks before preparing the files below.
 

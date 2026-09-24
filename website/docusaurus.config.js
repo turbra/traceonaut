@@ -51,7 +51,7 @@ const config = {
           {to: '/dashboards/work-overview/', label: 'Work Overview'},
           {to: '/dashboards/unified/', label: 'Unified'},
           {to: '/dashboards/all-sessions/', label: 'All Sessions'},
-          {to: '/dashboards/cwo/', label: 'CWO Dispatches'},
+          {to: '/dashboards/cwo/', label: 'CWO Overview'},
         ]},
         {href: 'https://github.com/turbra/traceonaut', label: 'GitHub', position: 'right'},
       ],

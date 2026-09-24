@@ -22,7 +22,7 @@ This covers the **whole configured Codex profile**, across projects. It uses rec
 - A supported direct CWO helper command associates its owning session.
 - A native subagent created after its parent's CWO association inherits that association.
 
-Import [CWO Dispatches](../dashboards/cwo.md). Its **CWO-associated sessions** section shows sessions and agents active in the selected range, their recorded session usage, and CWO helper command counts. Initial history scanning runs in bounded passes; the dashboard shows pending files and source gaps.
+Import [CWO Overview](../dashboards/cwo.md). Its **CWO-associated sessions** section shows sessions and agents active in the selected range, their recorded session usage, and CWO helper command counts. Initial history scanning runs in bounded passes; the dashboard shows pending files and source gaps.
 
 **Association is session context.** Token totals cover whole sessions, including earlier history, rather than CWO-only cost. Plain mentions of CWO in conversation, reading a guide, or generic agent activity do not establish association. [Data Sources and Privacy](../reference/data-sources-and-privacy.md#cwo-session-association) describes the supported signals.
 
@@ -40,7 +40,7 @@ Repeat `--cwo-audit-dir` for each project's audit directory. Traceonaut finds `a
 
 Choose the directories or files that your CWO workflow writes. CWO's `CWO_AUDIT_FILE` setting can select a custom location. Traceonaut reads existing files; enabling collection leaves your CWO launch and review workflow unchanged.
 
-The collector exposes `cwo_audit_*` metrics on the **same authenticated endpoint** that Prometheus already scrapes. Import [CWO Dispatches](../dashboards/cwo.md) to see its **Workflow activity** section.
+The collector exposes `cwo_audit_*` metrics on the **same authenticated endpoint** that Prometheus already scrapes. Import [CWO Overview](../dashboards/cwo.md) to see its **Workflow activity** section.
 
 | Recorded event | Dashboard meaning |
 | --- | --- |
@@ -103,6 +103,6 @@ Use protected directories and preserve the ledger key. Traceonaut supplies the o
 
 ## View and Export
 
-Import [CWO Dispatches](../dashboards/cwo.md), or use [Completed Dispatch Export](terminal-export.md). [Limits and Internals](../reference/limits-and-internals.md#cwo-embedding-and-recovery) covers embedding, recovery and final-sample confirmation.
+Import [CWO Overview](../dashboards/cwo.md), or use [Completed Dispatch Export](terminal-export.md). [Limits and Internals](../reference/limits-and-internals.md#cwo-embedding-and-recovery) covers embedding, recovery and final-sample confirmation.
 
 The [Observed Job Runner](observed-job-runner.md) is a separate option that starts explicitly authorized model work.

@@ -16,6 +16,7 @@ import threading
 from typing import Any, Iterator
 
 from traceonaut.observability_presentation import safe_load_presentation_registry
+from render_codex_sessions_dashboard import load_snapshot, render_dashboard as render_session_names
 
 
 DATASOURCE_PLACEHOLDER = "${DS_PROMETHEUS}"
@@ -63,7 +64,8 @@ def _named_variable(variable: dict[str, Any], names: dict[str, str]) -> None:
 
 
 def render_dashboard(
-    template: dict[str, Any], registry: dict[str, Any], *, datasource_uid: str | None = None
+    template: dict[str, Any], registry: dict[str, Any], *, datasource_uid: str | None = None,
+    session_snapshot: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """Apply explicit labels only to presentation; all metric queries stay intact."""
     dashboard = copy.deepcopy(template)
@@ -96,6 +98,13 @@ def render_dashboard(
                         prop["value"] = copy.deepcopy(task_mapping)
                     elif name == "Worker":
                         prop["value"] = copy.deepcopy(worker_mapping)
+    if session_snapshot is not None:
+        # Reuse protected session-name validation/mapping without changing the
+        # observed-dispatch variables or importing host names into metric labels.
+        native = [p for p in dashboard["panels"] if p.get("id") == 305]
+        named = render_session_names({"panels": native}, session_snapshot)["panels"]
+        by_id = {p["id"]: p for p in named}
+        dashboard["panels"] = [by_id.get(p["id"], p) for p in dashboard["panels"]]
     if datasource_uid is not None:
         if re.fullmatch(r"[A-Za-z0-9_-]{1,128}", datasource_uid) is None:
             raise ValueError("invalid datasource UID")
@@ -182,11 +191,14 @@ def write_dashboard(path: Path, dashboard: dict[str, Any]) -> bool:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--template", type=Path, required=True)
-    parser.add_argument("--presentation-file", type=Path, required=True)
+    parser.add_argument("--presentation-file", type=Path)
+    parser.add_argument("--session-snapshot-file", type=Path, help="optional existing session snapshot for CWO-associated session names")
     parser.add_argument("--datasource-uid")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--watch-seconds", type=float, help="refresh local name mappings every 1 to 60 seconds")
     args = parser.parse_args(argv)
+    if args.presentation_file is None and args.session_snapshot_file is None:
+        parser.error("provide --presentation-file or --session-snapshot-file")
     if args.watch_seconds is not None and not 1 <= args.watch_seconds <= 60:
         parser.error("--watch-seconds must be between 1 and 60")
     stop = threading.Event()
@@ -196,8 +208,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         while True:
             template = json.loads(args.template.read_text(encoding="utf-8"))
-            registry = safe_load_presentation_registry(args.presentation_file)
-            dashboard = render_dashboard(template, registry, datasource_uid=args.datasource_uid)
+            registry = (safe_load_presentation_registry(args.presentation_file) if args.presentation_file
+                        else {"version": 1, "projects": {}, "dispatches": {}})
+            session_snapshot = load_snapshot(args.session_snapshot_file) if args.session_snapshot_file else None
+            dashboard = render_dashboard(template, registry, datasource_uid=args.datasource_uid, session_snapshot=session_snapshot)
             changed = write_dashboard(args.output, dashboard)
             if changed or args.watch_seconds is None:
                 print(json.dumps({"status": "rendered", "changed": changed,

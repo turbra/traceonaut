@@ -15,7 +15,7 @@ TOKEN_PANELS = {
     "codex-work-overview-beta": {32, 33, 35, 80},
     "codex-unified-overview": {32, 33, 35, 80},
     "codex-all-sessions": {104, 160, 161, 111},
-    "cwo-observed-dispatches": {104, 160, 161, 111},
+    "cwo-observed-dispatches": {104, 160, 161, 111, 303},
 }
 
 

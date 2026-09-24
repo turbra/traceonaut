@@ -39,6 +39,7 @@ COMPONENTS = {
         "scripts/export_dispatch_observability.py",
         "scripts/export_terminal_observations.py",
         "scripts/render_observability_dashboard.py",
+        "scripts/render_codex_sessions_dashboard.py",
         TEMPLATES + "cwo-observed-dispatches.json",
     ),
 }

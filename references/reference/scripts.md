@@ -19,9 +19,13 @@ Run `python3 scripts/<name> --help` from the checkout root for argument syntax. 
 
 Session collection also accepts `--session-retention-seconds 2592000` and `--session-export-cap 1000`; see [Retention and Limits](retention-and-limits.md). `--state-dir` adds an existing dispatch ledger, and `--account-snapshot-file` adds the optional account snapshot. These are separate inputs from the session state and snapshot.
 
+`--cwo-sessions` enables CWO association across the configured Codex profile. It adds a private `cwo-sessions.sqlite3` feature index and lock in the existing session state directory; session and usage cursors are preserved. `--once` includes CWO scan status and association count.
+
+`--cwo-audit-dir` and `--cwo-audit-file` add optional read-only CWO workflow logs to the same endpoint. Both take absolute paths and can be repeated, up to 256 combined inputs. Directory discovery includes `audit.jsonl` and `*-audit.jsonl`; custom filenames require `--cwo-audit-file`. Sources must be separate from collector output. With these options, `--once` includes a `cwo_audit` health/count summary. See [CWO Integration](../integrations/cwo.md).
+
 ## Dashboard Renderers
 
-All four require `--template` and `--output`. Session renderers also require `--snapshot-file`; the dispatch renderer requires `--presentation-file`.
+All four require `--template` and `--output`. Session renderers also require `--snapshot-file`; the CWO renderer requires `--presentation-file`, `--session-snapshot-file`, or both. The session snapshot supplies session/project names; the presentation registry supplies observed-job names.
 
 | Script | Output / additional option |
 | --- | --- |

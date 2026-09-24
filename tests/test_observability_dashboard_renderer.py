@@ -72,6 +72,31 @@ class WorkDashboardRendererTests(unittest.TestCase):
         self.assertIn("Worker name not provided", text)
         self.assertNotIn(self.dispatch, text)
 
+    def test_session_names_preserve_dispatch_queries_and_selectors(self):
+        snapshot={'version':1,'sessions':[{'session_id':self.dispatch,'project_id':self.project,
+            'title':'Improve the search page','project_name':'Example app','agent_name':'',
+            'kind':'session','parent_id':None}]}
+        before=render_dashboard(self.template,self.registry)
+        result=render_dashboard(self.template,self.registry,session_snapshot=snapshot)
+        self.assertEqual(result['templating'],before['templating'])
+        self.assertEqual([(p['id'],p.get('targets')) for p in result['panels']],
+                         [(p['id'],p.get('targets')) for p in before['panels']])
+        native=next(p for p in result['panels'] if p['id']==305)
+        self.assertIn('Improve the search page',json.dumps(native['fieldConfig']))
+        self.assertIn('Example app',json.dumps(native['fieldConfig']))
+        with tempfile.TemporaryDirectory() as name:
+            root=Path(name);root.chmod(0o700)
+            source=root/'snapshot.json';source.write_text(json.dumps(snapshot));source.chmod(0o600)
+            output=root/'dashboard.json'
+            args=[sys.executable,str(ROOT/'scripts/render_observability_dashboard.py'),
+                '--template',str(ROOT/'examples/observability/cwo-observed-dispatches.json'),
+                '--session-snapshot-file',str(source),'--output',str(output)]
+            completed=subprocess.run(args,capture_output=True,text=True)
+            self.assertEqual(completed.returncode,0,completed.stdout+completed.stderr)
+            self.assertIn('Improve the search page',output.read_text())
+            source.chmod(0o644)
+            self.assertNotEqual(subprocess.run(args,capture_output=True).returncode,0)
+
     def test_bar_names_cannot_expand_grafana_variables_into_identities(self):
         for name in ("Task ${__field.name}", "Task $project", "Task [[project]]"):
             with self.subTest(name=name):

@@ -10,6 +10,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from traceonaut.codex_account_telemetry import render_account_metrics
+from traceonaut.cwo_audit_telemetry import render_audit_metrics
+from traceonaut.cwo_session_telemetry import render_cwo_session_metrics
 from traceonaut.codex_session_telemetry import SessionCollector, render_session_metrics
 from traceonaut.observability_contract import METRIC_FAMILIES
 
@@ -26,6 +28,9 @@ class MetricsReferenceTests(unittest.TestCase):
                 snapshot = collector.snapshot(now=now)
             finally:
                 collector.close()
+        audit_snapshot = {"source_available": 1, "collection_complete": 1, "scan_timestamp_seconds": now,
+                          "source_files": 1, "source_errors": 0, "limit_reached": 0,
+                          "skipped_records": {}, "events": [("a" * 64, "packet_built", now)]}
         ids = {"project_id": "example-project", "session_id": "00000000-0000-4000-8000-000000000001"}
         snapshot["sessions"] = [{
             **ids, "kind": "session", "parent_id": "none", "model": "example-model", "effort": "high",
@@ -40,7 +45,12 @@ class MetricsReferenceTests(unittest.TestCase):
         snapshot["reliability"]["compaction_observations"] = [{
             **ids, "observation_id": "example-compaction", "timestamp": now,
         }]
-        payload = render_session_metrics(snapshot) + render_account_metrics({
+        cwo = {"scan_timestamp_seconds": now, "scan_ready": 1, "pending_files": 0, "source_errors": 0,
+               "source_gaps": 0, "limit_reached": 0,
+               "associations": [{**ids, "source": "skill_block", "timestamp": now}],
+               "commands": [{"project_id": ids["project_id"], "sid": ids["session_id"], "id": "a"*64,
+                             "tool": "coach_prompt", "outcome": "completed", "at": now, "duration": 2}]}
+        payload = render_cwo_session_metrics(cwo) + render_audit_metrics(audit_snapshot) + render_session_metrics(snapshot) + render_account_metrics({
             "available": True, "last_attempt": now, "last_success": now,
             "values": {"reset_credits": 2, "windows": {"primary": {
                 "usedPercent": 20, "windowDurationMins": 10080, "resetsAt": now + 100,

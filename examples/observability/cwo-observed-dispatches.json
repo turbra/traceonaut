@@ -12,7 +12,7 @@
   "annotations": {
     "list": []
   },
-  "description": "Observed CWO app-server dispatches only, not ordinary Codex sessions or all CWO work. Shows readable tasks, worker status, selected model and effort, time, and reported tokens. Explicit task names come from the private presentation registry; technical identities stay in expandable diagnostics.",
+  "description": "CWO-associated Codex sessions and agents, optional workflow audit events, and separately observed app-server dispatches. Whole-session usage remains distinct from CWO-only cost.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -21,14 +21,1632 @@
   "liveNow": false,
   "panels": [
     {
-      "id": 150,
+      "id": 300,
       "type": "row",
-      "title": "Overview",
+      "title": "CWO-associated sessions · selected Codex profile",
       "collapsed": false,
       "panels": [],
       "gridPos": {
         "x": 0,
         "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 301,
+      "type": "stat",
+      "title": "Sessions with CWO",
+      "description": "Sessions with a structured CWO skill block or supported CWO helper command, and activity in the selected range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(max by (project_id, session_id) ((cwo_codex_session_info{kind=\"session\"} and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds >= ($__from / 1000)) and on (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))))) or (0 * (min(last_over_time(cwo_codex_cwo_scan_ready[2m])) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 302,
+      "type": "stat",
+      "title": "Associated agents",
+      "description": "Subagent sessions associated directly or through a CWO-associated parent before their creation, with activity in the selected range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(max by (project_id, session_id) ((cwo_codex_session_info{kind=\"subagent\"} and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds >= ($__from / 1000)) and on (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))))) or (0 * (min(last_over_time(cwo_codex_cwo_scan_ready[2m])) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 303,
+      "type": "stat",
+      "title": "Recorded session tokens",
+      "description": "Whole-session recorded token totals for the selected CWO-associated sessions and agents. Includes earlier session history; this is not CWO-exclusive cost. Missing or conflicting usage is omitted, so the total can be a lower bound.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum((max by (project_id, session_id) (cwo_codex_session_usage_tokens{token_kind=\"total\"}) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_usage_state) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 304,
+      "type": "stat",
+      "title": "CWO helper commands",
+      "description": "Recorded completed command items invoking a supported CWO helper within the selected range. Includes failed attempts; separate from model jobs and audit preparations.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count((max by (project_id, session_id, observation_id, tool, outcome) (cwo_codex_cwo_command_timestamp_seconds) >= ($__from / 1000)) and (max by (project_id, session_id, observation_id, tool, outcome) (cwo_codex_cwo_command_timestamp_seconds) <= ($__to / 1000))) or (0 * (min(last_over_time(cwo_codex_cwo_scan_ready[2m])) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 305,
+      "type": "table",
+      "title": "CWO-associated session activity",
+      "description": "Whole-profile session activity. Project and Task selectors below the dashboard title apply only to the observed-dispatch sections. Token values are whole-session recorded totals.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto",
+              "wrapText": true
+            },
+            "inspect": false,
+            "minWidth": 80
+          },
+          "decimals": 0,
+          "unit": "locale"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Session"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": true
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {}
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^.+$",
+                      "result": {
+                        "text": "Name unavailable"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Focus on this session",
+                    "url": "/d/cwo-supervisor-observability-v1?var-project=$__all&var-session=${__value.raw}&from=${__from}&to=${__to}"
+                  }
+                ]
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text",
+                  "wrapText": true
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unknown",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "Working",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "Waiting",
+                        "color": "blue"
+                      },
+                      "3": {
+                        "text": "Stopped / failed",
+                        "color": "orange"
+                      },
+                      "4": {
+                        "text": "No recent signal",
+                        "color": "yellow"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last seen"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Project"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {}
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^.+$",
+                      "result": {
+                        "text": "Name unavailable"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model / effort"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kind"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "session": {
+                        "text": "Session"
+                      },
+                      "subagent": {
+                        "text": "Subagent"
+                      },
+                      "internal": {
+                        "text": "Internal"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(label_join((max by (project_id, session_id, kind, model, effort) (cwo_codex_session_info) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))), \"model_effort\", \" / \", \"model\", \"effort\"), \"project\", \"$1\", \"project_id\", \"(.+)\")",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_state) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info)))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_usage_tokens{token_kind=\"total\"}) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_usage_state) == 1)",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "1000 * (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info)))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "session_id",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "session_id",
+                "project",
+                "kind",
+                "model_effort",
+                "Value #B",
+                "Value #C",
+                "Value #D"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "session_id": 0,
+              "kind": 2,
+              "model_effort": 3,
+              "Value #B": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "project": 1
+            },
+            "renameByName": {
+              "session_id": "Session",
+              "kind": "Kind",
+              "model_effort": "Model / effort",
+              "Value #B": "State",
+              "Value #C": "Tokens",
+              "Value #D": "Last seen",
+              "project": "Project"
+            }
+          }
+        }
+      ],
+      "options": {
+        "cellHeight": "md",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Last seen",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        },
+        "enablePagination": true
+      }
+    },
+    {
+      "id": 306,
+      "type": "stat",
+      "title": "CWO session source scan",
+      "description": "Scanned means selected rollout files were read without gaps. It does not prove that every use of the CWO skill produced a recognizable signal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 6,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Incomplete",
+                  "color": "orange"
+                },
+                "1": {
+                  "text": "Scanned",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "min(last_over_time(cwo_codex_cwo_scan_ready[2m]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 307,
+      "type": "stat",
+      "title": "CWO files pending",
+      "description": "Files awaiting CWO history scanning. Counts are lower bounds during backfill.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 13,
+        "w": 6,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time(cwo_codex_cwo_pending_files[2m]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 308,
+      "type": "stat",
+      "title": "CWO source gaps",
+      "description": "Malformed or oversized candidate records, conflicting observations, or source access failures.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 6,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time(cwo_codex_cwo_source_gaps[2m])) + sum(last_over_time(cwo_codex_cwo_source_errors[2m]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 309,
+      "type": "stat",
+      "title": "CWO scan age",
+      "description": "Age of the latest CWO session-source scan.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 13,
+        "w": 6,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "s",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "time() - min(last_over_time(cwo_codex_cwo_scan_timestamp_seconds[2m]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**CWO association** comes from an explicit skill block, a supported helper command, or a parent session. These views cover the selected Codex profile across projects. Tokens cover whole sessions, including earlier history, rather than CWO-only cost.\n\nToken scale: K = thousand · Mil = million · Bil = billion · Tri = trillion. Exact counts are in the detail tables. Project and Task selectors apply only to the observed-dispatch sections."
+      }
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Workflow activity · all configured audit logs",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 201,
+      "type": "stat",
+      "title": "Workflow events",
+      "description": "Unique recorded CWO audit events whose source timestamps fall in the selected range. Project and Task selectors apply only to the observed-dispatch sections below.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(((max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) >= ($__from / 1000)) and (max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) <= ($__to / 1000)))) or (0 * (min(last_over_time(cwo_audit_collection_complete[2m])) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "type": "stat",
+      "title": "Packets built",
+      "description": "Contractor packets prepared. This counts preparation, not executed jobs. Project and Task selectors apply only to the observed-dispatch sections below.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 20,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(((max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=\"packet_built\"}[$__range])) >= ($__from / 1000)) and (max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=\"packet_built\"}[$__range])) <= ($__to / 1000)))) or (0 * (min(last_over_time(cwo_audit_collection_complete[2m])) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "type": "stat",
+      "title": "Dispatches prepared",
+      "description": "Recorded dispatch preparations. A preparation does not establish that the job ran. Project and Task selectors apply only to the observed-dispatch sections below.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(((max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=\"dispatch_prepared\"}[$__range])) >= ($__from / 1000)) and (max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=\"dispatch_prepared\"}[$__range])) <= ($__to / 1000)))) or (0 * (min(last_over_time(cwo_audit_collection_complete[2m])) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "type": "stat",
+      "title": "Reviews evaluated",
+      "description": "Recorded review evaluations, including reevaluations. This is an event count, not unique completed jobs. Project and Task selectors apply only to the observed-dispatch sections below.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 20,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count(((max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=\"return_evaluated\"}[$__range])) >= ($__from / 1000)) and (max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=\"return_evaluated\"}[$__range])) <= ($__to / 1000)))) or (0 * (min(last_over_time(cwo_audit_collection_complete[2m])) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 205,
+      "type": "bargauge",
+      "title": "Workflow events by type",
+      "description": "Unique source-time events by type across all configured audit logs.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 14,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0,
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "packet_built"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Packets built"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "dispatch_prepared"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Dispatches prepared"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "return_evaluated"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Reviews evaluated"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "review_cli_started"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Review CLI started"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "review_cli_finished"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Review CLI finished"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "astra_adjudication_received"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Adjudication received"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt_coached"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Prompts coached"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "native_pool_rendered"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pool rendered"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "native_pool_status"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pool status recorded"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "native_pool_terminal"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pool terminal recorded"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "native_pool_interrupt_requested"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pool interrupt requested"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Other audit events"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count by (event_type) (((max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) >= ($__from / 1000)) and (max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) <= ($__to / 1000))))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{event_type}}"
+        }
+      ]
+    },
+    {
+      "id": 206,
+      "type": "stat",
+      "title": "Selected audit files",
+      "description": "Read successfully means configured audit files were read within their limits. This is not a check of all CWO sessions.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 24,
+        "w": 5,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Read gaps",
+                  "color": "orange"
+                },
+                "1": {
+                  "text": "Read",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "min(last_over_time(cwo_audit_collection_complete[2m]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 207,
+      "type": "stat",
+      "title": "Audit scan age",
+      "description": "Age of the latest audit scan attempt. Source access errors are reported separately.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 19,
+        "y": 24,
+        "w": 5,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "s",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "time() - min(last_over_time(cwo_audit_scan_timestamp_seconds[2m]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 208,
+      "type": "stat",
+      "title": "Audit source errors",
+      "description": "File or directory access failures in the latest scan.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 27,
+        "w": 5,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time(cwo_audit_source_errors[2m]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 209,
+      "type": "stat",
+      "title": "Skipped audit records",
+      "description": "Records omitted from the latest scan. Query cwo_audit_skipped_records by reason for details.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 19,
+        "y": 27,
+        "w": 5,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 42
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time(cwo_audit_skipped_records[2m]))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 210,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Workflow activity** counts source-time events from all configured audit logs. Project and Task selectors apply only to the observed-dispatch panels below. Export: newest 2,000 events within 30 days. Partial coverage means counts may be incomplete."
+      }
+    },
+    {
+      "id": 150,
+      "type": "row",
+      "title": "Observed dispatches",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 32,
         "w": 24,
         "h": 1
       }
@@ -44,7 +1662,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 1,
+        "y": 33,
         "w": 6,
         "h": 4
       },
@@ -105,7 +1723,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 1,
+        "y": 33,
         "w": 6,
         "h": 4
       },
@@ -166,7 +1784,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 1,
+        "y": 33,
         "w": 6,
         "h": 4
       },
@@ -227,7 +1845,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 1,
+        "y": 33,
         "w": 6,
         "h": 4
       },
@@ -276,21 +1894,6 @@
       ]
     },
     {
-      "id": 106,
-      "type": "text",
-      "title": "",
-      "gridPos": {
-        "x": 0,
-        "y": 5,
-        "w": 24,
-        "h": 2
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "**Token scale:** K = thousand · Mil = million · Bil = billion · Tri = trillion. Exact counts are in the detail tables."
-      }
-    },
-    {
       "id": 130,
       "type": "timeseries",
       "title": "Observed agent activity",
@@ -301,7 +1904,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 7,
+        "y": 39,
         "w": 16,
         "h": 8
       },
@@ -389,7 +1992,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 7,
+        "y": 39,
         "w": 8,
         "h": 8
       },
@@ -555,7 +2158,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 47,
         "w": 24,
         "h": 1
       }
@@ -571,7 +2174,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 48,
         "w": 24,
         "h": 8
       },
@@ -995,7 +2598,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 24,
+        "y": 56,
         "w": 24,
         "h": 1
       }
@@ -1011,7 +2614,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 25,
+        "y": 57,
         "w": 8,
         "h": 4
       },
@@ -1070,7 +2673,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 25,
+        "y": 57,
         "w": 8,
         "h": 4
       },
@@ -1129,7 +2732,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 25,
+        "y": 57,
         "w": 8,
         "h": 4
       },
@@ -1190,7 +2793,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 29,
+        "y": 61,
         "w": 12,
         "h": 8
       },
@@ -1325,7 +2928,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 29,
+        "y": 61,
         "w": 12,
         "h": 8
       },
@@ -1460,7 +3063,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 69,
         "w": 18,
         "h": 4
       },
@@ -1477,7 +3080,7 @@
       "transparent": true,
       "options": {
         "mode": "markdown",
-        "content": "**Coverage:** CWO-monitored runs only; other Codex sessions are not included.\n\nModel and effort are selected settings. Missing usage stays missing. Elapsed is wall time, not an ETA."
+        "content": "**Observed-dispatch coverage:** Jobs recorded by the observation hook or observed-job runner. Other CWO-associated sessions appear in the section above.\n\nModel and effort are selected settings. Missing usage stays missing. Elapsed is wall time, not an ETA."
       }
     },
     {
@@ -1491,7 +3094,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 37,
+        "y": 69,
         "w": 6,
         "h": 4
       },
@@ -1560,7 +3163,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 41,
+        "y": 73,
         "w": 24,
         "h": 1
       },
@@ -1578,7 +3181,7 @@
             "h": 5,
             "w": 6,
             "x": 0,
-            "y": 42
+            "y": 74
           },
           "fieldConfig": {
             "defaults": {
@@ -1631,7 +3234,7 @@
             "h": 5,
             "w": 6,
             "x": 6,
-            "y": 42
+            "y": 74
           },
           "fieldConfig": {
             "defaults": {
@@ -1684,7 +3287,7 @@
             "h": 5,
             "w": 6,
             "x": 12,
-            "y": 42
+            "y": 74
           },
           "fieldConfig": {
             "defaults": {
@@ -1737,7 +3340,7 @@
             "h": 5,
             "w": 6,
             "x": 18,
-            "y": 42
+            "y": 74
           },
           "fieldConfig": {
             "defaults": {
@@ -1789,7 +3392,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 47
+            "y": 79
           },
           "fieldConfig": {
             "defaults": {
@@ -1838,7 +3441,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 47
+            "y": 79
           },
           "fieldConfig": {
             "defaults": {
@@ -1900,7 +3503,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 55
+            "y": 87
           },
           "fieldConfig": {
             "defaults": {
@@ -1995,7 +3598,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 55
+            "y": 87
           },
           "fieldConfig": {
             "defaults": {
@@ -2158,7 +3761,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 63
+            "y": 95
           },
           "fieldConfig": {
             "defaults": {
@@ -2246,7 +3849,7 @@
             "h": 9,
             "w": 12,
             "x": 0,
-            "y": 72
+            "y": 104
           },
           "fieldConfig": {
             "defaults": {
@@ -2349,7 +3952,7 @@
             "h": 9,
             "w": 12,
             "x": 12,
-            "y": 72
+            "y": 104
           },
           "fieldConfig": {
             "defaults": {
@@ -2451,7 +4054,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 81
+            "y": 113
           },
           "fieldConfig": {
             "defaults": {
@@ -2526,7 +4129,7 @@
             "h": 9,
             "w": 12,
             "x": 0,
-            "y": 90
+            "y": 122
           },
           "fieldConfig": {
             "defaults": {
@@ -2603,7 +4206,7 @@
             "h": 9,
             "w": 12,
             "x": 12,
-            "y": 90
+            "y": 122
           },
           "fieldConfig": {
             "defaults": {
@@ -2691,7 +4294,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 99
+            "y": 131
           },
           "fieldConfig": {
             "defaults": {

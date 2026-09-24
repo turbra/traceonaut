@@ -33,3 +33,21 @@ Command detail keeps the newest **512 completions within seven days**. Compactio
 The dashboard shows the earliest fully covered command/compaction interval. Choose a start after that boundary for complete interval counts. Positive counts can be lower bounds during incomplete collection.
 
 [Limits and Internals](limits-and-internals.md) records scan budgets, tie handling and storage bounds. Export limits bound current metrics, while Prometheus storage grows with retained history.
+
+## CWO Workflow Audits
+
+The optional audit input exports the newest **2,000 unique events from the last 30 days**, across all configured files. One event produces one timestamp series. Copies with the same content hash count once. Source files remain unchanged; the collector uses an in-memory projection rather than another database.
+
+Each scan reads at most **256 files and 32 MiB**, visits at most **8,192 directory entries** and descends **16 levels** below each configured directory. Lines over **256 KiB**, malformed records and incomplete final lines are skipped. An incomplete line is retried on the next scan. Collection health reports gaps and limits; counts under partial coverage are lower bounds.
+
+Workflow queries use the event's original timestamp, so importing yesterday's log does not count as activity today. Prometheus history still starts with the first scrape: choosing an end time before that scrape cannot show newly imported events. Deleting or moving source logs stops their current export; already scraped samples remain available under Prometheus retention.
+
+Audit timestamps identify recorded events. They do not establish job completion, worker capacity or token usage.
+
+## CWO-Associated Sessions
+
+Association uses the session collector's export window and cap. Older parents can be read to establish a selected child's context. The optional feature has independent cursors and never resets usage accounting.
+
+Each pass reads at most **64 MiB**, up to **32 MiB per file**, from at most **4,096 selected rollout files**. A candidate record over **8 MiB** is a visible source gap. CWO helper detail retains at most **2,000 command records within 30 days**. Export-cap omissions remain visible until the omitted records age out. Initial backfill can take several scans.
+
+The dashboard selects sessions active in the chosen range that are exported at its end. Token totals cover those sessions' recorded history, including usage before CWO association. Choose a past end time with stored samples to inspect expired sessions.

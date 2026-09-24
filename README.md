@@ -120,7 +120,7 @@ your Prometheus datasource. The dashboard opens as **Work Overview**.
 | [Work Overview](https://turbra.github.io/traceonaut/dashboards/work-overview/) | Session activity, command outcomes, token totals and collector health. Start here. |
 | [Unified](https://turbra.github.io/traceonaut/dashboards/unified/) | Sessions, agent relationships and recorded usage in one view. |
 | [All Sessions](https://turbra.github.io/traceonaut/dashboards/all-sessions/) | A compact session inventory and usage summary. |
-| [CWO Dispatches](https://turbra.github.io/traceonaut/dashboards/cwo/) | Optional orchestration jobs, resources and outcomes from [CWO](https://github.com/gprocunier/complex-work-orchestration), a Codex skill for coordinating agents. |
+| [CWO Dispatches](https://turbra.github.io/traceonaut/dashboards/cwo/) | CWO-associated sessions, optional workflow audits and observed jobs from [CWO](https://github.com/gprocunier/complex-work-orchestration), a Codex skill for coordinating agents. |
 
 ## Documentation
 

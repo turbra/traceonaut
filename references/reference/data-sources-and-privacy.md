@@ -26,3 +26,15 @@ Prometheus receives numeric values and opaque IDs. Explicit session names, agent
 Prompts, prompt-derived titles, messages, command text, tool output and reasoning are excluded. The collector reads source files without modifying them. Protect the snapshot, database, rendered dashboards and Grafana access.
 
 Each additional profile needs its own collection. [Account Allowance](../optional/account-allowance.md) and [CWO Integration](../integrations/cwo.md) use separate optional sources.
+
+## CWO Workflow Audit Inputs
+
+With `--cwo-audit-dir` or `--cwo-audit-file`, Traceonaut reads only the selected audit sources. Prometheus receives the event's content hash as an opaque ID, a bounded event type and its source timestamp, plus numeric collection health. Other fields, including model names, paths, review text and packet contents, are excluded. Source files must be owned by the collector's user; symlinked files and directory paths are rejected. Discovery does not follow symlinked subdirectories.
+
+## CWO Session Association
+
+With `--cwo-sessions`, Traceonaut scans the indexed rollouts in the selected Codex profile. It recognizes whole user-message skill blocks naming `complex-work-orchestration`, terminal `CommandExecution` items for supported direct Python calls under `complex-work-orchestration/scripts/`, and native parent/subagent session metadata. Internal Codex tasks, such as memory consolidation, are outside this session view. Reading documentation and plain CWO mentions are excluded. Arbitrary shell programs and dynamically constructed helper paths are unclassified.
+
+A direct helper command can optionally be followed by `cat` to read its receipt. Command outcome and duration describe the complete recorded command, including that read. Supported helpers are listed in the [Metrics reference](metrics.md#cwo-associated-sessions).
+
+Only opaque session/command IDs, fixed source/tool/outcome categories and numeric timestamps/duration enter the feature index and metrics. Skill bodies, command arguments and output are inspected transiently, then discarded. Session usage retains its existing accounting rules; association does not claim that every token or turn was CWO work.

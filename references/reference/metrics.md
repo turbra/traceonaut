@@ -6,7 +6,7 @@ description: Metric names, wire types, labels and meanings for all collection so
 
 # Metrics
 
-Metric names are stable public identifiers. The `cwo_codex_` prefix belongs to session/account collection; the other families describe optional dispatch observation.
+Metric names are stable public identifiers. The `cwo_codex_` prefix belongs to session/account collection and optional CWO session association; `cwo_audit_` belongs to optional workflow audit collection. The remaining families describe optional dispatch observation.
 
 `untyped` below means the endpoint omits a Prometheus TYPE declaration. Those values are absolute snapshots, read like gauges. Apply `rate()` only to the counters identified here.
 
@@ -136,3 +136,39 @@ CWO field/token state: `0` unavailable, `1` present, `2` runtime-normalized, `3`
 CWO coverage: `0` unknown, `1` observed with no known gap, `2` known gap, `3` accounting conflict.
 
 See [Reading the Values](../dashboards/reading-values.md), [Collector Health](collector-health.md), and the [dispatch contract](../../scripts/traceonaut/observability_contract.py) for scope and remaining enumerations.
+
+## CWO Workflow Audits
+
+These optional gauges come from configured CWO audit JSONL, independently of the observed-dispatch ledger. Event timestamps describe when the source recorded an event. `skipped_records` and `source_errors` describe the latest scan, rather than cumulative failures.
+
+| Metric | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `cwo_audit_source_available` | gauge | None | At least one configured audit file was read. |
+| `cwo_audit_collection_complete` | gauge | None | All configured audit sources were read without gaps or export limits. |
+| `cwo_audit_scan_timestamp_seconds` | gauge | None | Unix time of the latest completed audit scan attempt. |
+| `cwo_audit_source_files` | gauge | None | Distinct audit files successfully read in the latest scan. |
+| `cwo_audit_source_errors` | gauge | None | Source access failures in the latest scan. |
+| `cwo_audit_limit_reached` | gauge | None | A discovery, byte or event export limit was reached. |
+| `cwo_audit_exported_events` | gauge | None | Unique audit events currently exported within the retention window. |
+| `cwo_audit_skipped_records` | gauge | `reason` | Records omitted in the latest scan, by bounded reason. |
+| `cwo_audit_event_timestamp_seconds` | gauge | `event_id`, `event_type` | Source Unix timestamp of one unique CWO audit event; not a job or token count. |
+
+Skip reasons: `invalid_json`, `unsupported_record`, `invalid_hash`, `invalid_timestamp`, `future_timestamp`, `oversized_line`, `partial_line`. Unknown valid event types use `other`. The content hash supports consistency and deduplication, not proof that a job executed.
+
+## CWO-Associated Sessions
+
+These optional gauges come from Codex rollout records with `--cwo-sessions`. The dashboard joins association with the existing session metrics; no second token ledger is created.
+
+| Name | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `cwo_codex_cwo_scan_timestamp_seconds` | gauge | None | Latest CWO session source scan attempt, Unix seconds. |
+| `cwo_codex_cwo_scan_ready` | gauge | None | Selected session sources scanned without pending files, access errors or retained gaps. |
+| `cwo_codex_cwo_pending_files` | gauge | None | Selected rollout files still awaiting CWO association scanning. |
+| `cwo_codex_cwo_source_errors` | gauge | None | CWO source access failures in the latest scan. |
+| `cwo_codex_cwo_source_gaps` | gauge | None | Persisted malformed or oversized candidate records and command conflicts. |
+| `cwo_codex_cwo_limit_reached` | gauge | None | Source-file or completed-command export cap reached. |
+| `cwo_codex_session_cwo_association_timestamp_seconds` | gauge | `project_id`, `session_id`, `source` | First CWO association: structured skill block, direct helper command, or parent session; not exclusive token attribution. |
+| `cwo_codex_cwo_command_timestamp_seconds` | gauge | `project_id`, `session_id`, `observation_id`, `tool`, `outcome` | Source completion time of a supported direct CWO helper command. |
+| `cwo_codex_cwo_command_duration_seconds` | gauge | `project_id`, `session_id`, `observation_id`, `tool`, `outcome` | Reported duration of a supported direct CWO helper command. |
+
+Association sources: `skill_block`, `tool_execution`, `parent_session`. Command outcomes: `completed`, `failed`, `unknown`. Supported helper names: `build_contractor_packet`, `close_bead_with_summary`, `coach_prompt`, `dispatch_work`, `evaluate_return`, `normalize_contractor_return`, `render_execution_status_report`, `route_work`, `run_checked_command`, `supervise_native_pool`, `supervise_native_worker`, `validate_operator_handoff`, `validate_run_readiness_plan`.

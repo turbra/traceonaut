@@ -1,40 +1,60 @@
 ---
 slug: /dashboards/cwo
 title: CWO Dispatches
-description: View observed CWO jobs, token usage, outcomes and declared budgets.
+description: View CWO-associated sessions and agents, workflow audit activity and observed jobs.
 ---
 
 # CWO Dispatches
 
 ![CWO Dispatches with synthetic example data](../../assets/screenshots/cwo-dispatches.png)
 
-*Example data. No personal jobs are shown.*
+*Synthetic data in the current dashboard layout. Counts depend on enabled sources and the selected time range.*
 
-This dashboard shows jobs recorded through [CWO Integration](../integrations/cwo.md) or the [Observed Job Runner](../integrations/observed-job-runner.md). Collector health is reported by `cwo_telemetry_component_state`; recorded jobs appear in `cwo_dispatch_state`.
+This dashboard has three independent sections: **CWO-associated sessions** from Codex records, **Workflow activity** from selected CWO audit logs, and **Observed dispatches** from a job ledger. Enable the sources you use through [CWO Integration](../integrations/cwo.md).
 
 ## Import
 
 Import [cwo-observed-dispatches.json](../../examples/observability/cwo-observed-dispatches.json) and select your Prometheus datasource.
 
-For readable names, use the presentation registry produced by the controller or observed-job runner:
+For readable session names, use the existing private session snapshot:
 
 ```bash
-CWO_PRESENTATION_FILE="/absolute/path/to/private/presentation.json"
+TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 CWO_DASHBOARD_DIR="$HOME/.local/share/traceonaut/dashboards"
 install -d -m 700 "$CWO_DASHBOARD_DIR"
 python3 scripts/render_observability_dashboard.py \
   --template examples/observability/cwo-observed-dispatches.json \
-  --presentation-file "$CWO_PRESENTATION_FILE" \
+  --session-snapshot-file "$TRACEONAUT_DATA_DIR/sessions-snapshot.json" \
   --output "$CWO_DASHBOARD_DIR/cwo-observed-dispatches.json"
 ```
+
+For observed-job names, also pass `--presentation-file /absolute/path/to/private/presentation.json` from the controller or observed-job runner. Either input can be used alone.
 
 Import the generated file. Names remain presentation metadata; missing names have explicit fallbacks. See [Automatic Name Updates](../operations/automatic-name-updates.md) for watcher/provisioning use.
 
 ## Use the Dashboard
 
-Summary values use the last stored sample per dispatch within the selected range, which defaults to 30 days. They describe observed jobs retained in that range, rather than jobs started inside it.
+### CWO-Associated Sessions
 
-If a short range is empty, widen it to include the last observed run. Completed jobs stop being exported after their final samples are confirmed in Prometheus. To see new CWO work, launch authorized jobs through the configured integration or Observed Job Runner. Ordinary Codex session collection alone does not record CWO dispatches.
+Choose **Today** or **Last 7 days** to see associated sessions and agents with recorded activity in that interval. Values use the latest exported samples at the selected end time. The table includes project, session, kind, latest model/effort, state and recorded tokens. This section covers the selected Codex profile across projects; the Project and Task selectors apply only to observed dispatches.
+
+Association comes from a structured CWO skill block, a supported helper command, or an associated parent before the child was created. **Recorded session tokens** includes whole-session history and can be a lower bound when usage is missing. It measures session usage, not CWO-exclusive cost. **CWO helper commands** counts source-time command completions, including failed attempts.
+
+**CWO session source scan** reports whether the selected files have been scanned. Pending files and source gaps make counts provisional. Sessions follow the existing [30-day inactivity window and export cap](../reference/retention-and-limits.md#session-export).
+
+### Workflow Activity
+
+Packets built, dispatches prepared and reviews evaluated count recorded events whose **original timestamps** fall within the selected time range. This section covers all configured audit logs; the Project and Task selectors apply only to observed dispatches.
+
+**Selected audit files**, **Audit scan age**, **Audit source errors** and **Skipped audit records** show health for the configured audit files only. Successful reads with no matching events show zero. Missing collection shows Unavailable; partial collection can show positive counts as lower bounds. The event-type chart lists only types present in the range.
+
+The collector exports the newest 2,000 events from the last 30 days. Prometheus must scrape them before they can appear. See [Retention and Limits](../reference/retention-and-limits.md#cwo-workflow-audits).
+
+### Observed Dispatches
+
+These panels show jobs recorded by the observation hook or [Observed Job Runner](../integrations/observed-job-runner.md). Summary values use the last stored sample per dispatch within the selected range, which defaults to 30 days. They describe observed jobs retained in that range, rather than jobs started inside it.
+
+If a short range is empty, widen it to include the last observed run. Completed jobs stop being exported after their final samples are confirmed in Prometheus. CWO-associated sessions can appear above while these job panels remain empty. Job metrics require the separate observed-job source.
 
 Dispatches, agents and completed responses are separate counts. Requested/acknowledged settings describe configuration. Token totals carry availability/coverage states. Declared allowances and enforced limits are separate fields.
 

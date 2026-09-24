@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from traceonaut.observability_contract import METRIC_FAMILIES  # noqa: E402
+from traceonaut.cwo_audit_telemetry import METRICS as AUDIT_METRICS
+from traceonaut.cwo_session_telemetry import METRICS as CWO_SESSION_METRICS
 from render_observability_dashboard import walk_panels  # noqa: E402
 
 
@@ -36,7 +38,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
     def test_dashboard_is_portable_classic_json_with_five_second_refresh(self) -> None:
         self.assertEqual(self.dashboard["uid"], "cwo-dispatch-observability-v1")
         self.assertEqual(self.dashboard["title"], "CWO Dispatches")
-        self.assertIn("Observed CWO app-server dispatches only", self.dashboard["description"])
+        self.assertIn("CWO-associated Codex sessions", self.dashboard["description"])
         self.assertEqual(self.dashboard["time"], {"from": "now-30d", "to": "now"})
         for other in (
             "codex-all-sessions.json",
@@ -72,6 +74,26 @@ class ObservabilityDashboardTests(unittest.TestCase):
                 metrics = set(metric_pattern.findall(expression))
                 self.assertTrue(metrics, expression)
                 observed.update(metrics)
+                if panel["id"] >= 300:
+                    native = {"cwo_codex_session_info", "cwo_codex_session_last_event_timestamp_seconds", "cwo_codex_session_usage_tokens", "cwo_codex_session_usage_state", "cwo_codex_session_state"}
+                    self.assertLessEqual(metrics, set(CWO_SESSION_METRICS) | native, expression)
+                    self.assertNotIn("$project", expression)
+                    self.assertNotIn("$dispatch", expression)
+                    if "cwo_codex_session_info" in metrics or "cwo_codex_session_usage_tokens" in metrics:
+                        self.assertIn("cwo_codex_session_cwo_association_timestamp_seconds", expression)
+                        self.assertIn("$__from / 1000", expression)
+                        self.assertIn("$__to / 1000", expression)
+                    continue
+                if panel["id"] >= 200:
+                    self.assertLessEqual(metrics, set(AUDIT_METRICS), expression)
+                    self.assertIn("last_over_time(", expression)
+                    self.assertNotIn("$project", expression)
+                    self.assertNotIn("$dispatch", expression)
+                    if "cwo_audit_event_timestamp_seconds" in metrics:
+                        self.assertIn("max by (event_id, event_type)", expression)
+                        self.assertIn("$__from / 1000", expression)
+                        self.assertIn("$__to / 1000", expression)
+                    continue
                 self.assertLessEqual(metrics, set(METRIC_FAMILIES), expression)
                 self.assertIn("last_over_time(", expression)
                 if panel["id"] == 130:
@@ -231,7 +253,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
     def test_overview_uses_observed_history_and_distinct_task_outcomes(self) -> None:
         sections = [p["title"] for p in self.dashboard["panels"]
                     if p["type"] == "row" and not p["collapsed"]]
-        self.assertEqual(sections, ["Overview", "Work and outcomes", "Tokens and time"])
+        self.assertEqual(sections, ["CWO-associated sessions · selected Codex profile", "Workflow activity · all configured audit logs", "Observed dispatches", "Work and outcomes", "Tokens and time"])
         activity = self.panel("Observed agent activity")
         self.assertTrue(activity["targets"][0]["range"])
         self.assertFalse(activity["targets"][0]["instant"])

@@ -181,6 +181,8 @@ class StoredSampleIntegrationTests(unittest.TestCase):
                     .replace("$project", fixture.project_id)
                     .replace("$dispatch", fixture.dispatch_id)
                     .replace("$__range", "5m")
+                    .replace("$__from", str(int((time.time() - 300) * 1000)))
+                    .replace("$__to", str(int(time.time() * 1000)))
                 )
                 client.query(expression, time.time())
                 query_count += 1

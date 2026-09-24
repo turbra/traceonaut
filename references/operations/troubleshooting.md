@@ -24,7 +24,7 @@ This reports HTTP status and the presence of collector health metrics while keep
 | UP but empty data | [Collector Health](../reference/collector-health.md), selected filters and [retention](../reference/retention-and-limits.md). |
 | Missing names | [Automatic Name Updates](automatic-name-updates.md). |
 | Grafana has no data | Imported datasource selection and Prometheus queries. |
-| CWO data appears only in older ranges | [CWO Dispatches](../dashboards/cwo.md#use-the-dashboard): the range must contain stored dispatch samples, and new jobs need an observation-enabled launch. |
+| CWO data appears only in older ranges | Enable [`--cwo-sessions`](../integrations/cwo.md#collect-cwo-sessions) for CWO-associated sessions across your Codex profile. Check pending files and source gaps. Audit logs are a separate optional source. The separate observed-job panels require stored dispatch samples within the selected range. |
 | Token counts still show M or G | Re-render and import the current dashboard template. If a watcher provisions it, update the [watcher's template or release](automatic-name-updates.md) too. |
 | Account values unavailable | [Account Allowance](../optional/account-allowance.md) collector, login and freshness. |
 

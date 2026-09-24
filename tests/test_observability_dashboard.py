@@ -22,7 +22,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.dashboard = json.loads(DASHBOARD_PATH.read_text(encoding="utf-8"))
-        cls.scrape = json.loads(SCRAPE_PATH.read_text(encoding="utf-8"))
+        cls.scrape = SCRAPE_PATH.read_text(encoding="utf-8")
 
     def panel(self, title: str) -> dict:
         return next(
@@ -35,7 +35,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
 
     def test_dashboard_is_portable_classic_json_with_five_second_refresh(self) -> None:
         self.assertEqual(self.dashboard["uid"], "cwo-dispatch-observability-v1")
-        self.assertEqual(self.dashboard["title"], "CWO · Observed dispatches")
+        self.assertEqual(self.dashboard["title"], "CWO Dispatches")
         self.assertIn("Observed CWO app-server dispatches only", self.dashboard["description"])
         self.assertEqual(self.dashboard["time"], {"from": "now-30d", "to": "now"})
         for other in (
@@ -269,20 +269,22 @@ class ObservabilityDashboardTests(unittest.TestCase):
         self.assertIn("cwo_dispatch_coverage_state", responses["targets"][0]["expr"])
         self.assertIn("max by (project_id, dispatch_id)", responses["targets"][0]["expr"])
 
-    def test_scrape_example_is_json_compatible_loopback_and_authenticated(self) -> None:
-        self.assertEqual(set(self.scrape), {"scrape_configs"})
-        self.assertEqual(len(self.scrape["scrape_configs"]), 1)
-        job = self.scrape["scrape_configs"][0]
-
-        self.assertEqual(job["scrape_interval"], "5s")
-        self.assertEqual(job["scrape_timeout"], "4s")
-        self.assertEqual(job["static_configs"], [{"targets": ["127.0.0.1:9464"]}])
-        self.assertEqual(job["authorization"]["type"], "Bearer")
-        self.assertEqual(
-            job["authorization"]["credentials_file"],
-            "/replace/with/protected/cwo-observability.token",
-        )
-        self.assertNotIn("credentials", job["authorization"])
+    def test_scrape_example_matches_quick_start_and_separates_optional_dispatches(self) -> None:
+        guide = (ROOT / "references/getting-started.mdx").read_text()
+        expected = re.search(r"<!-- prometheus-scrape -->(?:\s*\*/})?\s*```yaml\n(.*?)\n```", guide, re.S)[1]
+        active = "\n".join(line for line in self.scrape.splitlines()
+                           if line.strip() and not line.lstrip().startswith("#"))
+        self.assertEqual(active, expected)
+        self.assertIn("job_name: traceonaut\n", active)
+        self.assertIn("scrape_interval: 5s", active)
+        self.assertIn("scrape_timeout: 4s", active)
+        self.assertIn("type: Bearer", active)
+        self.assertIn("credentials_file: /absolute/path/to/traceonaut/metrics.token", active)
+        self.assertIn("targets: ['127.0.0.1:9464']", active)
+        self.assertNotIn("credentials:", self.scrape)
+        self.assertIn("  # - job_name: traceonaut-dispatches", self.scrape)
+        self.assertIn("  #     - targets: ['127.0.0.1:9465']", self.scrape)
+        self.assertIn("--state-dir", self.scrape)
 
 
 if __name__ == "__main__":

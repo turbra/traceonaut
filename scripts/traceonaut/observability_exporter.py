@@ -363,8 +363,8 @@ def render_prometheus(samples: list[Sample]) -> bytes:
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
-def read_credential(path: Path) -> bytes:
-    """Read one owner-only regular file, rejecting symlinks and unsafe parents."""
+def validate_credential_parent(path: Path) -> Path:
+    """Validate the trusted directory chain before reading or creating a token."""
     path = path.absolute()
     for parent in reversed(path.parents):
         info = parent.lstat()
@@ -375,6 +375,12 @@ def read_credential(path: Path) -> bytes:
         writable = info.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
         if writable and not (info.st_uid == 0 and info.st_mode & stat.S_ISVTX):
             raise ValueError("writable credential ancestor")
+    return path
+
+
+def read_credential(path: Path) -> bytes:
+    """Read one owner-only regular file, rejecting symlinks and unsafe parents."""
+    path = validate_credential_parent(path)
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         info = os.fstat(fd)

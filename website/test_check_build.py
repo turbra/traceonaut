@@ -1,8 +1,9 @@
 from pathlib import Path
+import json
 import tempfile
 import unittest
 
-from check_build import PROJECT_ROOT, validate_build
+from check_build import PROJECT_ROOT, PUBLIC_ASSETS, expected_pages, validate_build
 
 
 class BuildChecks(unittest.TestCase):
@@ -27,7 +28,7 @@ class BuildChecks(unittest.TestCase):
         self.assertIn("missing target", self.check('<img src="assets/missing.svg">')[0])
 
     def test_declared_public_asset_matches_source(self):
-        for name in ("traceonaut.png", "traceonaut-favicon.png"):
+        for name in PUBLIC_ASSETS:
             with self.subTest(name=name):
                 image = (PROJECT_ROOT / "assets" / name).read_bytes()
                 self.assertEqual(self.check(f'<img src="/traceonaut/{name}">',
@@ -100,6 +101,28 @@ class BuildChecks(unittest.TestCase):
             (root / "assets").mkdir()
             (root / "assets/link.html").symlink_to(root / "index.html")
             self.assertTrue(any("Symlink" in error for error in validate_build(root, {"index.html"})))
+
+    def test_manifest_requires_public_paths_metadata_and_unique_routes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "website").mkdir()
+            (root / "references").mkdir()
+            manifest = root / "website/docs-manifest.json"
+            guide = root / "references/guide.md"
+            guide.write_text("---\nslug: /guide\ntitle: Guide\ndescription: A guide.\n---\n")
+            manifest.write_text(json.dumps(["references/guide.md"]))
+            self.assertEqual(expected_pages(root), {"404.html", "guide/index.html"})
+            for names in ([], ["../private.md"], ["references/guide.md"] * 2):
+                manifest.write_text(json.dumps(names))
+                with self.assertRaises(ValueError):
+                    expected_pages(root)
+            manifest.write_text(json.dumps(["references/guide.md"]))
+            guide.write_text("---\nslug: /guide\n---\n")
+            with self.assertRaisesRegex(ValueError, "metadata"):
+                expected_pages(root)
+            guide.write_text("---\nslug: /../private\ntitle: Guide\ndescription: A guide.\n---\n")
+            with self.assertRaisesRegex(ValueError, "route"):
+                expected_pages(root)
 
 
 if __name__ == "__main__":

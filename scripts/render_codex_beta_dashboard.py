@@ -35,7 +35,7 @@ from render_codex_sessions_dashboard import (
 
 BETA_UID = "cwo-codex-beta"
 # Use the canonical path to avoid a second dashboard load during self-navigation.
-BETA_PATH = "/d/" + BETA_UID + "/codex-c2b7-work-overview-c2b7-beta"
+BETA_PATH = "/d/" + BETA_UID + "/work-overview"
 MAX_DASHBOARD_BYTES = 32 * 1024 * 1024
 
 

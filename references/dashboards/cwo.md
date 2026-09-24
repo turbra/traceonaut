@@ -1,0 +1,39 @@
+---
+slug: /dashboards/cwo
+title: CWO Dispatches
+description: View observed CWO jobs, token usage, outcomes and declared budgets.
+---
+
+# CWO Dispatches
+
+![CWO Dispatches with synthetic example data](../../assets/screenshots/cwo-dispatches.png)
+
+*Example data. No personal jobs are shown.*
+
+This view covers jobs observed through [CWO Integration](../integrations/cwo.md). Check for `cwo_telemetry_component_state` in Prometheus first.
+
+## Import
+
+Import [cwo-observed-dispatches.json](../../examples/observability/cwo-observed-dispatches.json) and select your Prometheus datasource.
+
+For readable names, use the presentation registry produced by the controller or observed-job runner:
+
+```bash
+CWO_PRESENTATION_FILE="/absolute/path/to/private/presentation.json"
+CWO_DASHBOARD_DIR="$HOME/.local/share/traceonaut/dashboards"
+install -d -m 700 "$CWO_DASHBOARD_DIR"
+python3 scripts/render_observability_dashboard.py \
+  --template examples/observability/cwo-observed-dispatches.json \
+  --presentation-file "$CWO_PRESENTATION_FILE" \
+  --output "$CWO_DASHBOARD_DIR/cwo-observed-dispatches.json"
+```
+
+Import the generated file. Names remain presentation metadata; missing names have explicit fallbacks. See [Automatic Name Updates](../operations/automatic-name-updates.md) for watcher/provisioning use.
+
+## Read the View
+
+Summary values use the last stored sample per dispatch within the selected range, which defaults to 30 days. They describe observed jobs retained in that range, rather than jobs started inside it.
+
+Dispatches, agents and completed responses are separate counts. Requested/acknowledged settings describe configuration. Token totals carry availability/coverage states. Declared allowances and enforced limits are separate fields.
+
+Ordinary sessions, Beads, native-pool reports and unobserved work belong outside this source. [Reading the Values](reading-values.md) explains common token and missing-value conventions.

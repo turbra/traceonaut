@@ -45,10 +45,13 @@ class WorktreeSource:
 
     def __init__(self, root: Path):
         self.root = root
-        paths = [root / "README.md", *sorted((root / "references").glob("*.md")),
+        paths = [root / "README.md", *sorted((root / "references").rglob("*.md")),
+                 *sorted((root / "references").rglob("*.mdx")),
                  *sorted((root / "scripts").rglob("*.py")),
                  *sorted((root / "examples").rglob("*.json")),
                  *sorted((root / "schemas").glob("*.json"))]
+        paths.extend(root / name for name in ("website/docs/home.mdx", "website/docs-manifest.json")
+                     if (root / name).is_file())
         self.names = {path.relative_to(root).as_posix() for path in paths}
 
     def read(self, name: str) -> str:
@@ -170,7 +173,25 @@ def validate(source) -> tuple[list[str], int]:
                 ):
                     errors.append(f"{name!r}: non-stdlib runtime import {root}")
 
-    for name in sorted(n for n in source.names if n.endswith(".md")):
+    # Homepage links target published routes. Other documents use source-relative
+    # links. Resolve routes from the same source/index snapshot as the links.
+    page_routes = set()
+    if "website/docs-manifest.json" in source.names:
+        try:
+            documents = json.loads(source.read("website/docs-manifest.json"))
+            if not isinstance(documents, list) or not all(isinstance(p, str) for p in documents):
+                raise ValueError("invalid manifest")
+            for document in documents:
+                if document not in source.names:
+                    errors.append(f"website/docs-manifest.json: missing source {document!r}")
+                    continue
+                route = re.search(r"^slug: (/(?:[a-z-]+(?:/[a-z-]+)*)?)$", source.read(document), re.M)
+                if route:
+                    page_routes.add(route[1].rstrip("/") + "/")
+        except (ValueError, OSError, KeyError):
+            errors.append("website/docs-manifest.json: invalid page manifest")
+
+    for name in sorted(n for n in source.names if n.endswith((".md", ".mdx"))):
         try:
             content = source.read(name)
         except (ValueError, OSError, KeyError) as exc:
@@ -181,6 +202,8 @@ def validate(source) -> tuple[list[str], int]:
                 continue
             target = link.split("#", 1)[0]
             if not target:
+                continue
+            if name == "website/docs/home.mdx" and target in page_routes:
                 continue
             joined = posixpath.join(posixpath.dirname(name), unquote(target) if source.staged else target)
             normalized = posixpath.normpath(joined)

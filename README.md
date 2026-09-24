@@ -14,24 +14,26 @@
   <a href="https://turbra.github.io/traceonaut/">Documentation</a>
 </p>
 
+
 ---
 
-Traceonaut reads existing Codex session files and exposes authenticated metrics
-for Prometheus. Import its dashboard JSON into Grafana to see recorded token
-usage, session activity, command outcomes, and collector health.
+Traceonaut shows Codex session activity, recorded token usage, command outcomes,
+and collector health in Grafana. It reads your existing Codex files and serves
+metrics for your Prometheus to scrape.
+
+![Work Overview with synthetic example data](assets/screenshots/work-overview.png)
+
+*Work Overview. All screenshots use synthetic example data.*
 
 ```text
-Codex files -> collector on your workstation -> Prometheus -> Grafana
+Codex files → Traceonaut collector → Prometheus → Grafana
 ```
-
-Prometheus pulls metrics; the collector does not push them. A separate renderer
-adds readable names to the dashboard JSON, not metric samples. No Codex telemetry
-changes, OpenTelemetry, node_exporter, or alerting services are required.
 
 ## Install
 
-Clone on the workstation containing your Codex profile. The collector uses
-Python's standard library; there are no Python packages to install.
+Clone on the workstation holding your Codex profile. The collector uses Python's
+standard library. See [Install](https://turbra.github.io/traceonaut/install/) for
+supported and tested versions.
 
 ```bash
 git clone https://github.com/turbra/traceonaut.git
@@ -39,36 +41,95 @@ cd traceonaut
 python3 scripts/collect_codex_sessions.py --help
 ```
 
-See the [installation guide](https://turbra.github.io/traceonaut/install/) for
-requirements. Use your existing Prometheus and Grafana, locally or on a separate
-server.
-
 ## Quick Start
 
-Follow the [Quick Start guide](https://turbra.github.io/traceonaut/getting-started/):
+These commands use Prometheus on the same machine. For remote or container
+Prometheus, use the [Quick Start network tabs](https://turbra.github.io/traceonaut/getting-started/#1-run-the-collector).
 
-1. **[Run the collector](https://turbra.github.io/traceonaut/getting-started/#1-run-the-collector)** against
-   your Codex profile, using a protected scrape credential.
-2. **[Configure Prometheus](https://turbra.github.io/traceonaut/getting-started/#2-add-the-prometheus-scrape-job)**
-   to scrape the workstation's `/metrics` endpoint.
-3. **[Import a dashboard](https://turbra.github.io/traceonaut/getting-started/#3-import-a-dashboard-into-grafana)**
-   into Grafana and select your Prometheus datasource.
+### 1. Run the Collector
 
-For remote Prometheus, choose a reachable LAN/VPN address with `--host` and allow
-that server through the workstation firewall. Loopback is the default. Bearer
-authentication does not encrypt HTTP; follow the [network requirements](https://turbra.github.io/traceonaut/operations/#network-and-credentials).
+From the checkout root, choose your Codex profile and create a private data directory:
 
-No release build, Grafana file provisioning, or extra monitoring service is needed.
+<!-- setup-paths -->
+```bash
+export TRACEONAUT_SOURCE_HOME="$HOME/.codex"
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+export TRACEONAUT_METRICS_CREDENTIAL="$TRACEONAUT_DATA_DIR/metrics.token"
+export TRACEONAUT_LISTEN_ADDRESS="127.0.0.1"
+install -d -m 700 "$TRACEONAUT_DATA_DIR"
+```
+
+Create the token once; reuse it on restart:
+
+<!-- credential-create -->
+```bash
+python3 scripts/create_metrics_token.py --credential-file "$TRACEONAUT_METRICS_CREDENTIAL"
+```
+
+<!-- run-collector -->
+```bash
+python3 scripts/collect_codex_sessions.py \
+  --codex-home "$TRACEONAUT_SOURCE_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+
+Leave this terminal running. The full [Quick Start](https://turbra.github.io/traceonaut/getting-started/)
+also includes a one-pass source check.
+
+### 2. Add the Prometheus Scrape Job
+
+Merge this job into your Prometheus configuration. Set `credentials_file` to the
+absolute token path readable by Prometheus, then validate and reload its configuration:
+
+<!-- prometheus-scrape -->
+```yaml
+scrape_configs:
+  - job_name: traceonaut
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    authorization:
+      type: Bearer
+      credentials_file: /absolute/path/to/traceonaut/metrics.token
+    static_configs:
+      - targets: ['127.0.0.1:9464']
+```
+
+### 3. Import a Dashboard into Grafana
+
+In a second terminal, from the checkout root:
+
+<!-- render-beta -->
+```bash
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+python3 scripts/render_codex_beta_dashboard.py \
+  --template examples/observability/codex-work-overview-beta.json \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --output "$TRACEONAUT_DATA_DIR/beta.json"
+```
+
+In Grafana, open **Dashboards → New → Import**, upload `beta.json`, and select
+your Prometheus datasource. The dashboard opens as **Work Overview**.
+
+## Dashboards at a Glance
+
+| Dashboard | Use it for |
+| --- | --- |
+| [Work Overview](https://turbra.github.io/traceonaut/dashboards/beta/) | Session activity, command outcomes, token totals and collector health. Start here. |
+| [Unified](https://turbra.github.io/traceonaut/dashboards/unified/) | Sessions, agent relationships and recorded usage in one view. |
+| [All Sessions](https://turbra.github.io/traceonaut/dashboards/stable/) | A compact session inventory and usage summary. |
+| [CWO Dispatches](https://turbra.github.io/traceonaut/dashboards/cwo/) | Optional orchestration jobs, resources and outcomes from [CWO](https://github.com/gprocunier/complex-work-orchestration), a Codex skill for coordinating agents. |
 
 ## Documentation
 
-Browse the [documentation](https://turbra.github.io/traceonaut/) for all guides.
-
-| Guide | What it covers |
+| Guide | Covers |
 | --- | --- |
-| [Dashboards](https://turbra.github.io/traceonaut/#dashboards) | Beta, Unified, All sessions, and optional CWO observed dispatches. |
-| [Data and Limits](https://turbra.github.io/traceonaut/data-and-limits/) | Sources, retention, token accounting, and missing data. |
-| [Operations](https://turbra.github.io/traceonaut/operations/) | Services, automatic name updates, upgrades, and troubleshooting. |
-| [CWO integration](https://turbra.github.io/traceonaut/integrations/cwo/) | Optional job metrics from [Complex Work Orchestration](https://github.com/gprocunier/complex-work-orchestration), a Codex skill for coordinating agents and tracking work across sessions. |
-
-CWO is not required for ordinary Codex session collection.
+| [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/) | Counts, session states, time ranges and missing data. |
+| [Operations](https://turbra.github.io/traceonaut/operations/) | Services, upgrades, name updates, networking and troubleshooting. |
+| [Scripts](https://turbra.github.io/traceonaut/reference/scripts/) | Arguments and defaults. |
+| [Metrics](https://turbra.github.io/traceonaut/reference/metrics/) | Names, types, labels and meanings. |
+| [Example Queries](https://turbra.github.io/traceonaut/reference/example-queries/) | PromQL for usage and collector health. |
+| [Data Sources and Privacy](https://turbra.github.io/traceonaut/reference/data-sources-and-privacy/) | Files read, data stored and endpoint contents. |
+| [Retention and Limits](https://turbra.github.io/traceonaut/reference/retention-and-limits/) | Export windows and historical views. |

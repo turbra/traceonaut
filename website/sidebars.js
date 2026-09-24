@@ -1,30 +1,174 @@
 module.exports = {
-  docs: [
-    {type: 'doc', id: 'website/docs/home', label: 'Documentation'},
+  "docs": [
     {
-      type: 'category', label: 'Getting Started', collapsed: false,
-      items: [
-        {type: 'doc', id: 'references/installation', label: 'Install'},
-        {type: 'doc', id: 'references/deployment', label: 'Quick Start'},
-      ],
+      "type": "doc",
+      "id": "website/docs/home",
+      "label": "Documentation"
     },
     {
-      type: 'category', label: 'Dashboards', collapsed: false,
-      items: [
-        {type: 'doc', id: 'references/codex-beta-dashboard', label: 'Work overview (Beta)'},
-        {type: 'doc', id: 'references/codex-unified-dashboard', label: 'Unified overview'},
-        {type: 'link', label: 'All sessions (Stable)', href: '/data-and-limits/#add-the-stable-dashboard'},
-        {type: 'doc', id: 'references/cwo-dashboard', label: 'CWO observed dispatches'},
-      ],
+      "type": "category",
+      "label": "Getting Started",
+      "collapsed": false,
+      "items": [
+        {
+          "type": "doc",
+          "id": "references/install",
+          "label": "Install"
+        },
+        {
+          "type": "doc",
+          "id": "references/getting-started",
+          "label": "Quick Start"
+        }
+      ]
     },
-    {type: 'doc', id: 'references/codex-all-sessions-observability', label: 'Data and Limits'},
-    {type: 'doc', id: 'references/operations', label: 'Operations'},
     {
-      type: 'category', label: 'Optional Integrations', collapsed: true,
-      items: [
-        {type: 'doc', id: 'references/cwo-integration', label: 'CWO'},
-        {type: 'doc', id: 'references/terminal-observation-export', label: 'Completed Dispatch Export'},
-      ],
+      "type": "category",
+      "label": "Dashboards",
+      "collapsed": false,
+      "items": [
+        {
+          "type": "doc",
+          "id": "references/dashboards/index",
+          "label": "Choosing a Dashboard"
+        },
+        {
+          "type": "doc",
+          "id": "references/dashboards/beta",
+          "label": "Work Overview"
+        },
+        {
+          "type": "doc",
+          "id": "references/dashboards/unified",
+          "label": "Unified"
+        },
+        {
+          "type": "doc",
+          "id": "references/dashboards/stable",
+          "label": "All Sessions"
+        },
+        {
+          "type": "doc",
+          "id": "references/dashboards/reading-values",
+          "label": "Reading the Values"
+        }
+      ]
     },
-  ],
+    {
+      "type": "category",
+      "label": "Operations",
+      "collapsed": true,
+      "items": [
+        {
+          "type": "doc",
+          "id": "references/operations",
+          "label": "Operations"
+        },
+        {
+          "type": "doc",
+          "id": "references/operations/run-as-a-service",
+          "label": "Run as a Service"
+        },
+        {
+          "type": "doc",
+          "id": "references/operations/upgrade",
+          "label": "Upgrade"
+        },
+        {
+          "type": "doc",
+          "id": "references/operations/automatic-name-updates",
+          "label": "Automatic Name Updates"
+        },
+        {
+          "type": "doc",
+          "id": "references/operations/network-and-security",
+          "label": "Network and Security"
+        },
+        {
+          "type": "doc",
+          "id": "references/operations/troubleshooting",
+          "label": "Troubleshooting"
+        }
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Reference",
+      "collapsed": true,
+      "items": [
+        {
+          "type": "doc",
+          "id": "references/reference/scripts",
+          "label": "Scripts"
+        },
+        {
+          "type": "doc",
+          "id": "references/reference/metrics",
+          "label": "Metrics"
+        },
+        {
+          "type": "doc",
+          "id": "references/reference/dashboards",
+          "label": "Dashboard Reference"
+        },
+        {
+          "type": "doc",
+          "id": "references/reference/example-queries",
+          "label": "Example Queries"
+        },
+        {
+          "type": "doc",
+          "id": "references/reference/data-sources-and-privacy",
+          "label": "Data Sources and Privacy"
+        },
+        {
+          "type": "doc",
+          "id": "references/reference/retention-and-limits",
+          "label": "Retention and Limits"
+        },
+        {
+          "type": "doc",
+          "id": "references/reference/collector-health",
+          "label": "Collector Health"
+        },
+        {
+          "type": "doc",
+          "id": "references/reference/limits-and-internals",
+          "label": "Limits and Internals"
+        }
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Optional",
+      "collapsed": true,
+      "items": [
+        {
+          "type": "doc",
+          "id": "references/optional/account-allowance",
+          "label": "Account Allowance"
+        },
+        {
+          "type": "doc",
+          "id": "references/integrations/cwo",
+          "label": "CWO Integration"
+        },
+        {
+          "type": "doc",
+          "id": "references/dashboards/cwo",
+          "label": "CWO Dispatches"
+        },
+        {
+          "type": "doc",
+          "id": "references/integrations/terminal-export",
+          "label": "Completed Dispatch Export"
+        },
+        {
+          "type": "doc",
+          "id": "references/integrations/observed-job-runner",
+          "label": "Observed Job Runner"
+        }
+      ]
+    }
+  ]
 };

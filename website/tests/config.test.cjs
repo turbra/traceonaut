@@ -12,20 +12,26 @@ test('renders only explicit public documents, directly from source', () => {
   assert.equal(docs.path, '..');
   assert.equal(path.isAbsolute(docs.sidebarPath), false);
   assert.equal(path.isAbsolute(config.presets[0][1].theme.customCss), false);
-  assert.equal(docs.include.length, 10);
+  assert.deepEqual(docs.include, require('../docs-manifest.json'));
+  assert.equal(docs.include.length, 28);
   assert.equal(new Set(docs.include).size, docs.include.length);
   for (const file of docs.include) {
-    assert.match(file, /^(references\/[a-z-]+\.md|website\/docs\/home\.mdx)$/);
+    assert.match(file, /^(references\/(?:[a-z-]+\/)*[a-z-]+\.mdx?|website\/docs\/home\.mdx)$/);
     assert(fs.lstatSync(path.join(root, file)).isFile());
   }
-  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 9);
+  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 27);
 });
 
 test('sidebar document IDs resolve to the same authoritative files', () => {
   const ids = new Set(docs.include.map(file => file.replace(/\.mdx?$/, '')));
   function visit(items) {
     for (const item of items) {
-      if (item.type === 'doc') assert(ids.has(item.id), item.id);
+      if (item.type === 'doc') {
+        assert(ids.has(item.id), item.id);
+        const file = docs.include.find(file => file.replace(/\.mdx?$/, '') === item.id);
+        const source = fs.readFileSync(path.join(root, file), 'utf8');
+        assert.equal(source.match(/^title: (.+)$/m)[1], item.label);
+      }
       if (item.items) visit(item.items);
     }
   }
@@ -42,7 +48,15 @@ test('Pages routes are unique and broken links fail the build', () => {
   const routes = docs.include.map(file => {
     const source = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(source, /^---\nslug: \/[^\n]*\n/);
-    return source.match(/^slug: (.+)$/m)[1];
+    assert.match(source, /^title: .+$/m);
+    assert.match(source, /^description: .+$/m);
+    const slug = source.match(/^slug: (.+)$/m)[1];
+    if (file !== 'website/docs/home.mdx') {
+      const expected = '/' + file.replace(/^references\//, '').replace(/\.mdx?$/, '').replace(/\/index$/, '');
+      assert.equal(slug, expected, file);
+      assert.equal(source.match(/^# (.+)$/m)[1], source.match(/^title: (.+)$/m)[1]);
+    }
+    return slug;
   });
   assert.equal(new Set(routes).size, routes.length);
   assert(routes.includes('/'));
@@ -67,21 +81,23 @@ test('README and site navigation use matching guide destinations', () => {
   })), expected);
   const start = sidebars.docs.find(item => item.label === 'Getting Started');
   assert.deepEqual(start.items.map(item => [item.label, item.id]), [
-    ['Install', 'references/installation'], ['Quick Start', 'references/deployment'],
+    ['Install', 'references/install'], ['Quick Start', 'references/getting-started'],
   ]);
-  assert.match(fs.readFileSync(path.join(root, 'references/installation.md'), 'utf8'), /^# Install Traceonaut$/m);
-  assert.match(fs.readFileSync(path.join(root, 'references/deployment.md'), 'utf8'), /^# Quick Start$/m);
-  assert.match(fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8'), /^## Documentation$/m);
+  assert.match(fs.readFileSync(path.join(root, 'references/install.md'), 'utf8'), /^# Install$/m);
+  assert.match(fs.readFileSync(path.join(root, 'references/getting-started.mdx'), 'utf8'), /^# Quick Start$/m);
+  assert.match(fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8'), /^## Quick Start$/m);
 });
 
-test('CWO is discoverable under Dashboards alongside the session views', () => {
+test('all dashboards are discoverable and CWO setup stays optional', () => {
   const dashboards = sidebars.docs.find(item => item.type === 'category' && item.label === 'Dashboards');
-  assert(dashboards.items.some(item => item.id === 'references/cwo-dashboard'));
+  assert(dashboards.items.some(item => item.id === 'references/dashboards/stable'));
+  const optional = sidebars.docs.find(item => item.label === 'Optional');
+  assert(optional.items.some(item => item.id === 'references/dashboards/cwo'));
   const home = fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8');
   const section = home.split('\n## Dashboards\n')[1].split('\n## ')[0];
   const routes = [
     '/dashboards/beta/', '/dashboards/unified/',
-    '/data-and-limits/#add-the-stable-dashboard', '/dashboards/cwo/',
+    '/dashboards/stable/', '/dashboards/cwo/',
   ];
   const menu = config.themeConfig.navbar.items.find(item => item.label === 'Dashboards');
   assert.deepEqual(menu.items.map(item => item.to), routes);
@@ -91,7 +107,7 @@ test('CWO is discoverable under Dashboards alongside the session views', () => {
     assert(section.includes(`<strong>${title}</strong>`), title);
   }
   assert(!config.themeConfig.navbar.items.some(item => item.to === '/dashboards/cwo/'));
-  assert(config.themeConfig.footer.links[0].items.some(item => item.to === '/#dashboards'));
+  assert(config.themeConfig.footer.links[0].items.some(item => item.to === '/dashboards/'));
 });
 
 test('committed banner is the site title and share image', () => {
@@ -118,19 +134,19 @@ test('uses the supplied favicon and external Apache license badge', () => {
 
 test('source links go to GitHub while document links and code remain intact', () => {
   const tree = {children: [
-    {type: 'link', url: '../scripts/traceonaut/observability_host.py'},
+    {type: 'link', url: '../../scripts/traceonaut/observability_host.py'},
     {type: 'definition', url: '../schemas/supervisor-project-registration-v1.schema.json'},
-    {type: 'link', url: 'deployment.md#1-run-the-collector'},
+    {type: 'link', url: 'getting-started.mdx#1-run-the-collector'},
     {type: 'link', url: 'https://example.org/'},
     {type: 'code', value: '[source](../scripts/example.py)'},
   ]};
   sourceLinks()(tree);
   assert.equal(tree.children[0].url, 'https://github.com/turbra/traceonaut/blob/main/scripts/traceonaut/observability_host.py');
   assert.equal(tree.children[1].url, 'https://github.com/turbra/traceonaut/blob/main/schemas/supervisor-project-registration-v1.schema.json');
-  assert.equal(tree.children[2].url, 'deployment.md#1-run-the-collector');
+  assert.equal(tree.children[2].url, 'getting-started.mdx#1-run-the-collector');
   assert.equal(tree.children[3].url, 'https://example.org/');
   assert.equal(tree.children[4].value, '[source](../scripts/example.py)');
-  assert.throws(() => sourceLinks()({type: 'link', url: '../scripts/../../private.key'}), /escapes/);
+  assert.throws(() => sourceLinks()({type: 'link', url: '../../scripts/../../private.key'}), /escapes/);
 });
 
 test('source changes trigger Pages and only build output is uploaded', () => {
@@ -140,6 +156,8 @@ test('source changes trigger Pages and only build output is uploaded', () => {
   assert.equal((workflow.match(/'examples\/observability\/\*\.json'/g) || []).length, 2);
   assert.equal((workflow.match(/'assets\/traceonaut\.png'/g) || []).length, 2);
   assert.equal((workflow.match(/'assets\/traceonaut-favicon\.png'/g) || []).length, 2);
+  assert.equal((workflow.match(/'assets\/screenshots\/\*\.png'/g) || []).length, 2);
+  assert.equal((workflow.match(/'examples\/observability\/prometheus-scrape\.yaml'/g) || []).length, 2);
   assert.match(workflow, /path: website\/build/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /if: github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/);

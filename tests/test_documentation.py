@@ -1,6 +1,7 @@
 """Check public guide links, executable block syntax, and source references."""
 
 import hashlib
+import json
 from html.parser import HTMLParser
 from pathlib import Path
 import re
@@ -16,7 +17,8 @@ from traceonaut.codex_session_telemetry import (
     COMPACTION_SOURCE_QUALIFICATION,
 )
 
-DOCS = [ROOT / "README.md", ROOT / "AGENTS.md", *sorted((ROOT / "references").glob("*.md"))]
+DOCS = [ROOT / "README.md", ROOT / "AGENTS.md", *sorted((ROOT / "references").rglob("*.md")),
+        *sorted((ROOT / "references").rglob("*.mdx"))]
 
 
 class HTMLReferences(HTMLParser):
@@ -51,7 +53,7 @@ class DocumentationTests(unittest.TestCase):
         target = (origin.parent / unquote(link.path)).resolve() if link.path else origin
         self.assertTrue(target.is_relative_to(ROOT), reference)
         self.assertTrue(target.exists(), f"{origin.name}: {reference}")
-        if link.fragment and target.suffix == ".md":
+        if link.fragment and target.suffix in (".md", ".mdx"):
             self.assertIn(unquote(link.fragment), heading_ids(target.read_text()), reference)
 
     def test_relative_guide_links_and_headings_exist(self):
@@ -79,7 +81,7 @@ class DocumentationTests(unittest.TestCase):
                       '<img src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square" '
                       'alt="License: Apache-2.0"></a>', readme)
         self.assertEqual(re.findall(r"^## (.+)$", readme, re.M),
-                         ["Install", "Quick Start", "Documentation"])
+                         ["Install", "Quick Start", "Dashboards at a Glance", "Documentation"])
         # Canonical, unmodified text from https://www.apache.org/licenses/LICENSE-2.0.txt.
         self.assertEqual(hashlib.sha256((ROOT / "LICENSE").read_bytes()).hexdigest(),
                          "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30")
@@ -90,13 +92,48 @@ class DocumentationTests(unittest.TestCase):
                 self.assert_reference(ROOT / "README.md", reference)
 
     def test_documented_shell_blocks_parse_without_execution(self):
-        for doc in DOCS:
+        for doc in [*DOCS, ROOT / "website/docs/home.mdx"]:
             blocks = re.findall(r"^```bash\n(.*?)^```\s*$", doc.read_text(), re.M | re.S)
             for number, block in enumerate(blocks, 1):
                 with self.subTest(doc=doc.name, block=number):
                     result = subprocess.run(["bash", "-n"], input=block, text=True,
                                             capture_output=True, timeout=10)
                     self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_quick_start_blocks_match_readme_and_home(self):
+        guide = (ROOT / "references/getting-started.mdx").read_text()
+        for name in ("setup-paths", "credential-create", "run-collector", "prometheus-scrape", "render-beta"):
+            pattern = r"<!-- " + name + r" -->(?:\s*\*/})?\s*```\w+\n(.*?)\n```"
+            expected = re.search(pattern, guide, re.S)[1]
+            for file in ("README.md", "website/docs/home.mdx"):
+                with self.subTest(marker=name, file=file):
+                    self.assertEqual(re.search(pattern, (ROOT / file).read_text(), re.S)[1], expected)
+
+    def test_all_guides_have_explicit_pages_and_metadata(self):
+        manifest = json.loads((ROOT / "website/docs-manifest.json").read_text())
+        guides = {p.relative_to(ROOT).as_posix() for p in DOCS if p.is_relative_to(ROOT / "references")}
+        self.assertEqual(set(manifest), guides | {"website/docs/home.mdx"})
+        for file in guides:
+            text = (ROOT / file).read_text()
+            self.assertRegex(text, r"(?m)^description: .+$")
+            title = re.search(r"(?m)^title: (.+)$", text)[1]
+            self.assertEqual(re.search(r"(?m)^# (.+)$", text)[1], title)
+
+    def test_scripts_and_dashboard_inventory_match_entry_points(self):
+        scripts = (ROOT / "references/reference/scripts.md").read_text()
+        for path in (ROOT / "scripts").glob("*.py"):
+            if '__name__ == "__main__"' in path.read_text():
+                self.assertIn(f"`{path.name}`", scripts)
+        self.assertIn("`--poll-seconds 5`", scripts)
+        for name in ("collect_codex_sessions.py", "collect_codex_account.py", "export_dispatch_observability.py"):
+            row = next(line for line in scripts.splitlines() if line.startswith(f"| `{name}`"))
+            self.assertIn("`--once`", row)
+        inventory = (ROOT / "references/reference/dashboards.md").read_text()
+        for path in (ROOT / "examples/observability").glob("*.json"):
+            data = json.loads(path.read_text())
+            if "panels" in data:
+                for value in (data["uid"], data["title"], path.name):
+                    self.assertIn(value, inventory)
 
 
 if __name__ == "__main__":

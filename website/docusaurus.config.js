@@ -23,18 +23,7 @@ const config = {
       docs: {
         // Render the public guides in place. Never crawl private repo state.
         path: '..',
-        include: [
-          'website/docs/home.mdx',
-          'references/installation.md',
-          'references/deployment.md',
-          'references/operations.md',
-          'references/codex-beta-dashboard.md',
-          'references/codex-unified-dashboard.md',
-          'references/cwo-dashboard.md',
-          'references/codex-all-sessions-observability.md',
-          'references/cwo-integration.md',
-          'references/terminal-observation-export.md',
-        ],
+        include: require('./docs-manifest.json'),
         routeBasePath: '/',
         sidebarPath: './sidebars.js',
         editUrl: 'https://github.com/turbra/traceonaut/edit/main/',
@@ -54,10 +43,10 @@ const config = {
         {to: '/getting-started/', label: 'Quick Start', position: 'left'},
         {to: '/', label: 'Documentation', position: 'left', activeBaseRegex: '^/traceonaut/$'},
         {label: 'Dashboards', position: 'left', items: [
-          {to: '/dashboards/beta/', label: 'Work overview (Beta)'},
-          {to: '/dashboards/unified/', label: 'Unified overview'},
-          {to: '/data-and-limits/#add-the-stable-dashboard', label: 'All sessions (Stable)'},
-          {to: '/dashboards/cwo/', label: 'CWO observed dispatches'},
+          {to: '/dashboards/beta/', label: 'Work Overview'},
+          {to: '/dashboards/unified/', label: 'Unified'},
+          {to: '/dashboards/stable/', label: 'All Sessions'},
+          {to: '/dashboards/cwo/', label: 'CWO Dispatches'},
         ]},
         {href: 'https://github.com/turbra/traceonaut', label: 'GitHub', position: 'right'},
       ],
@@ -68,8 +57,9 @@ const config = {
         {title: 'Documentation', items: [
           {label: 'Install', to: '/install/'},
           {label: 'Quick Start', to: '/getting-started/'},
-          {label: 'Dashboards', to: '/#dashboards'},
-          {label: 'Data and Limits', to: '/data-and-limits/'},
+          {label: 'Choosing a Dashboard', to: '/dashboards/'},
+          {label: 'Scripts', to: '/reference/scripts/'},
+          {label: 'Metrics', to: '/reference/metrics/'},
           {label: 'Operations', to: '/operations/'},
         ]},
         {title: 'Project', items: [

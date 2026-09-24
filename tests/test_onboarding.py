@@ -25,9 +25,9 @@ from collect_codex_sessions import SessionMetricsEndpoint
 from traceonaut.observability_exporter import read_credential
 
 
-def documented_block(marker, guide_name="deployment.md"):
+def documented_block(marker, guide_name="getting-started.mdx"):
     guide = (ROOT / "references" / guide_name).read_text()
-    return re.search(r"<!-- " + re.escape(marker) + r" -->\s*```bash\n(.*?)\n```", guide, re.S)[1]
+    return re.search(r"<!-- " + re.escape(marker) + r" -->(?:\s*\*/})?\s*```bash\n(.*?)\n```", guide, re.S)[1]
 
 
 class OnboardingTests(unittest.TestCase):
@@ -69,7 +69,7 @@ class OnboardingTests(unittest.TestCase):
 
     def credential(self):
         result = subprocess.run(["bash", "-eu", "-c", documented_block("credential-create")],
-                                env=self.env, cwd=self.root, capture_output=True, text=True, timeout=10)
+                                env=self.env, cwd=ROOT, capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "")
         self.assertEqual(self.token.stat().st_mode & 0o777, 0o600)
@@ -96,10 +96,18 @@ class OnboardingTests(unittest.TestCase):
         self.assertEqual(self.state.stat().st_mode & 0o777, 0o700)
         self.assert_source_unchanged()
 
+    def test_documented_once_checks_source_without_a_credential(self):
+        result = subprocess.run(["bash", "-eu", "-c", documented_block("collect-once")],
+                                env=self.env, cwd=ROOT, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), {"sessions": 1, "pending_files": 0, "source_available": 1})
+        self.assertFalse(self.token.exists())
+        self.assert_source_unchanged()
+
     def test_documented_credential_creation_does_not_overwrite(self):
         value = self.credential()
         result = subprocess.run(["bash", "-eu", "-c", documented_block("credential-create")],
-                                env=self.env, cwd=self.root, capture_output=True, timeout=10)
+                                env=self.env, cwd=ROOT, capture_output=True, timeout=10)
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(read_credential(self.token), value)
         self.assertNotIn(value, result.stdout + result.stderr)
@@ -206,10 +214,10 @@ class OnboardingTests(unittest.TestCase):
                 self.assertEqual(failure.exception.code, 401)
                 failure.exception.close()
             # Only the test port differs from the literal first-use client.
-            block = documented_block("metrics-check", "operations.md")
+            block = documented_block("metrics-check", "operations/troubleshooting.md")
             self.assertEqual(block.count("127.0.0.1:9464"), 1)
             result = subprocess.run(["bash", "-eu", "-c", block.replace("127.0.0.1:9464", f"127.0.0.1:{port}")],
-                                    env=self.env, cwd=self.root, capture_output=True, timeout=10)
+                                    env=self.env, cwd=ROOT, capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn(b"HTTP 200", result.stdout)
             self.assertNotIn(value, result.stdout + result.stderr)
@@ -227,9 +235,9 @@ class OnboardingTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
         for guide, marker, output, uid in (
-            ("deployment.md", "render-beta", "beta.json", "cwo-codex-beta"),
-            ("codex-unified-dashboard.md", "render-unified", "unified.json", "cwo-codex-unified"),
-            ("codex-all-sessions-observability.md", "render-stable", "stable.json", "cwo-supervisor-observability-v1"),
+            ("getting-started.mdx", "render-beta", "beta.json", "cwo-codex-beta"),
+            ("dashboards/unified.md", "render-unified", "unified.json", "cwo-codex-unified"),
+            ("dashboards/stable.md", "render-stable", "stable.json", "cwo-supervisor-observability-v1"),
         ):
             with self.subTest(dashboard=output):
                 result = subprocess.run(["bash", "-eu", "-c", documented_block(marker, guide)],

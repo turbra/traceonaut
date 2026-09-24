@@ -4,8 +4,8 @@ const path = require('node:path');
 module.exports = function sourceLinks() {
   return function transform(tree) {
     function walk(node) {
-      if (['link', 'definition'].includes(node.type) && /^\.\.\/(scripts|schemas|examples)\//.test(node.url)) {
-        const [file, fragment] = node.url.slice(3).split('#');
+      if (['link', 'definition'].includes(node.type) && /^(\.\.\/)+(scripts|schemas|examples)\//.test(node.url)) {
+        const [file, fragment] = node.url.replace(/^(\.\.\/)+/, '').split('#');
         const target = path.posix.normalize(file);
         if (!/^(scripts|schemas|examples)\//.test(target)) {
           throw new Error(`Source link escapes public directories: ${node.url}`);

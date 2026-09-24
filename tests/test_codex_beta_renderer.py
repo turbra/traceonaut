@@ -80,7 +80,7 @@ class CodexBetaRendererTests(unittest.TestCase):
             for session in ("parent", "child", "other"):
                 self.assertEqual(fields[session]["links"], [{
                     "title": "Focus this work",
-                    "url": "/d/cwo-codex-beta/codex-c2b7-work-overview-c2b7-beta"
+                    "url": "/d/cwo-codex-beta/work-overview"
                     + "?${project:queryparam}&var-session="
                     + session + "&${__url_time_range}",
                 }])

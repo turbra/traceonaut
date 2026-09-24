@@ -20,10 +20,10 @@ from build_release import COMPONENTS, build_release
 class ReleaseBundleTests(unittest.TestCase):
     def test_dashboard_assets_match_their_titles_and_release_components(self):
         templates = {
-            "stable": ("codex-all-sessions.json", "Codex · All sessions"),
-            "beta": ("codex-work-overview-beta.json", "Codex · Work overview · Beta"),
-            "unified": ("codex-unified-overview.json", "Codex · Unified overview"),
-            "dispatch": ("cwo-observed-dispatches.json", "CWO · Observed dispatches"),
+            "stable": ("codex-all-sessions.json", "All Sessions"),
+            "beta": ("codex-work-overview-beta.json", "Work Overview"),
+            "unified": ("codex-unified-overview.json", "Unified"),
+            "dispatch": ("cwo-observed-dispatches.json", "CWO Dispatches"),
         }
         for component, (filename, title) in templates.items():
             with self.subTest(component=component):

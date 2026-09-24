@@ -55,7 +55,7 @@
             "mode": "fixed",
             "fixedColor": "green"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "mappings": [
             {
@@ -620,7 +620,7 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -681,7 +681,7 @@
             "mode": "fixed",
             "fixedColor": "green"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -742,8 +742,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "short",
-          "decimals": 1
+          "unit": "locale",
+          "decimals": 0
         },
         "overrides": []
       },
@@ -761,9 +761,7 @@
         },
         "textMode": "value",
         "wideLayout": true,
-        "text": {
-          "valueSize": 62
-        }
+        "text": {}
       },
       "targets": [
         {
@@ -803,7 +801,7 @@
             "mode": "fixed",
             "fixedColor": "purple"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -879,7 +877,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "min": 0,
           "noValue": "Not reported",
@@ -967,7 +965,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "min": 0,
           "noValue": "Not reported",
@@ -1294,15 +1292,15 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 120
+                "value": 180
               },
               {
                 "id": "unit",
-                "value": "short"
+                "value": "locale"
               },
               {
                 "id": "decimals",
-                "value": 1
+                "value": 0
               }
             ]
           },
@@ -1402,7 +1400,11 @@
               },
               {
                 "id": "unit",
-                "value": "short"
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
               }
             ]
           },
@@ -1476,15 +1478,15 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 135
+                "value": 180
               },
               {
                 "id": "unit",
-                "value": "short"
+                "value": "locale"
               },
               {
                 "id": "decimals",
-                "value": 1
+                "value": 0
               }
             ]
           },
@@ -1776,8 +1778,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "short",
-          "decimals": 1
+          "unit": "locale",
+          "decimals": 0
         },
         "overrides": []
       },
@@ -1795,9 +1797,7 @@
         },
         "textMode": "value",
         "wideLayout": true,
-        "text": {
-          "valueSize": 62
-        }
+        "text": {}
       },
       "targets": [
         {
@@ -1837,8 +1837,8 @@
             "mode": "fixed",
             "fixedColor": "green"
           },
-          "unit": "short",
-          "decimals": 1
+          "unit": "locale",
+          "decimals": 0
         },
         "overrides": []
       },
@@ -1856,9 +1856,7 @@
         },
         "textMode": "value",
         "wideLayout": true,
-        "text": {
-          "valueSize": 62
-        }
+        "text": {}
       },
       "targets": [
         {
@@ -1898,7 +1896,7 @@
             "mode": "fixed",
             "fixedColor": "purple"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -1959,8 +1957,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "short",
-          "decimals": 1,
+          "unit": "locale",
+          "decimals": 0,
           "min": 0
         },
         "overrides": [
@@ -2242,7 +2240,7 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -2303,7 +2301,7 @@
             "mode": "fixed",
             "fixedColor": "orange"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -2470,7 +2468,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Codex · All sessions",
+  "title": "All Sessions",
   "uid": "cwo-supervisor-observability-v1",
   "version": 1,
   "weekStart": ""

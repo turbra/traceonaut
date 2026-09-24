@@ -1,0 +1,139 @@
+---
+slug: /getting-started
+title: Quick Start
+description: Run the collector, connect Prometheus and import Work Overview.
+---
+
+# Quick Start
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Complete [Install](install.md), then run these commands from the checkout root.
+
+## 1. Run the Collector
+
+Point `TRACEONAUT_SOURCE_HOME` at the profile containing `sessions/`.
+
+{/* <!-- setup-paths --> */}
+```bash
+export TRACEONAUT_SOURCE_HOME="$HOME/.codex"
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+export TRACEONAUT_METRICS_CREDENTIAL="$TRACEONAUT_DATA_DIR/metrics.token"
+export TRACEONAUT_LISTEN_ADDRESS="127.0.0.1"
+install -d -m 700 "$TRACEONAUT_DATA_DIR"
+```
+
+Choose the network layout:
+
+<Tabs groupId="network">
+<TabItem value="local" label="Same Machine" default>
+
+Keep `127.0.0.1` when Prometheus runs directly on this workstation.
+
+</TabItem>
+<TabItem value="remote" label="Remote Server">
+
+Set the collector's bind address to its numeric LAN/VPN address:
+
+```bash
+export TRACEONAUT_LISTEN_ADDRESS="192.0.2.10"
+```
+
+Replace this documentation address with one assigned to your workstation. Use that address or its DNS name as the scrape target.
+
+</TabItem>
+<TabItem value="container" label="Container Prometheus">
+
+Use a workstation LAN/VPN address reachable from the Prometheus container. Set `TRACEONAUT_LISTEN_ADDRESS` to that numeric address. Mount the token into the container read-only and use its container path in `credentials_file`.
+
+A container's loopback points to the container itself. Host networking is an alternative when both processes share the host network.
+
+</TabItem>
+</Tabs>
+
+:::warning Remote HTTP
+Bearer authentication leaves HTTP traffic unencrypted. Use a trusted private LAN, an encrypted VPN, or an HTTPS proxy. Allow only Prometheus through the workstation firewall. See [Network and Security](operations/network-and-security.md).
+:::
+
+Create the token once. On restart, reuse the existing file.
+
+{/* <!-- credential-create --> */}
+```bash
+python3 scripts/create_metrics_token.py --credential-file "$TRACEONAUT_METRICS_CREDENTIAL"
+```
+
+Check the source before starting the server:
+
+{/* <!-- collect-once --> */}
+```bash
+python3 scripts/collect_codex_sessions.py \
+  --codex-home "$TRACEONAUT_SOURCE_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" --once
+```
+
+Expect `source_available: 1`. `pending_files` counts files still to scan. The continuous collector finishes that work.
+
+{/* <!-- run-collector --> */}
+```bash
+python3 scripts/collect_codex_sessions.py \
+  --codex-home "$TRACEONAUT_SOURCE_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+
+Leave it running; **Ctrl+C** stops it. For persistent collection, use [Run as a Service](operations/run-as-a-service.md).
+
+## 2. Add the Prometheus Scrape Job
+
+Give Prometheus a protected copy of the token, readable by its service user. Use its absolute path as seen by Prometheus. Add this job to your existing configuration:
+
+{/* <!-- prometheus-scrape --> */}
+```yaml
+scrape_configs:
+  - job_name: traceonaut
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    authorization:
+      type: Bearer
+      credentials_file: /absolute/path/to/traceonaut/metrics.token
+    static_configs:
+      - targets: ['127.0.0.1:9464']
+```
+
+For remote or container Prometheus, replace `127.0.0.1:9464` with the reachable workstation address. The [scrape example](../examples/observability/prometheus-scrape.yaml) also includes a separate optional dispatch job.
+
+```bash
+promtool check config /path/to/prometheus.yml
+```
+
+Reload Prometheus, then check these queries. Both should return `1` after the first scan:
+
+```promql
+up{job="traceonaut"}
+cwo_codex_collector_source_available
+```
+
+Metric names retain the `cwo_codex_` prefix for compatibility with existing queries and dashboards.
+
+## 3. Import a Dashboard into Grafana
+
+In a second terminal, from the checkout root:
+
+{/* <!-- render-beta --> */}
+```bash
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+python3 scripts/render_codex_beta_dashboard.py \
+  --template examples/observability/codex-work-overview-beta.json \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --output "$TRACEONAUT_DATA_DIR/beta.json"
+```
+
+Open **Dashboards → New → Import**, upload `beta.json`, and select your Prometheus datasource. The dashboard title is **Work Overview**.
+
+Metrics refresh automatically. See [Automatic Name Updates](operations/automatic-name-updates.md) when new sessions need to appear in the selectors.
+
+Next: [Reading the Values](dashboards/reading-values.md) or [Choosing a Dashboard](dashboards/index.md).

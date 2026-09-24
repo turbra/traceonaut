@@ -77,7 +77,7 @@ class CodexSessionsDashboardTests(unittest.TestCase):
 
     def test_portable_dashboard_replaces_primary_with_thirty_minute_view(self) -> None:
         self.assertEqual(self.dashboard["uid"], "cwo-supervisor-observability-v1")
-        self.assertEqual(self.dashboard["title"], "Codex · All sessions")
+        self.assertEqual(self.dashboard["title"], "All Sessions")
         self.assertEqual(self.dashboard["time"], {"from": "now-30m", "to": "now"})
         self.assertEqual(self.dashboard["refresh"], "5s")
         self.assertEqual(self.dashboard["schemaVersion"], 39)

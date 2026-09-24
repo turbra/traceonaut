@@ -1,118 +1,159 @@
 ---
 slug: /
-title: Traceonaut documentation
-description: Collect Codex session metrics on your workstation, scrape them with Prometheus, and view them in Grafana.
+title: Documentation
+description: Collect Codex session metrics, connect Prometheus and explore your runs in Grafana.
 hide_title: true
 ---
 
 import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <h1 className="traceonaut-hero">
   <img src={useBaseUrl('/traceonaut.png')} alt="Traceonaut: Explore every run" />
 </h1>
 
-<div className="traceonaut-intro">
-  <p className="traceonaut-lead">
-    Codex session metrics for your existing Prometheus and Grafana.
-  </p>
-  <p>
-    See recorded token usage, session activity, command outcomes, and collector
-    health. Run the collector on your workstation and import a dashboard into
-    Grafana. No Codex telemetry changes are needed.
-  </p>
-  <a href="https://www.apache.org/licenses/LICENSE-2.0">
-    <img src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square" alt="License: Apache-2.0" />
-  </a>
-</div>
+<p className="traceonaut-lead">Codex session metrics for your existing Prometheus and Grafana.</p>
 
-## Documentation
+Read session activity, recorded token usage, command outcomes and collector health.
+Traceonaut reads Codex files on your workstation; Prometheus scrapes its endpoint;
+Grafana queries Prometheus.
 
-New to Traceonaut? [Install the collector](/install/), then follow the
-[Quick Start guide](/getting-started/) to collect metrics and view them in
-Grafana. Dashboard guides and operating instructions are below.
+<a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square" alt="License: Apache-2.0" /></a>
 
-## How it works
-
-<ol className="traceonaut-flow" aria-label="Metrics flow">
-  <li><strong>Codex files</strong><span>On your workstation</span></li>
-  <li><strong>Collector</strong><span>Reads files and serves metrics</span></li>
-  <li><strong>Prometheus</strong><span>Scrapes and stores samples</span></li>
-  <li><strong>Grafana</strong><span>Queries Prometheus</span></li>
-</ol>
-
-Prometheus pulls from the collector's authenticated `/metrics` endpoint. Your
-existing Prometheus and Grafana can run on the same machine or a separate server.
-OpenTelemetry, node_exporter, and alerting services are not required.
+<figure className="traceonaut-screenshot">
+  <Link to="/dashboards/beta/">
+    <img src={useBaseUrl('/screenshots/work-overview.png')} alt="Work Overview showing session activity and collector health with synthetic example data" />
+  </Link>
+  <figcaption>Work Overview. All screenshots use synthetic example data.</figcaption>
+</figure>
 
 ## Quick Start
 
-Complete [installation](/install/) first. Then:
+Complete [Install](/install/), then run these steps from the checkout root.
+This example uses Prometheus on the same machine. See [Quick Start](/getting-started/)
+for remote and container setups.
 
-<div className="traceonaut-cards">
-  <Link className="traceonaut-card" to="/getting-started/#1-run-the-collector">
-    <span className="traceonaut-step">01</span>
-    <strong>Run the collector</strong>
-    <span>Point it at your Codex profile and set a protected scrape credential.</span>
-  </Link>
-  <Link className="traceonaut-card" to="/getting-started/#2-add-the-prometheus-scrape-job">
-    <span className="traceonaut-step">02</span>
-    <strong>Add the scrape job</strong>
-    <span>Tell Prometheus where the collector is and how to authenticate.</span>
-  </Link>
-  <Link className="traceonaut-card" to="/getting-started/#3-import-a-dashboard-into-grafana">
-    <span className="traceonaut-step">03</span>
-    <strong>Import into Grafana</strong>
-    <span>Generate dashboard JSON with readable names, then import it.</span>
-  </Link>
-</div>
+<Tabs>
+<TabItem value="collector" label="1. Run the Collector" default>
 
-<Link className="button button--primary" to="/getting-started/">Open the Quick Start guide</Link>
+Choose your Codex profile and a private data directory:
 
-For a remote Prometheus server, use a specific reachable LAN/VPN address and
-allow only that server through the workstation firewall. Bearer authentication
-does not encrypt HTTP. Read the <Link to="/operations/#network-and-credentials">network requirements</Link>
-before exposing the endpoint. A sleeping or disconnected workstation cannot be
-scraped, and reconnecting does not backfill missed samples.
+{/* <!-- setup-paths --> */}
+```bash
+export TRACEONAUT_SOURCE_HOME="$HOME/.codex"
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+export TRACEONAUT_METRICS_CREDENTIAL="$TRACEONAUT_DATA_DIR/metrics.token"
+export TRACEONAUT_LISTEN_ADDRESS="127.0.0.1"
+install -d -m 700 "$TRACEONAUT_DATA_DIR"
+```
+
+Create the token once; reuse it on restart:
+
+{/* <!-- credential-create --> */}
+```bash
+python3 scripts/create_metrics_token.py --credential-file "$TRACEONAUT_METRICS_CREDENTIAL"
+```
+
+{/* <!-- run-collector --> */}
+```bash
+python3 scripts/collect_codex_sessions.py \
+  --codex-home "$TRACEONAUT_SOURCE_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+
+Leave the collector running. Use a second terminal for rendering.
+
+</TabItem>
+<TabItem value="prometheus" label="2. Add the Scrape Job">
+
+Merge this job into your Prometheus configuration. Replace the credential path
+with the token's absolute path as seen by Prometheus, then validate and reload:
+
+{/* <!-- prometheus-scrape --> */}
+```yaml
+scrape_configs:
+  - job_name: traceonaut
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    authorization:
+      type: Bearer
+      credentials_file: /absolute/path/to/traceonaut/metrics.token
+    static_configs:
+      - targets: ['127.0.0.1:9464']
+```
+
+</TabItem>
+<TabItem value="grafana" label="3. Import into Grafana">
+
+Run in a second terminal from the checkout root:
+
+{/* <!-- render-beta --> */}
+```bash
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+python3 scripts/render_codex_beta_dashboard.py \
+  --template examples/observability/codex-work-overview-beta.json \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --output "$TRACEONAUT_DATA_DIR/beta.json"
+```
+
+Open **Dashboards → New → Import**, upload `beta.json`, and select your Prometheus
+datasource. The dashboard title is **Work Overview**.
+
+</TabItem>
+</Tabs>
 
 ## Dashboards
 
 <div className="traceonaut-cards traceonaut-cards--explore">
   <Link className="traceonaut-card" to="/dashboards/beta/">
-    <strong>Codex · Work overview · Beta</strong>
-    <span>Start here for session activity, command outcomes, and collector health.</span>
+    <strong>Work Overview</strong>
+    <span>Start here for session activity, command outcomes, tokens and collector health.</span>
   </Link>
   <Link className="traceonaut-card" to="/dashboards/unified/">
-    <strong>Codex · Unified overview</strong>
-    <span>See sessions and agents in one view.</span>
+    <strong>Unified</strong>
+    <span>Sessions, agent relationships and recorded usage in one view.</span>
   </Link>
-  <Link className="traceonaut-card" to="/data-and-limits/#add-the-stable-dashboard">
-    <strong>Codex · All sessions</strong>
-    <span>Use the Stable session view as an alternative to Beta.</span>
+  <Link className="traceonaut-card" to="/dashboards/stable/">
+    <strong>All Sessions</strong>
+    <span>A compact session inventory and usage summary.</span>
   </Link>
   <Link className="traceonaut-card" to="/dashboards/cwo/">
-    <strong>CWO · Observed dispatches</strong>
-    <span>View jobs from the optional CWO integration, separate from Codex sessions.</span>
+    <strong>CWO Dispatches</strong>
+    <span>Optional orchestration jobs, resources and outcomes, separate from session metrics.</span>
   </Link>
 </div>
 
 ## Explore
 
 <div className="traceonaut-cards traceonaut-cards--explore">
-  <Link className="traceonaut-card" to="/data-and-limits/">
-    <strong>Data and Limits</strong>
-    <span>Understand retention, recorded totals, missing data, and what the collector can read.</span>
+  <Link className="traceonaut-card" to="/dashboards/reading-values/">
+    <strong>Reading the Values</strong><span>Understand counts, session states and time ranges.</span>
   </Link>
   <Link className="traceonaut-card" to="/operations/">
-    <strong>Operations</strong>
-    <span>Keep collection running, refresh dashboard names, upgrade, and troubleshoot.</span>
+    <strong>Operations</strong><span>Run a service, upgrade and troubleshoot collection.</span>
+  </Link>
+  <Link className="traceonaut-card" to="/reference/scripts/">
+    <strong>Scripts</strong><span>Find arguments, defaults and supported entry points.</span>
+  </Link>
+  <Link className="traceonaut-card" to="/reference/metrics/">
+    <strong>Metrics</strong><span>Look up metric names, types, labels and meanings.</span>
+  </Link>
+  <Link className="traceonaut-card" to="/reference/example-queries/">
+    <strong>Example Queries</strong><span>Query usage and collector health in Prometheus.</span>
+  </Link>
+  <Link className="traceonaut-card" to="/reference/data-sources-and-privacy/">
+    <strong>Data Sources and Privacy</strong><span>See which files are read and which data leaves the workstation.</span>
   </Link>
 </div>
 
-## Optional CWO integration
+## Related
 
 [Complex Work Orchestration (CWO)](https://github.com/gprocunier/complex-work-orchestration)
-is a Codex skill for planning complex tasks, coordinating coding agents, and
-tracking work across sessions. Traceonaut's <Link to="/integrations/cwo/">optional integration</Link>
-adds dispatch metrics for the <Link to="/dashboards/cwo/">separate CWO dashboard</Link>.
-**You do not need CWO for ordinary Codex session collection.**
+is a Codex skill for planning tasks, coordinating agents and tracking work across
+sessions. The optional [CWO Integration](/integrations/cwo/) adds dispatch metrics
+for [CWO Dispatches](/dashboards/cwo/).

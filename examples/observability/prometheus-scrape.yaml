@@ -1,19 +1,23 @@
-{
-  "scrape_configs": [
-    {
-      "job_name": "cwo-supervisor-observability",
-      "scrape_interval": "5s",
-      "scrape_timeout": "4s",
-      "scheme": "http",
-      "authorization": {
-        "type": "Bearer",
-        "credentials_file": "/replace/with/protected/cwo-observability.token"
-      },
-      "static_configs": [
-        {
-          "targets": ["127.0.0.1:9464"]
-        }
-      ]
-    }
-  ]
-}
+# Add these jobs to your existing Prometheus configuration.
+# Loopback targets require Prometheus to share the exporters' network namespace.
+# For remote session collection, use the workstation's reachable LAN/VPN address.
+scrape_configs:
+  - job_name: traceonaut
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    authorization:
+      type: Bearer
+      credentials_file: /absolute/path/to/traceonaut/metrics.token
+    static_configs:
+      - targets: ['127.0.0.1:9464']
+
+  # Optional standalone CWO exporter, started explicitly with --port 9465.
+  # Omit this job when the session collector exposes the ledger via --state-dir.
+  # - job_name: traceonaut-dispatches
+  #   scrape_interval: 5s
+  #   scrape_timeout: 4s
+  #   authorization:
+  #     type: Bearer
+  #     credentials_file: /absolute/path/to/traceonaut/dispatch.token
+  #   static_configs:
+  #     - targets: ['127.0.0.1:9465']

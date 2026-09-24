@@ -27,7 +27,7 @@ from render_codex_sessions_dashboard import (
 )
 
 UNIFIED_UID = "cwo-codex-unified"
-UNIFIED_PATH = "/d/" + UNIFIED_UID + "/codex-c2b7-unified-overview"
+UNIFIED_PATH = "/d/" + UNIFIED_UID + "/unified"
 MAX_DASHBOARD_BYTES = 32 * 1024 * 1024
 
 

@@ -75,6 +75,19 @@ class RepositoryValidationTests(unittest.TestCase):
         self.write("README.md", "# Fixed only in worktree\n")
         self.assertTrue(any("missing link" in e for e in self.errors()))
 
+    def test_mdx_and_pages_routes_are_checked_against_the_index(self):
+        self.stage("website/docs-manifest.json", '["website/docs/home.mdx", "references/install.md"]')
+        self.stage("website/docs/home.mdx", "---\nslug: /\n---\n[Install](/install/)\n")
+        self.stage("references/install.md", "---\nslug: /install\n---\n")
+        self.assertEqual(self.errors(), [])
+        self.stage("website/docs/home.mdx", "---\nslug: /\n---\n[Invalid](/etc/hosts)\n")
+        self.assertTrue(any("escapes repository" in e for e in self.errors()))
+        self.stage("website/docs/home.mdx", "---\nslug: /\n---\n[Install](/install/)\n")
+        self.stage("references/guide.mdx", "[Missing](missing.md)\n")
+        self.assertTrue(any("missing link" in e for e in self.errors()))
+        self.write("references/missing.md", "# Unstaged\n")
+        self.assertTrue(any("missing link" in e for e in self.errors()))
+
     def test_untracked_module_and_package_marker_do_not_satisfy_imports(self):
         self.stage("scripts/main.py", "import helper\nfrom traceonaut.worker import run\n")
         self.write("scripts/helper.py", "")

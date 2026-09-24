@@ -2,20 +2,46 @@
 """Check the static Pages artifact without network access or extra packages."""
 
 from html.parser import HTMLParser
+import json
 from pathlib import Path
 import re
 from urllib.parse import unquote, urljoin, urlsplit
 
 BASE = "https://turbra.github.io/traceonaut/"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PAGES = {
-    "index.html", "404.html", "install/index.html", "getting-started/index.html",
-    "operations/index.html", "dashboards/beta/index.html",
-    "dashboards/cwo/index.html",
-    "dashboards/unified/index.html", "data-and-limits/index.html",
-    "integrations/cwo/index.html", "integrations/terminal-export/index.html",
+def expected_pages(project_root=PROJECT_ROOT):
+    """Resolve only explicitly declared public sources, never a repository crawl."""
+    manifest = json.loads((project_root / "website/docs-manifest.json").read_text())
+    if not isinstance(manifest, list) or not manifest or len(set(manifest)) != len(manifest):
+        raise ValueError("Invalid public document manifest")
+    pages = {"404.html"}
+    for name in manifest:
+        if not re.fullmatch(r"references/(?:[a-z-]+/)*[a-z-]+\.mdx?|website/docs/home\.mdx", name):
+            raise ValueError(f"Unexpected public source: {name}")
+        source = project_root / name
+        if source.is_symlink() or not source.resolve().is_relative_to(project_root.resolve()):
+            raise ValueError(f"Unsafe public source: {name}")
+        text = source.read_text()
+        front = re.match(r"\A---\n(.*?)\n---\n", text, re.S)
+        metadata = dict(re.findall(r"^(slug|title|description): (.+)$", front[1], re.M)) if front else {}
+        if set(metadata) != {"slug", "title", "description"}:
+            raise ValueError(f"Missing page metadata: {name}")
+        slug = metadata["slug"]
+        if not re.fullmatch(r"/(?:[a-z-]+(?:/[a-z-]+)*)?", slug):
+            raise ValueError(f"Invalid page route: {name}")
+        page = slug.lstrip("/") + "/index.html" if slug != "/" else "index.html"
+        if page in pages:
+            raise ValueError(f"Duplicate page route: {slug}")
+        pages.add(page)
+    return pages
+
+
+PAGES = expected_pages()
+PUBLIC_ASSETS = {
+    "traceonaut-favicon.png", "traceonaut.png",
+    "screenshots/work-overview.png", "screenshots/unified.png",
+    "screenshots/all-sessions.png", "screenshots/cwo-dispatches.png",
 }
-PUBLIC_ASSETS = {"traceonaut-favicon.png", "traceonaut.png"}
 
 
 class Page(HTMLParser):

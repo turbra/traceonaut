@@ -49,7 +49,7 @@ DEFAULT_COMMAND_EXPORT_CAP = 512
 COMMAND_SOURCE = "ambient_session_item_completed_command_execution"
 COMMAND_DURATION_SCOPE = "runtime_reported_command_duration"
 COMMAND_SOURCE_QUALIFICATION = (
-    "references/codex-all-sessions-observability.md#recorded-command-source"
+    "references/reference/limits-and-internals.md#recorded-command-source"
 )
 COMPACTION_FEATURE_VERSION = 1
 COMPACTION_EXPORT_CAP = 512
@@ -57,7 +57,7 @@ COMPACTION_EXPORT_CAP = 512
 DEFAULT_COMPACTION_EXPORT_CAP = 64
 COMPACTION_SOURCE = "ambient_session_item_completed_context_compaction"
 COMPACTION_SOURCE_QUALIFICATION = (
-    "references/codex-all-sessions-observability.md#recorded-compaction-source"
+    "references/reference/limits-and-internals.md#recorded-compaction-source"
 )
 
 

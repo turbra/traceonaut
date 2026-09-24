@@ -97,7 +97,7 @@ class CodexBetaDashboardTests(unittest.TestCase):
 
     def test_is_a_distinct_portable_native_grafana_11_5_dashboard(self) -> None:
         self.assertEqual(self.dashboard["uid"], "cwo-codex-beta")
-        self.assertEqual(self.dashboard["title"], "Codex · Work overview · Beta")
+        self.assertEqual(self.dashboard["title"], "Work Overview")
         self.assertEqual(self.dashboard["schemaVersion"], 39)
         self.assertEqual(self.dashboard["time"], {"from": "now-30m", "to": "now"})
         self.assertEqual(self.dashboard["refresh"], "5s")
@@ -143,7 +143,7 @@ class CodexBetaDashboardTests(unittest.TestCase):
         content = scope["options"]["content"]
         self.assertIn("Work: ${session:text}", content)
         clear = re.search(r'<a href="([^"]+)">All work</a>', content).group(1)
-        compare = re.search(r'<a href="([^"]+)">Compare original</a>', content).group(1)
+        compare = re.search(r'<a href="([^"]+)">All Sessions</a>', content).group(1)
         self.assertIn("${project:queryparam}", clear)
         self.assertIn("var-session=$__all", clear)
         self.assertIn("${__url_time_range}", clear)
@@ -458,7 +458,7 @@ class CodexBetaDashboardTests(unittest.TestCase):
         ):
             panel = self.panel(title)
             defaults = panel["fieldConfig"]["defaults"]
-            self.assertEqual(defaults["unit"], "sishort")
+            self.assertEqual(defaults["unit"], "locale")
             self.assertEqual(defaults["noValue"], "Not recorded")
             expression = panel["targets"][0]["expr"]
             self.assertIn(f'token_kind="{token_kind}"', expression)
@@ -488,7 +488,7 @@ class CodexBetaDashboardTests(unittest.TestCase):
 
     def test_ranked_history_uses_one_zero_based_scale_and_explicit_units(self) -> None:
         for title, unit, field in (
-            ("Recorded tokens by work", "sishort", "Recorded tokens"),
+            ("Recorded tokens by work", "locale", "Recorded tokens"),
             ("Observed turn time by work", "s", "Observed turn time"),
         ):
             panel = self.panel(title)
@@ -613,7 +613,7 @@ class CodexBetaDashboardTests(unittest.TestCase):
             self.assertNotIn("to=${__to}", link)
             if link.startswith("/d/cwo-codex-beta/") or link.startswith("/d/cwo-codex-beta?"):
                 self.assertTrue(link.startswith(
-                    "/d/cwo-codex-beta/codex-c2b7-work-overview-c2b7-beta?"
+                    "/d/cwo-codex-beta/work-overview?"
                 ), "Self-navigation must not redirect and cancel the refreshed queries")
 
     def test_field_colors_use_modes_supported_by_grafana_11_5(self) -> None:

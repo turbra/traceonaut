@@ -1,4 +1,4 @@
-/* Teal documentation layout, following the scrubctl project site. */
+/* Shared documentation layout. */
 :root {
   --ifm-color-primary: #2c7a7b;
   --ifm-color-primary-dark: #276d6e;
@@ -50,6 +50,9 @@
 
 .traceonaut-hero { margin: 0 0 1.5rem; }
 .traceonaut-hero img { display: block; width: 100%; height: auto; border-radius: 8px; }
+.traceonaut-screenshot { margin: 1.5rem 0; }
+.traceonaut-screenshot img { display: block; width: 100%; height: auto; border-radius: 8px; }
+.traceonaut-screenshot figcaption { margin-top: 0.5rem; color: var(--ifm-color-emphasis-700); font-size: 0.85rem; }
 
 .traceonaut-lead {
   font-size: 1.25rem;

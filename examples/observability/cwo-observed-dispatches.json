@@ -55,7 +55,7 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -116,7 +116,7 @@
             "mode": "fixed",
             "fixedColor": "green"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -177,7 +177,7 @@
             "mode": "fixed",
             "fixedColor": "orange"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -238,7 +238,7 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -257,9 +257,7 @@
         },
         "textMode": "value",
         "wideLayout": true,
-        "text": {
-          "valueSize": 62
-        }
+        "text": {}
       },
       "targets": [
         {
@@ -294,7 +292,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "min": 0,
           "noValue": "Not reported",
@@ -382,7 +380,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "min": 0,
           "noValue": "Not reported",
@@ -806,7 +804,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "short"
+                "value": "locale"
               },
               {
                 "id": "decimals",
@@ -826,15 +824,15 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "short"
+                "value": "locale"
               },
               {
                 "id": "decimals",
-                "value": 1
+                "value": 0
               },
               {
                 "id": "custom.width",
-                "value": 105
+                "value": 180
               }
             ]
           }
@@ -1009,8 +1007,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "short",
-          "decimals": 1
+          "unit": "locale",
+          "decimals": 0
         },
         "overrides": []
       },
@@ -1028,9 +1026,7 @@
         },
         "textMode": "value",
         "wideLayout": true,
-        "text": {
-          "valueSize": 62
-        }
+        "text": {}
       },
       "targets": [
         {
@@ -1070,8 +1066,8 @@
             "mode": "fixed",
             "fixedColor": "green"
           },
-          "unit": "short",
-          "decimals": 1
+          "unit": "locale",
+          "decimals": 0
         },
         "overrides": []
       },
@@ -1089,9 +1085,7 @@
         },
         "textMode": "value",
         "wideLayout": true,
-        "text": {
-          "valueSize": 62
-        }
+        "text": {}
       },
       "targets": [
         {
@@ -1131,7 +1125,7 @@
             "mode": "fixed",
             "fixedColor": "purple"
           },
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         },
         "overrides": []
@@ -1192,8 +1186,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "short",
-          "decimals": 1,
+          "unit": "locale",
+          "decimals": 0,
           "min": 0
         },
         "overrides": [
@@ -1574,7 +1568,8 @@
           "fieldConfig": {
             "defaults": {
               "noValue": "Unavailable",
-              "unit": "short"
+              "unit": "locale",
+              "decimals": 0
             },
             "overrides": []
           },
@@ -1626,7 +1621,8 @@
           "fieldConfig": {
             "defaults": {
               "noValue": "Unavailable",
-              "unit": "short"
+              "unit": "locale",
+              "decimals": 0
             },
             "overrides": []
           },
@@ -1678,7 +1674,8 @@
           "fieldConfig": {
             "defaults": {
               "noValue": "Unavailable",
-              "unit": "short"
+              "unit": "locale",
+              "decimals": 0
             },
             "overrides": []
           },
@@ -1893,7 +1890,8 @@
           "fieldConfig": {
             "defaults": {
               "noValue": "Unavailable",
-              "unit": "short"
+              "unit": "locale",
+              "decimals": 0
             },
             "overrides": [
               {
@@ -1987,7 +1985,8 @@
           "fieldConfig": {
             "defaults": {
               "noValue": "Unavailable",
-              "unit": "short"
+              "unit": "locale",
+              "decimals": 0
             },
             "overrides": [
               {
@@ -2237,7 +2236,8 @@
           "fieldConfig": {
             "defaults": {
               "noValue": "Unavailable",
-              "unit": "short"
+              "unit": "locale",
+              "decimals": 0
             },
             "overrides": []
           },
@@ -2516,7 +2516,8 @@
           "fieldConfig": {
             "defaults": {
               "noValue": "Unavailable",
-              "unit": "short"
+              "unit": "locale",
+              "decimals": 0
             },
             "overrides": []
           },
@@ -2680,7 +2681,8 @@
           "fieldConfig": {
             "defaults": {
               "noValue": "Unavailable",
-              "unit": "short"
+              "unit": "locale",
+              "decimals": 0
             },
             "overrides": []
           },
@@ -2810,7 +2812,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "CWO · Observed dispatches",
+  "title": "CWO Dispatches",
   "uid": "cwo-dispatch-observability-v1",
   "version": 3,
   "weekStart": ""

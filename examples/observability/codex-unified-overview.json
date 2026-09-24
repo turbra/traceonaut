@@ -2194,11 +2194,11 @@
         "x": 0,
         "y": 41,
         "w": 24,
-        "h": 2
+        "h": 4
       },
       "options": {
         "mode": "markdown",
-        "content": "Available recorded history **includes activity before this interval** and may omit older records. Cached input and reasoning output are subsets of their stated denominators."
+        "content": "Available recorded history **includes activity before this interval** and may omit older records. Cached input and reasoning output are subsets of their stated denominators.\n\n**Token scale:** K = thousand · Mil = million · Bil = billion · Tri = trillion. Exact counts are in the detail tables."
       },
       "transparent": true
     },
@@ -2213,7 +2213,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 43,
+        "y": 45,
         "w": 6,
         "h": 4
       },
@@ -2224,8 +2224,8 @@
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
           },
-          "decimals": 0,
-          "unit": "locale"
+          "decimals": 1,
+          "unit": "short"
         },
         "overrides": []
       },
@@ -2274,7 +2274,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 43,
+        "y": 45,
         "w": 6,
         "h": 4
       },
@@ -2285,8 +2285,8 @@
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
           },
-          "decimals": 0,
-          "unit": "locale"
+          "decimals": 1,
+          "unit": "short"
         },
         "overrides": []
       },
@@ -2335,7 +2335,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 43,
+        "y": 45,
         "w": 6,
         "h": 4
       },
@@ -2346,8 +2346,8 @@
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
           },
-          "decimals": 0,
-          "unit": "locale"
+          "decimals": 1,
+          "unit": "short"
         },
         "overrides": []
       },
@@ -2396,7 +2396,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 43,
+        "y": 45,
         "w": 6,
         "h": 4
       },
@@ -2458,7 +2458,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 47,
+        "y": 49,
         "w": 12,
         "h": 3
       },
@@ -2523,7 +2523,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 47,
+        "y": 49,
         "w": 12,
         "h": 3
       },
@@ -2588,7 +2588,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 50,
+        "y": 52,
         "w": 24,
         "h": 8
       },
@@ -2599,8 +2599,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "locale",
-          "decimals": 0,
+          "unit": "short",
+          "decimals": 1,
           "min": 0,
           "fieldMinMax": false
         },
@@ -2721,7 +2721,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 58,
+        "y": 60,
         "w": 24,
         "h": 1
       }
@@ -2732,7 +2732,7 @@
       "title": "",
       "gridPos": {
         "x": 0,
-        "y": 59,
+        "y": 61,
         "w": 24,
         "h": 2
       },
@@ -2753,7 +2753,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 61,
+        "y": 63,
         "w": 16,
         "h": 8
       },
@@ -2889,7 +2889,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 61,
+        "y": 63,
         "w": 8,
         "h": 8
       },
@@ -2965,7 +2965,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 69,
+        "y": 71,
         "w": 7,
         "h": 3
       },
@@ -3039,7 +3039,7 @@
       },
       "gridPos": {
         "x": 7,
-        "y": 69,
+        "y": 71,
         "w": 7,
         "h": 3
       },
@@ -3101,7 +3101,7 @@
       },
       "gridPos": {
         "x": 14,
-        "y": 69,
+        "y": 71,
         "w": 10,
         "h": 3
       },
@@ -3177,7 +3177,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 72,
+        "y": 74,
         "w": 24,
         "h": 1
       },
@@ -3193,7 +3193,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 73,
+            "y": 75,
             "w": 24,
             "h": 11
           },
@@ -3563,7 +3563,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 84,
+            "y": 86,
             "w": 24,
             "h": 10
           },
@@ -3850,7 +3850,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 73,
+        "y": 75,
         "w": 24,
         "h": 1
       },
@@ -3866,7 +3866,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 74,
+            "y": 76,
             "w": 24,
             "h": 10
           },
@@ -4179,7 +4179,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 84,
+            "y": 86,
             "w": 24,
             "h": 10
           },
@@ -4514,7 +4514,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 74,
+        "y": 76,
         "w": 24,
         "h": 1
       },
@@ -4530,7 +4530,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 75,
+            "y": 77,
             "w": 12,
             "h": 3
           },
@@ -4665,7 +4665,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 75,
+            "y": 77,
             "w": 12,
             "h": 3
           },
@@ -4726,7 +4726,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 78,
+            "y": 80,
             "w": 24,
             "h": 8
           },
@@ -4927,7 +4927,7 @@
           "title": "What these signals mean",
           "gridPos": {
             "x": 0,
-            "y": 86,
+            "y": 88,
             "w": 24,
             "h": 3
           },
@@ -4946,7 +4946,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 75,
+        "y": 77,
         "w": 24,
         "h": 1
       },
@@ -4962,7 +4962,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 76,
+            "y": 78,
             "w": 8,
             "h": 4
           },
@@ -5024,7 +5024,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 76,
+            "y": 78,
             "w": 8,
             "h": 4
           },
@@ -5099,7 +5099,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 76,
+            "y": 78,
             "w": 8,
             "h": 4
           },
@@ -5160,7 +5160,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 80,
+            "y": 82,
             "w": 24,
             "h": 8
           },
@@ -5361,7 +5361,7 @@
           "title": "What context activity tells you",
           "gridPos": {
             "x": 0,
-            "y": 88,
+            "y": 90,
             "w": 24,
             "h": 3
           },
@@ -5380,7 +5380,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 76,
+        "y": 78,
         "w": 24,
         "h": 1
       },
@@ -5396,7 +5396,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 77,
+            "y": 79,
             "w": 8,
             "h": 4
           },
@@ -5477,7 +5477,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 77,
+            "y": 79,
             "w": 16,
             "h": 4
           },
@@ -5606,7 +5606,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 81,
+            "y": 83,
             "w": 24,
             "h": 4
           },

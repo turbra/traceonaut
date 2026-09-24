@@ -238,8 +238,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "locale",
-          "decimals": 0
+          "unit": "short",
+          "decimals": 1
         },
         "overrides": []
       },
@@ -276,6 +276,21 @@
       ]
     },
     {
+      "id": 106,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Token scale:** K = thousand · Mil = million · Bil = billion · Tri = trillion. Exact counts are in the detail tables."
+      }
+    },
+    {
       "id": 130,
       "type": "timeseries",
       "title": "Observed agent activity",
@@ -286,7 +301,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 7,
         "w": 16,
         "h": 8
       },
@@ -374,7 +389,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 5,
+        "y": 7,
         "w": 8,
         "h": 8
       },
@@ -540,7 +555,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 15,
         "w": 24,
         "h": 1
       }
@@ -556,7 +571,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 16,
         "w": 24,
         "h": 8
       },
@@ -980,7 +995,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 24,
         "w": 24,
         "h": 1
       }
@@ -996,7 +1011,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 25,
         "w": 8,
         "h": 4
       },
@@ -1007,8 +1022,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "locale",
-          "decimals": 0
+          "unit": "short",
+          "decimals": 1
         },
         "overrides": []
       },
@@ -1055,7 +1070,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 23,
+        "y": 25,
         "w": 8,
         "h": 4
       },
@@ -1066,8 +1081,8 @@
             "mode": "fixed",
             "fixedColor": "green"
           },
-          "unit": "locale",
-          "decimals": 0
+          "unit": "short",
+          "decimals": 1
         },
         "overrides": []
       },
@@ -1114,7 +1129,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 23,
+        "y": 25,
         "w": 8,
         "h": 4
       },
@@ -1175,7 +1190,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 27,
+        "y": 29,
         "w": 12,
         "h": 8
       },
@@ -1186,8 +1201,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "locale",
-          "decimals": 0,
+          "unit": "short",
+          "decimals": 1,
           "min": 0
         },
         "overrides": [
@@ -1310,7 +1325,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 27,
+        "y": 29,
         "w": 12,
         "h": 8
       },
@@ -1445,7 +1460,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 37,
         "w": 18,
         "h": 4
       },
@@ -1476,7 +1491,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 35,
+        "y": 37,
         "w": 6,
         "h": 4
       },
@@ -1545,7 +1560,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 39,
+        "y": 41,
         "w": 24,
         "h": 1
       },
@@ -1563,7 +1578,7 @@
             "h": 5,
             "w": 6,
             "x": 0,
-            "y": 40
+            "y": 42
           },
           "fieldConfig": {
             "defaults": {
@@ -1616,7 +1631,7 @@
             "h": 5,
             "w": 6,
             "x": 6,
-            "y": 40
+            "y": 42
           },
           "fieldConfig": {
             "defaults": {
@@ -1669,7 +1684,7 @@
             "h": 5,
             "w": 6,
             "x": 12,
-            "y": 40
+            "y": 42
           },
           "fieldConfig": {
             "defaults": {
@@ -1722,7 +1737,7 @@
             "h": 5,
             "w": 6,
             "x": 18,
-            "y": 40
+            "y": 42
           },
           "fieldConfig": {
             "defaults": {
@@ -1774,7 +1789,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 45
+            "y": 47
           },
           "fieldConfig": {
             "defaults": {
@@ -1823,7 +1838,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 45
+            "y": 47
           },
           "fieldConfig": {
             "defaults": {
@@ -1885,7 +1900,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 53
+            "y": 55
           },
           "fieldConfig": {
             "defaults": {
@@ -1980,7 +1995,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 53
+            "y": 55
           },
           "fieldConfig": {
             "defaults": {
@@ -2143,7 +2158,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 61
+            "y": 63
           },
           "fieldConfig": {
             "defaults": {
@@ -2231,7 +2246,7 @@
             "h": 9,
             "w": 12,
             "x": 0,
-            "y": 70
+            "y": 72
           },
           "fieldConfig": {
             "defaults": {
@@ -2334,7 +2349,7 @@
             "h": 9,
             "w": 12,
             "x": 12,
-            "y": 70
+            "y": 72
           },
           "fieldConfig": {
             "defaults": {
@@ -2436,7 +2451,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 79
+            "y": 81
           },
           "fieldConfig": {
             "defaults": {
@@ -2511,7 +2526,7 @@
             "h": 9,
             "w": 12,
             "x": 0,
-            "y": 88
+            "y": 90
           },
           "fieldConfig": {
             "defaults": {
@@ -2588,7 +2603,7 @@
             "h": 9,
             "w": 12,
             "x": 12,
-            "y": 88
+            "y": 90
           },
           "fieldConfig": {
             "defaults": {
@@ -2676,7 +2691,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 97
+            "y": 99
           },
           "fieldConfig": {
             "defaults": {

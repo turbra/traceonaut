@@ -2170,11 +2170,11 @@
         "x": 0,
         "y": 35,
         "w": 24,
-        "h": 2
+        "h": 4
       },
       "options": {
         "mode": "markdown",
-        "content": "Totals cover sessions still exported at the selected end time. Export limits are in Diagnostics. For expired sessions, choose a past end time. Includes history before this interval; older records may be missing. **Not interval usage.**"
+        "content": "Totals cover sessions still exported at the selected end time. Export limits are in Diagnostics. For expired sessions, choose a past end time. Includes history before this interval; older records may be missing. **Not interval usage.**\n\n**Token scale:** K = thousand · Mil = million · Bil = billion · Tri = trillion. Exact counts are in the detail tables."
       },
       "transparent": true
     },
@@ -2189,7 +2189,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 39,
         "w": 6,
         "h": 3
       },
@@ -2200,8 +2200,8 @@
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
           },
-          "decimals": 0,
-          "unit": "locale"
+          "decimals": 1,
+          "unit": "short"
         },
         "overrides": []
       },
@@ -2250,7 +2250,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 37,
+        "y": 39,
         "w": 6,
         "h": 3
       },
@@ -2261,8 +2261,8 @@
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
           },
-          "decimals": 0,
-          "unit": "locale"
+          "decimals": 1,
+          "unit": "short"
         },
         "overrides": []
       },
@@ -2311,7 +2311,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 37,
+        "y": 39,
         "w": 6,
         "h": 3
       },
@@ -2322,8 +2322,8 @@
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
           },
-          "decimals": 0,
-          "unit": "locale"
+          "decimals": 1,
+          "unit": "short"
         },
         "overrides": []
       },
@@ -2372,7 +2372,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 37,
+        "y": 39,
         "w": 6,
         "h": 3
       },
@@ -2452,7 +2452,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 40,
+        "y": 42,
         "w": 12,
         "h": 3
       },
@@ -2517,7 +2517,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 40,
+        "y": 42,
         "w": 12,
         "h": 3
       },
@@ -2582,7 +2582,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 43,
+        "y": 45,
         "w": 12,
         "h": 9
       },
@@ -2593,8 +2593,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "locale",
-          "decimals": 0,
+          "unit": "short",
+          "decimals": 1,
           "min": 0,
           "fieldMinMax": false
         },
@@ -2718,7 +2718,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 43,
+        "y": 45,
         "w": 12,
         "h": 9
       },
@@ -2850,7 +2850,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 52,
+        "y": 54,
         "w": 24,
         "h": 1
       },
@@ -2866,7 +2866,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 54,
+            "y": 56,
             "w": 12,
             "h": 4
           },
@@ -3051,7 +3051,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 54,
+            "y": 56,
             "w": 12,
             "h": 4
           },
@@ -3236,7 +3236,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 58,
+            "y": 60,
             "w": 6,
             "h": 4
           },
@@ -3310,7 +3310,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 58,
+            "y": 60,
             "w": 6,
             "h": 4
           },
@@ -3372,7 +3372,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 58,
+            "y": 60,
             "w": 6,
             "h": 4
           },
@@ -3434,7 +3434,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 58,
+            "y": 60,
             "w": 6,
             "h": 4
           },
@@ -3496,7 +3496,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 62,
+            "y": 64,
             "w": 8,
             "h": 3
           },
@@ -3557,7 +3557,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 62,
+            "y": 64,
             "w": 8,
             "h": 3
           },
@@ -3618,7 +3618,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 62,
+            "y": 64,
             "w": 8,
             "h": 3
           },
@@ -3688,7 +3688,7 @@
           "title": "What these signals mean",
           "gridPos": {
             "x": 0,
-            "y": 65,
+            "y": 67,
             "w": 12,
             "h": 4
           },
@@ -3704,7 +3704,7 @@
           "title": "What context activity tells you",
           "gridPos": {
             "x": 12,
-            "y": 65,
+            "y": 67,
             "w": 12,
             "h": 4
           },
@@ -3725,7 +3725,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 69,
+            "y": 71,
             "w": 24,
             "h": 7
           },
@@ -3931,7 +3931,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 76,
+            "y": 78,
             "w": 24,
             "h": 7
           },
@@ -4137,7 +4137,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 83,
+            "y": 85,
             "w": 24,
             "h": 8
           },
@@ -4508,7 +4508,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 91,
+            "y": 93,
             "w": 24,
             "h": 8
           },
@@ -4873,7 +4873,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 99,
+            "y": 101,
             "w": 24,
             "h": 4
           },
@@ -5002,7 +5002,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 103,
+            "y": 105,
             "w": 24,
             "h": 4
           },

@@ -27,7 +27,9 @@ Token, response and turn totals cover each selected session's recorded history. 
 | Stopped / failed | The latest turn stopped or failed. |
 | No recent signal | A turn remains open but has had no recent activity. |
 
-Counts use digit grouping, such as `1,400,000,000`, rather than abbreviated prefixes.
+Token summaries and comparison bars use compact values: **K = thousand, Mil = million, Bil = billion, Tri = trillion**. For example, `1.4 Bil` means 1.4 billion tokens and `7.2 Mil` means 7.2 million tokens. Each dashboard shows this legend beside its token summaries.
+
+Detail tables keep exact, grouped counts, such as `1,400,000,000`.
 
 ## Missing Values
 

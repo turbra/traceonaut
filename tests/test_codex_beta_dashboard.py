@@ -458,7 +458,7 @@ class CodexBetaDashboardTests(unittest.TestCase):
         ):
             panel = self.panel(title)
             defaults = panel["fieldConfig"]["defaults"]
-            self.assertEqual(defaults["unit"], "locale")
+            self.assertEqual(defaults["unit"], "short")
             self.assertEqual(defaults["noValue"], "Not recorded")
             expression = panel["targets"][0]["expr"]
             self.assertIn(f'token_kind="{token_kind}"', expression)
@@ -488,7 +488,7 @@ class CodexBetaDashboardTests(unittest.TestCase):
 
     def test_ranked_history_uses_one_zero_based_scale_and_explicit_units(self) -> None:
         for title, unit, field in (
-            ("Recorded tokens by work", "locale", "Recorded tokens"),
+            ("Recorded tokens by work", "short", "Recorded tokens"),
             ("Observed turn time by work", "s", "Observed turn time"),
         ):
             panel = self.panel(title)

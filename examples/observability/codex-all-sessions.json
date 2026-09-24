@@ -742,8 +742,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "locale",
-          "decimals": 0
+          "unit": "short",
+          "decimals": 1
         },
         "overrides": []
       },
@@ -857,7 +857,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "Sessions are included when their **latest observed event** falls inside the selected range. Token, response, turn, and duration totals cover **available observed session history**, not activity spent within the selected range, and may omit older usage or records."
+        "content": "Sessions are included when their **latest observed event** falls inside the selected range. Token, response, turn, and duration totals cover **available observed session history**, not activity spent within the selected range, and may omit older usage or records.\n\n**Token scale:** K = thousand · Mil = million · Bil = billion · Tri = trillion. Exact counts are in the detail tables."
       }
     },
     {
@@ -1662,8 +1662,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "locale",
-          "decimals": 0
+          "unit": "short",
+          "decimals": 1
         },
         "overrides": []
       },
@@ -1721,8 +1721,8 @@
             "mode": "fixed",
             "fixedColor": "green"
           },
-          "unit": "locale",
-          "decimals": 0
+          "unit": "short",
+          "decimals": 1
         },
         "overrides": []
       },
@@ -1841,8 +1841,8 @@
             "mode": "fixed",
             "fixedColor": "blue"
           },
-          "unit": "locale",
-          "decimals": 0,
+          "unit": "short",
+          "decimals": 1,
           "min": 0
         },
         "overrides": [

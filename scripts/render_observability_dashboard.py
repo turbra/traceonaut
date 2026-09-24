@@ -84,7 +84,10 @@ def render_dashboard(
         # Technical diagnostics retain original identities for investigation.
         if panel.get("id", 0) < 100:
             continue
-        if panel.get("type") == "bargauge":
+        if panel.get("type") == "bargauge" and any(
+            item.get("id") == "rowsToFields"
+            for item in panel.get("transformations", [])
+        ):
             panel["fieldConfig"]["overrides"].extend(
                 {"matcher": {"id": "byName", "options": identity},
                  "properties": [{"id": "displayName", "value": _display_name(name)}]}

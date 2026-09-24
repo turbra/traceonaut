@@ -14,21 +14,19 @@ Work Overview is the recommended starting view. Follow [Quick Start](../getting-
 
 ## Use the Dashboard
 
-Choose a **Project**, **Work**, and time range. Selecting a work title focuses that session; **All work** clears the Work filter. Project and Work are independent filters.
+Choose a **Project**, **Work**, and time range. Selecting a work title focuses that session. Choose **All** in the Work selector to clear it. Project and Work are independent filters.
 
-- **Overview** shows activity and session state.
-- **Observed session history** shows recorded token, response and turn totals.
-- **Commands** shows completions and failures within the selected interval.
-- **Collector health** shows freshness, errors and skipped records.
-- Expand **Diagnostics** to inspect coverage and retention.
+- The top strip shows collection health, command coverage and optional account allowance.
+- Headlines and the working-sessions chart summarize activity.
+- **Work and activity** lists sessions, subagent roles, parent names, usage and command outcomes.
+- Expand **Usage** for token breakdowns and the ten highest-usage sessions.
+- Expand **Diagnostics** for record coverage, skipped records and export retention.
 
-The **All Sessions** link opens the alternative view with the same filters.
+**Partial** command values are lower bounds, displayed as **≥** in the headlines. Recorded commands and failures remain visible while collection catches up or source records have gaps. Table counts remain numeric for sorting.
 
-See [Reading the Values](reading-values.md), [Collector Health](../reference/collector-health.md), and [Retention and Limits](../reference/retention-and-limits.md) for the shared meanings.
+Dashboard links switch to **All Sessions** with the same filters and time range. The default refresh is 30 seconds.
 
-## Account Allowance
-
-The account strip uses the optional [Account Allowance](../optional/account-allowance.md) collector.
+See [Reading the Values](reading-values.md) for value meanings and [Collector Health](../reference/collector-health.md) for source checks. The allowance values use the optional [Account Allowance](../optional/account-allowance.md) collector.
 
 ## Display Names
 

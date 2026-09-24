@@ -1,15 +1,14 @@
 ---
 slug: /dashboards
 title: Choosing a Dashboard
-description: Compare the four views and find their import guides.
+description: Compare the three active views and find their import guides.
 ---
 
 # Choosing a Dashboard
 
 | Dashboard | Use it for | Source |
 | --- | --- | --- |
-| [Work Overview](work-overview.md) | Daily session activity, usage, commands and collector health. Start here. | Codex session files |
-| [Unified](unified.md) | Session and agent inventory alongside usage and execution. | Codex session files |
+| [Work Overview](work-overview.md) | Daily session and subagent activity, usage and commands. Start here. | Codex session files |
 | [All Sessions](all-sessions.md) | A compact, session-centered alternative. | Codex session files |
 | [CWO Overview](cwo.md) | CWO sessions, agents, usage and workflow activity. | Codex records, optional CWO audit logs and dispatch ledger |
 

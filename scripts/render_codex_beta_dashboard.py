@@ -12,7 +12,6 @@ import re
 import signal
 import stat
 import threading
-from urllib.parse import quote
 
 from render_codex_sessions_dashboard import (
     DATASOURCE_PLACEHOLDER,
@@ -193,21 +192,18 @@ def render_dashboard(template: dict, snapshot: dict, datasource_uid=None, labels
             item.get("id") == "rowsToFields"
             for item in panel.get("transformations", [])
         ):
+            # One field-name link works for every historical identity. Repeating
+            # the same URL in each display-name override bloats large snapshots.
+            panel.setdefault("fieldConfig", {}).setdefault("defaults", {})["links"] = [{
+                "title": "Focus this work",
+                "url": BETA_PATH + "?${project:queryparam}"
+                + "&var-session=${__field.name:percentencode}&${__url_time_range}",
+            }]
             panel.setdefault("fieldConfig", {}).setdefault("overrides", []).extend(
                 {
                     "matcher": {"id": "byName", "options": identity},
                     "properties": [
                         {"id": "displayName", "value": name},
-                        {
-                            "id": "links",
-                            "value": [{
-                                "title": "Focus this work",
-                                "url": BETA_PATH
-                                + "?${project:queryparam}&var-session="
-                                + quote(identity, safe="")
-                                + "&${__url_time_range}",
-                            }],
-                        },
                     ],
                 }
                 for identity, name in names["Session"].items()
@@ -218,11 +214,9 @@ def render_dashboard(template: dict, snapshot: dict, datasource_uid=None, labels
                 continue
             for prop in override.get("properties", []):
                 if prop.get("id") == "mappings":
-                    values = (
-                        names["Session"]
-                        if panel.get("id") == 11 and field == "Work"
-                        else names[field]
-                    )
+                    # The primary inventory has its own Parent column. Keeping
+                    # the Work title single-line also keeps linked rows compact.
+                    values = names["Session"] if panel.get("id") == 11 and field == "Work" else names[field]
                     prop["value"] = _mapping(values, field + " name unavailable")
     if datasource_uid is not None:
         if re.fullmatch(r"[A-Za-z0-9_-]{1,128}", datasource_uid) is None:

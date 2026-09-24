@@ -29,10 +29,10 @@ class AccountPanelContractTests(unittest.TestCase):
             )
             panels = {
                 panel["id"]: {key: value for key, value in panel.items() if key != "gridPos"}
-                for panel in dashboard["panels"]
-                if panel["id"] in range(90, 95)
+                for panel in dashboard["panels"] + [c for row in dashboard["panels"] for c in row.get("panels", [])]
+                if panel["id"] in range(91, 95)
             }
-            self.assertEqual(set(panels), set(range(90, 95)), name)
+            self.assertEqual(set(panels), set(range(91, 95)), name)
             contracts.append(panels)
         # The Prometheus cases below therefore qualify the actual expressions
         # in both dashboards, including zero, missing, stale and failed reads.
@@ -130,7 +130,7 @@ class AccountQueryIntegrationTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        panels = {panel["id"]: panel for panel in dashboard["panels"]}
+        panels = {panel["id"]: panel for panel in dashboard["panels"] + [c for row in dashboard["panels"] for c in row.get("panels", [])]}
         cls.expressions = {
             (panel_id, target["refId"]): target["expr"]
             for panel_id in range(91, 95)

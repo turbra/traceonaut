@@ -41,7 +41,10 @@ METRICS = {
     "cwo_codex_session_observed_turn_seconds",
     "cwo_codex_session_usage_state",
     "cwo_codex_collector_scan_timestamp_seconds",
-    "cwo_codex_collector_last_event_timestamp_seconds",
+    "cwo_codex_collector_errors_total",
+    "cwo_codex_command_telemetry_ready",
+    "cwo_codex_command_telemetry_complete_after_timestamp_seconds",
+    "cwo_codex_command_telemetry_snapshot_timestamp_seconds",
     "cwo_codex_collector_sessions",
     "cwo_codex_collector_pending_files",
     "cwo_codex_collector_source_available",
@@ -79,7 +82,7 @@ class CodexSessionsDashboardTests(unittest.TestCase):
         self.assertEqual(self.dashboard["uid"], "cwo-supervisor-observability-v1")
         self.assertEqual(self.dashboard["title"], "All Sessions")
         self.assertEqual(self.dashboard["time"], {"from": "now-30m", "to": "now"})
-        self.assertEqual(self.dashboard["refresh"], "5s")
+        self.assertEqual(self.dashboard["refresh"], "30s")
         self.assertEqual(self.dashboard["schemaVersion"], 39)
         self.assertNotIn("scenes", self.dashboard)
         self.assertEqual(
@@ -128,7 +131,6 @@ class CodexSessionsDashboardTests(unittest.TestCase):
                 "State",
                 "Last seen",
                 "Project",
-                "Agent",
                 "Model / effort",
                 "Tokens",
                 "Turn time",
@@ -163,49 +165,29 @@ class CodexSessionsDashboardTests(unittest.TestCase):
         self.assertNotIn("rate(", expression)
         self.assertIn("History begins at collector installation", activity["description"])
         self.assertIn("missing heartbeat periods remain gaps", activity["description"])
-        states = self.panel("Current session states")
-        self.assertIn("does not claim the session is finished", states["description"])
-        self.assertEqual(
-            {target["legendFormat"] for target in states["targets"]},
-            {"Working", "Waiting", "Stopped / failed", "No recent signal", "Unknown"},
-        )
-        self.assertTrue(all(target["expr"].endswith("> 0") for target in states["targets"]))
 
-    def test_health_separates_reader_freshness_from_source_event_age(self) -> None:
-        health = self.panel("Collection status")
-        latest_event = self.panel("Latest source event age")
-        health_expression = health["targets"][0]["expr"]
-        self.assertIn("cwo_codex_collector_source_available", health_expression)
-        self.assertIn("cwo_codex_collector_scan_timestamp_seconds", health_expression)
-        self.assertNotIn("collector_last_event", health_expression)
-        self.assertIn("cwo_codex_collector_last_event_timestamp_seconds", latest_event["targets"][0]["expr"])
-        self.assertIn("valid when Codex is quiet", latest_event["description"])
+    def test_health_tracks_scan_even_when_source_events_are_quiet(self):
+        health = self.panel("Collection")
+        expr = health["targets"][0]["expr"]
+        self.assertIn("cwo_codex_collector_source_available", expr)
+        self.assertIn("cwo_codex_collector_scan_timestamp_seconds", expr)
+        self.assertNotIn("collector_last_event", expr)
+        self.assertIn("scan_timestamp_seconds", self.panel("Scan age")["targets"][0]["expr"])
 
-    def test_observed_history_is_not_presented_as_range_delta_or_full_lifetime(self) -> None:
-        for title in (
-            "Recorded session tokens",
-            "Sessions and latest activity",
-            "Input tokens recorded",
-            "Output tokens recorded",
-            "Observed responses",
-            "Recorded tokens by session",
-            "Observed turn time by session",
-        ):
-            description = self.panel(title)["description"].lower()
-            self.assertIn("available", description)
-        self.assertIn("may omit older usage", self.panel("Recorded session tokens")["description"])
+
+    def test_observed_history_scope_is_in_descriptions(self):
+        for title in ("Recorded session tokens", "Sessions and latest activity",
+                      "Recorded tokens by session", "Observed turn time by session"):
+            self.assertIn("available", self.panel(title)["description"].lower())
+            self.assertIn("reading-values/", self.panel(title)["description"])
         self.assertIn("not tokens spent within the selected range", self.panel("Recorded session tokens")["description"])
-        coverage = self.panel("")["options"]["content"]
-        self.assertIn("latest observed event", coverage)
-        self.assertIn("available observed session history", coverage)
-        self.assertIn("may omit older usage", coverage)
-        self.assertIn("not backfilled", coverage)
+
 
     def test_usage_conflict_suppresses_recorded_tokens_and_response_count(self) -> None:
         table = self.panel("Sessions and latest activity")
         recorded = next(target["expr"] for target in table["targets"] if target["refId"] == "C")
         responses = next(target["expr"] for target in table["targets"] if target["refId"] == "E")
-        for expression in (recorded, responses, self.panel("Observed responses")["targets"][0]["expr"]):
+        for expression in (recorded, responses):
             self.assertIn("cwo_codex_session_usage_state", expression)
             self.assertIn("== 1", expression)
             self.assertIn("== 4", expression)
@@ -252,15 +234,13 @@ class CodexSessionsDashboardTests(unittest.TestCase):
             self.assertIn("<= $__to / 1000", target["expr"])
         self.assertIn("not added to recorded tokens", diagnostics["description"])
 
-    def test_range_and_history_scope_is_prominent_near_summary_cards(self) -> None:
-        scope = self.panel("Selected range and recorded history")
-        self.assertEqual(scope["type"], "text")
-        self.assertEqual(scope["gridPos"], {"x": 0, "y": 12, "w": 24, "h": 4})
-        content = scope["options"]["content"]
-        self.assertIn("latest observed event", content)
-        self.assertIn("available observed session history", content)
-        self.assertIn("not activity spent within the selected range", content)
-        self.assertIn("may omit older usage or records", content)
+    def test_inventory_leads_and_detail_rows_are_collapsed(self):
+        table = self.panel("Sessions and latest activity")
+        self.assertEqual(table["gridPos"], dict(x=0, y=2, w=24, h=10))
+        self.assertTrue(self.panel("Diagnostics")["collapsed"])
+        self.assertTrue(self.panel("Usage")["collapsed"])
+        self.assertFalse(any(p["type"] in ("text", "piechart") for p in walk_panels(self.dashboard["panels"])))
+
 
     def test_comparison_bars_receive_table_fields_for_human_name_mapping(self) -> None:
         for title in ("Recorded tokens by session", "Observed turn time by session"):
@@ -319,7 +299,6 @@ class CodexSessionsRendererTests(unittest.TestCase):
         expected = {
             "Session": "Review collector coverage",
             "Project": "Complex work orchestration",
-            "Agent": "Dashboard reviewer",
         }
         keys = {"Session": self.session, "Project": self.project, "Agent": self.session}
         for field, name in expected.items():
@@ -331,12 +310,12 @@ class CodexSessionsRendererTests(unittest.TestCase):
             self.assertEqual(mapping[0]["options"][keys[field]]["text"], name)
             self.assertEqual(mapping[-1]["options"]["pattern"], "^.+$")
             self.assertNotRegex(mapping[-1]["options"]["result"]["text"], self.session)
-        diagnostics = next(panel for panel in rendered["panels"] if panel.get("id") == 173)
+        diagnostics = next(panel for panel in walk_panels(rendered["panels"]) if panel.get("id") == 173)
         session_column = next(item for item in diagnostics["fieldConfig"]["overrides"]
                               if item["matcher"]["options"] == "Session")
         mapping = next(prop["value"] for prop in session_column["properties"] if prop["id"] == "mappings")
         self.assertEqual(mapping[0]["options"][self.session]["text"], "Review collector coverage")
-        for panel in rendered["panels"]:
+        for panel in walk_panels(rendered["panels"]):
             if panel.get("type") != "bargauge":
                 continue
             fallback = panel["fieldConfig"]["overrides"][0]
@@ -364,12 +343,6 @@ class CodexSessionsRendererTests(unittest.TestCase):
             variables["session"]["options"][1]["text"],
             "Complex work orchestration · Subagent · 2026-09-16 12:00:00.000 UTC",
         )
-        table = next(panel for panel in rendered["panels"] if panel.get("id") == 110)
-        agent = next(
-            item for item in table["fieldConfig"]["overrides"] if item["matcher"]["options"] == "Agent"
-        )
-        mapping = next(prop["value"] for prop in agent["properties"] if prop["id"] == "mappings")
-        self.assertEqual(mapping[0]["options"][self.session]["text"], "Subagent")
 
     def test_duplicate_titles_are_disambiguated_by_human_start_time(self) -> None:
         second = copy.deepcopy(self.snapshot["sessions"][0])

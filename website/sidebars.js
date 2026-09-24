@@ -39,11 +39,6 @@ module.exports = {
         },
         {
           "type": "doc",
-          "id": "references/dashboards/unified",
-          "label": "Unified"
-        },
-        {
-          "type": "doc",
           "id": "references/dashboards/all-sessions",
           "label": "All Sessions"
         },

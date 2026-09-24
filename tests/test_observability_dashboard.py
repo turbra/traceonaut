@@ -35,7 +35,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
     def expressions(panel: dict) -> list[str]:
         return [target["expr"] for target in panel.get("targets", [])]
 
-    def test_dashboard_is_portable_classic_json_with_five_second_refresh(self) -> None:
+    def test_dashboard_is_portable_classic_json_with_one_minute_refresh(self) -> None:
         self.assertEqual(self.dashboard["uid"], "cwo-dispatch-observability-v1")
         self.assertEqual(self.dashboard["title"], "CWO Overview")
         self.assertIn("CWO-associated Codex sessions", self.dashboard["description"])
@@ -47,7 +47,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
         ):
             session = json.loads((DASHBOARD_PATH.parent / other).read_text())
             self.assertNotEqual(self.dashboard["uid"], session["uid"])
-        self.assertEqual(self.dashboard["refresh"], "5s")
+        self.assertEqual(self.dashboard["refresh"], "1m")
         self.assertEqual(self.dashboard["schemaVersion"], 39)
         self.assertIn("1y", self.dashboard["timepicker"]["time_options"])
         self.assertNotIn("scenes", self.dashboard)
@@ -62,7 +62,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
             if panel["type"] in {"row", "text"}:
                 continue
             self.assertEqual(panel["datasource"]["uid"], "${DS_PROMETHEUS}")
-            self.assertIn(panel["fieldConfig"]["defaults"]["noValue"], {"Unavailable", "Not reported", "Not connected"})
+            self.assertIn(panel["fieldConfig"]["defaults"]["noValue"], {"—"})
             for target in panel.get("targets", []):
                 self.assertEqual(target["datasource"]["uid"], "${DS_PROMETHEUS}")
 
@@ -116,7 +116,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
             'last_over_time(cwo_dispatch_field_state{project_id=~"$project",dispatch_id=~"$dispatch",field="dispatch_elapsed"}[$__range]) == 1',
             elapsed,
         )
-        self.assertEqual(panel["fieldConfig"]["defaults"]["noValue"], "Unavailable")
+        self.assertEqual(panel["fieldConfig"]["defaults"]["noValue"], "—")
 
     def test_stale_token_totals_require_latest_state_and_nonconflicting_coverage(
         self,
@@ -170,17 +170,15 @@ class ObservabilityDashboardTests(unittest.TestCase):
                 continue
             self.assertIn('field="dispatch_elapsed"}[$__range]) == 1', target["expr"])
 
-    def test_agent_and_dispatch_counts_use_distinct_identities(self) -> None:
-        active = self.panel("Active distinct agents")["targets"][0]["expr"]
-        terminal = self.panel("Terminal dispatches in selected range")["targets"][0][
-            "expr"
-        ]
-
+    def test_agent_and_dispatch_counts_use_distinct_identities(self):
+        active = self.panel("Agents working")["targets"][0]["expr"]
+        terminal = self.panel("Completed tasks")["targets"][0]["expr"]
         self.assertIn("count by (project_id, agent_id)", active)
-        self.assertIn("cwo_agent_state", active)
+        self.assertIn("cwo_dispatch_state", active)
         self.assertIn("<= 2", active)
         self.assertIn("cwo_dispatch_state", terminal)
-        self.assertIn(">= 3", terminal)
+        self.assertIn("== 3", terminal)
+
 
     def test_requested_and_configured_views_are_separate_and_claim_no_attribution(
         self,
@@ -228,7 +226,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
         details = next(panel for panel in overview if panel["id"] == 90)
         self.assertTrue(details["collapsed"])
         self.assertGreaterEqual(len(details["panels"]), 15)
-        self.assertTrue(all(panel["id"] >= 100 for panel in overview if panel["type"] != "row"))
+        self.assertTrue(all(panel["id"] >= 100 or panel["id"] == 3 for panel in overview if panel["type"] != "row"))
         work = self.panel("Work and results")
         # Each query returns at most one row per dispatch. Grafana 11.5's
         # outerTabular mode combines pairs of frames into duplicate rows.
@@ -237,7 +235,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
         for technical_field in ("Time", "job", "instance", "agent_id", "project_id", "__name__"):
             self.assertNotIn(technical_field, shown)
         fields = work["transformations"][2]["options"]["renameByName"].values()
-        self.assertEqual(set(fields), {"Task", "Worker", "Status", "Model", "Effort", "Elapsed", "Responses", "Tokens"})
+        self.assertEqual(set(fields), {"Task", "Worker", "Status", "Model", "Effort", "Elapsed", "Responses", "Tokens", "Last response"})
         task_field = next(o for o in work["fieldConfig"]["overrides"] if o["matcher"]["options"] == "Task")
         links = next(p["value"] for p in task_field["properties"] if p["id"] == "links")
         self.assertTrue(links[0]["url"].startswith("/d/" + self.dashboard["uid"] + "?"))
@@ -250,46 +248,30 @@ class ObservabilityDashboardTests(unittest.TestCase):
                 for selector in re.findall(r"cwo_dispatch_coverage_state\{([^}]+)\}", expression):
                     self.assertNotIn("token_kind", selector)
 
-    def test_overview_uses_observed_history_and_distinct_task_outcomes(self) -> None:
-        sections = [p["title"] for p in self.dashboard["panels"]
-                    if p["type"] == "row" and not p["collapsed"]]
-        self.assertEqual(sections, ["CWO-associated sessions · selected Codex profile", "Workflow activity · all configured audit logs", "Observed dispatches", "Work and outcomes", "Tokens and time"])
-        activity = self.panel("Observed agent activity")
-        self.assertTrue(activity["targets"][0]["range"])
-        self.assertFalse(activity["targets"][0]["instant"])
-        # Prometheus rejects a range with more than 11,000 points per series.
-        self.assertLessEqual(activity["maxDataPoints"], 10000)
-        self.assertFalse(activity["fieldConfig"]["defaults"]["custom"]["spanNulls"])
-        activity_query = activity["targets"][0]["expr"]
-        self.assertIn("count by (project_id, agent_id)", activity_query)
-        self.assertIn("max by (project_id, dispatch_id)", activity_query)
-        self.assertIn("<= 2", activity_query)
-        self.assertIn("[20s]", activity_query)
-        self.assertNotIn("$__range", activity_query)
-        outcomes = self.panel("Task outcomes")
-        self.assertEqual(outcomes["options"]["pieType"], "donut")
-        self.assertEqual({t["legendFormat"] for t in outcomes["targets"]},
-                         {"Completed", "Stopped / failed", "In progress", "Unknown"})
-        for query in self.expressions(outcomes):
+    def test_overview_orders_sources_by_filter_scope(self):
+        sections = [p["title"] for p in self.dashboard["panels"] if p["type"] == "row" and not p["collapsed"]]
+        self.assertEqual(sections, ["Observed dispatches · Project/Task filters apply",
+                                   "Workflow activity · all audit logs",
+                                   "CWO-associated sessions · whole profile"])
+        self.assertFalse(any(p["type"] in ("text", "piechart", "timeseries") for p in walk_panels(self.dashboard["panels"])))
+        for title in ("Completed tasks", "Stopped or failed"):
+            query = self.panel(title)["targets"][0]["expr"]
             self.assertIn("cwo_dispatch_state", query)
-            self.assertNotIn("agent_id", query)
-            self.assertNotIn("vector(0)", query)
             self.assertIn("max by (project_id, dispatch_id)", query)
-            self.assertTrue(query.endswith("> 0"))
 
-    def test_token_cards_preserve_kind_provenance_and_conflict_gates(self) -> None:
-        for kind, title in (("input", "Input tokens reported"), ("output", "Output tokens reported")):
+
+    def test_tokens_and_responses_keep_provenance_after_deduplication(self):
+        for title in ("Tokens reported", "Where tokens went"):
             expression = self.panel(title)["targets"][0]["expr"]
-            self.assertIn('token_kind="' + kind + '"', expression)
-            self.assertNotIn('token_kind="total"', expression)
+            self.assertIn('token_kind="total"', expression)
             self.assertIn("cwo_dispatch_token_state", expression)
             self.assertIn("unless on (project_id, dispatch_id)", expression)
             self.assertIn("cwo_dispatch_coverage_state", expression)
             self.assertNotIn("vector(0)", expression)
-        responses = self.panel("Completed model responses")
-        self.assertIn("cwo_dispatch_completed_cycles_total", responses["targets"][0]["expr"])
-        self.assertIn("cwo_dispatch_coverage_state", responses["targets"][0]["expr"])
-        self.assertIn("max by (project_id, dispatch_id)", responses["targets"][0]["expr"])
+        responses = next(t["expr"] for t in self.panel("Work and results")["targets"] if t["refId"] == "D")
+        self.assertIn("cwo_dispatch_completed_cycles_total", responses)
+        self.assertIn("cwo_dispatch_coverage_state", responses)
+
 
     def test_scrape_example_matches_quick_start_and_separates_optional_dispatches(self) -> None:
         guide = (ROOT / "references/getting-started.mdx").read_text()

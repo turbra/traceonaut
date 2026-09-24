@@ -56,7 +56,7 @@ class WorkDashboardRendererTests(unittest.TestCase):
         row = next(p for p in result["panels"] if p["id"] == 90)
         self.assertTrue(row["collapsed"])
         for panel in result["panels"]:
-            if panel["type"] == "bargauge":
+            if panel["type"] == "bargauge" and any(t["id"] == "rowsToFields" for t in panel.get("transformations", [])):
                 labels = panel["fieldConfig"]["overrides"]
                 named = next(o for o in labels if o["matcher"]["options"] == self.dispatch)
                 self.assertEqual(named["properties"], [
@@ -103,7 +103,7 @@ class WorkDashboardRendererTests(unittest.TestCase):
                 self.registry["dispatches"][self.dispatch]["task_name"] = name
                 rendered = render_dashboard(self.template, self.registry)
                 for panel in rendered["panels"]:
-                    if panel["type"] != "bargauge":
+                    if panel["type"] != "bargauge" or not any(t["id"] == "rowsToFields" for t in panel.get("transformations", [])):
                         continue
                     override = next(o for o in panel["fieldConfig"]["overrides"]
                                     if o["matcher"]["options"] == self.dispatch)

@@ -6,17 +6,17 @@ description: Read scan freshness, error rates and skipped-record reasons.
 
 # Collector Health
 
-Work Overview has a collector-wide health row. Project and Work filters leave these values unchanged.
+Work Overview and All Sessions have a collector-wide status strip. Project and Work filters leave these values unchanged. Skipped records and detailed coverage are in Diagnostics.
 
 | Signal | Read it as |
 | --- | --- |
 | Scan age | Seconds since `cwo_codex_collector_scan_timestamp_seconds`. Compare it with your polling interval. |
-| Errors | `rate(cwo_codex_collector_errors_total[1h])`: average errors per second over the last hour. It needs two samples. |
+| Errors | `3600 * rate(cwo_codex_collector_errors_total[1h])`: average errors per hour over the last hour. It needs two samples. |
 | Skipped records | Cumulative `cwo_codex_collector_skipped_records_total`, grouped by reason. |
 | Source available | `1` means the source can be read. |
 | Pending files | Files still to scan. This can be high during initial collection. |
 
-An idle Codex profile can have a healthy collector. **Latest source event age** measures session activity separately from scan age. Missing health samples show **Unavailable**.
+An idle Codex profile can have a healthy collector. **Latest source event age** measures session activity separately from scan age. Missing health samples show **—**.
 
 ## Skipped-Record Reasons
 

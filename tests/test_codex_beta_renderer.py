@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from render_codex_beta_dashboard import (  # noqa: E402
     BETA_UID, load_labels, presentation_names, render_dashboard,
-    validate_labels, write_beta_dashboard,
+    validate_labels, write_beta_dashboard, walk_panels,
 )
 
 
@@ -68,7 +68,7 @@ class CodexBetaRendererTests(unittest.TestCase):
         result = render_dashboard(draft, source, "prometheus", {
             "version": 1, "sessions": {"parent": "Observability dashboard"},
         })
-        panels = {panel["id"]: panel for panel in result["panels"]}
+        panels = {panel["id"]: panel for panel in walk_panels(result["panels"])}
         for identity in (80, 81):
             overrides = panels[identity]["fieldConfig"]["overrides"]
             fields = {
@@ -78,17 +78,17 @@ class CodexBetaRendererTests(unittest.TestCase):
             self.assertEqual(fields["parent"]["displayName"], "Observability dashboard")
             self.assertEqual(fields["child"]["displayName"], "Review metrics")
             for session in ("parent", "child", "other"):
-                self.assertEqual(fields[session]["links"], [{
-                    "title": "Focus this work",
-                    "url": "/d/cwo-codex-beta/work-overview"
-                    + "?${project:queryparam}&var-session="
-                    + session + "&${__url_time_range}",
-                }])
+                self.assertNotIn("links", fields[session])
+            self.assertEqual(panels[identity]["fieldConfig"]["defaults"]["links"], [{
+                "title": "Focus this work",
+                "url": "/d/cwo-codex-beta/work-overview?${project:queryparam}"
+                       "&var-session=${__field.name:percentencode}&${__url_time_range}",
+            }])
             fallback = overrides[0]["properties"][0]
             self.assertEqual(fallback, {"id": "displayName", "value": "Work name unavailable"})
         # Percentage bars are composition, not per-session identity fields.
         for identity in (34, 36):
-            before = next(panel for panel in draft["panels"] if panel["id"] == identity)
+            before = next(panel for panel in walk_panels(draft["panels"]) if panel["id"] == identity)
             self.assertEqual(panels[identity]["fieldConfig"], before["fieldConfig"])
         self.assertNotIn("MUST NOT LEAK", json.dumps(result))
         self.assertEqual(draft, original)

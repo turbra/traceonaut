@@ -111,31 +111,6 @@ class CommandQueryIntegrationTests(unittest.TestCase):
             ("elsewhere", "work-c", "other-context", 600),
         ):
             lines.append(f'cwo_codex_compaction_observation_timestamp_seconds{{project_id="{project}",session_id="{session}",observation_id="{event}"}} {cls.now - age}')
-        # Independent state fixtures include complete, incomplete and conflicting
-        # populations. The original command/history fixtures stay unchanged.
-        for project, sessions in (
-            ("ring", [("unknown", 0), ("working", 1), ("waiting", 2), ("stopped", 3), ("quiet", 4)]),
-            ("ring-missing", [("known", 2), ("absent-state", None)]),
-            ("ring-invalid", [("known", 2), ("unsupported", 9)]),
-            ("ring-fractional", [("known", 2), ("unsupported", 2.5)]),
-            ("ring-conflict", [("known", 2), ("conflicting", 1)]),
-        ):
-            for session, state in sessions:
-                labels = f'project_id="{project}",session_id="{session}"'
-                lines.append(f'cwo_codex_session_info{{{labels}}} 1')
-                lines.append(f'cwo_codex_session_last_event_timestamp_seconds{{{labels}}} {cls.now - 10}')
-                if state is not None:
-                    lines.append(f'cwo_codex_session_state{{{labels}}} {state}')
-        lines.extend([
-            'cwo_codex_session_state{project_id="ring",session_id="working",replica="second"} 1',
-            'cwo_codex_session_info{project_id="ring",session_id="working",replica="second"} 1',
-            'cwo_codex_session_state{project_id="ring-conflict",session_id="conflicting",replica="second"} 2',
-            'cwo_codex_session_state{project_id="ring",session_id="orphan"} 1',
-            f'cwo_codex_session_last_event_timestamp_seconds{{project_id="ring",session_id="orphan"}} {cls.now - 10}',
-            'cwo_codex_session_info{project_id="ring",session_id="old"} 1',
-            'cwo_codex_session_state{project_id="ring",session_id="old"} 2',
-            f'cwo_codex_session_last_event_timestamp_seconds{{project_id="ring",session_id="old"}} {cls.now - 4000}',
-        ])
         cls.endpoint._payload = ("\n".join(lines) + "\n").encode()
         cls.endpoint.start()
         cls.addClassCleanup(cls.endpoint.close)
@@ -195,302 +170,164 @@ class CommandQueryIntegrationTests(unittest.TestCase):
             for row in self.query(title, **kwargs)
         }
 
-    def assert_work_nan(self, ref, *, expected=None, **kwargs):
-        values = self.values_by_session(11, ref=ref, **kwargs)
-        self.assertEqual(
-            set(values),
-            expected or {"work-a", "work-b", "work-zero", "work-missing"},
-        )
-        self.assertTrue(all(math.isnan(value) for value in values.values()))
+    def counts(self, identity, **kwargs):
+        """The two mutually exclusive headline frames are presentation, not sums."""
+        covered = self.query(identity, ref="A", **kwargs)
+        partial = self.query(identity, ref="B", **kwargs)
+        self.assertFalse(covered and partial)
+        return covered or partial
+
+    def count(self, identity, **kwargs):
+        rows = self.counts(identity, **kwargs)
+        self.assertEqual(len(rows), 1)
+        return float(rows[0]["value"][1])
+
+    def publish(self, raw, marker, value):
+        if marker == "fixture_generation":
+            raw = b"\n".join(line for line in raw.split(b"\n") if not line.startswith(b"fixture_generation "))
+            raw += f"\nfixture_generation {value}\n".encode()
+        with self.endpoint._lock:
+            self.endpoint._payload = raw
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            rows = self.client.query(marker, time.time())
+            if rows and float(rows[0]["value"][1]) == value:
+                return time.time()
+            time.sleep(.05)
+        self.fail("Prometheus did not observe the changed fixture")
 
     def test_counts_filter_completion_time_both_bounds_and_project(self):
-        self.assertEqual(self.value("Commands recorded"), 5)
-        self.assertEqual(self.value("Recorded failures"), 1)
-        self.assertEqual(self.value("Unknown outcomes"), 2)
-        self.assertEqual(self.value("Commands recorded", end=self.now - 45), 4)
-        self.assertEqual(self.value("Commands recorded", start=self.now - 45), 1)
-        self.assertEqual(self.value("Recorded failures", project="elsewhere"), 1)
-        self.assertEqual(self.value("Longest recorded command"), 40)
+        self.assertEqual(self.count(51), 5)
+        self.assertEqual(self.count(52), 1)
+        self.assertEqual(self.count(51, end=self.now - 45), 4)
+        self.assertEqual(self.count(51, start=self.now - 45), 1)
+        self.assertEqual(self.count(52, project="elsewhere"), 1)
+        self.assertEqual(self.values_by_session(11, ref="E")["work-a"], 40)
+        # Both source-time boundaries are inclusive.
+        self.assertEqual(self.count(51, start=self.now - 30, end=self.now - 30), 1)
 
-    def ring_counts(self, **kwargs):
-        return {
-            target["legendFormat"]: float(rows[0]["value"][1])
-            for target in self.panel_ids[23]["targets"]
-            if target["refId"] in "ABCDE" and (rows := self.query(23, ref=target["refId"], **kwargs))
-        }
+    def test_complete_empty_range_is_zero_but_missing_duration_stays_missing(self):
+        self.assertEqual(self.count(51, session="absent"), 0)
+        self.assertEqual(self.count(52, session="absent"), 0)
+        for work, count in (("work-zero", 0), ("work-missing", 1)):
+            self.assertEqual(self.values_by_session(11, ref="F", session=work), {work: count})
+            self.assertTrue(math.isnan(self.values_by_session(11, ref="E", session=work)[work]))
+        self.assertEqual(self.values_by_session(11, ref="E", session="work-b"), {"work-b": 0})
 
-    def test_ring_counts_selected_sessions_once_and_excludes_orphan_and_old_state(self):
-        counts = self.ring_counts(project="ring")
-        self.assertEqual(counts, {"Working": 1, "Waiting": 1, "Stopped / failed": 1,
-                                  "No recent signal": 1, "Unknown": 1})
-        self.assertEqual(sum(counts.values()), self.value(3, project="ring"))
-        self.assertEqual(self.ring_counts(project="ring", session="working"), {"Working": 1})
-        self.assertEqual(self.ring_counts(project="ring", session="waiting"), {"Waiting": 1})
-        self.assertEqual(self.ring_counts(project="ring", session="unknown"), {"Unknown": 1})
-        self.assertEqual(self.ring_counts(project="ring", session="orphan"), {})
+    def test_watermark_changes_coverage_not_observed_values(self):
+        for start in (self.now - 604800, self.now - 604801):
+            self.assertEqual(self.query(51, start=start), [])
+            self.assertEqual(self.value(51, ref="B", start=start), 6)
+            self.assertEqual(self.value(52, ref="B", start=start), 2)
+            self.assertEqual(self.value(58, start=start), 0)
+            self.assertEqual(self.values_by_session(11, ref="F", start=start)["work-a"], 3)
+        for when in (self.now + 30, self.now - 1):
+            for identity in (51, 52):
+                self.assertEqual(self.counts(identity, when=when), [])
+            for ref in ("D", "E", "F", "I"):
+                self.assertEqual(self.query(11, ref=ref, when=when), [])
+            self.assertEqual(self.query(58, when=when), [])
 
-    def test_ring_never_renders_a_partial_distribution_as_a_complete_ring(self):
-        for project in ("ring-missing", "ring-invalid", "ring-fractional", "ring-conflict"):
-            with self.subTest(project=project):
-                self.assertEqual(self.value(3, project=project), 2)
-                self.assertEqual(self.ring_counts(project=project), {})
-                self.assertEqual(self.ring_counts(project=project, session="known"), {"Waiting": 1})
+    def test_partial_gaps_backfill_and_cap_keep_positive_and_zero_lower_bounds(self):
+        original = self.endpoint._payload
+        partial = original.replace(b"cwo_codex_command_telemetry_ready 1\n", b"cwo_codex_command_telemetry_ready 0\n")
+        partial += (b"cwo_codex_command_telemetry_source_gaps 1\n"
+                    b"cwo_codex_command_telemetry_cap_truncated 1\n"
+                    b"cwo_codex_command_telemetry_pending_files 5\n")
+        try:
+            when = self.publish(partial, "cwo_codex_command_telemetry_ready", 0)
+            self.assertEqual(self.query(51, when=when), [])
+            self.assertEqual(self.value(51, ref="B", when=when), 5)
+            self.assertEqual(self.value(52, ref="B", when=when), 1)
+            self.assertEqual(self.value(51, ref="B", session="absent", when=when), 0)
+            self.assertEqual(self.value(58, when=when), 0)
+            self.assertEqual(self.values_by_session(11, ref="F", when=when),
+                             {"work-a": 2, "work-b": 2, "work-zero": 0, "work-missing": 1})
+            self.assertEqual(self.values_by_session(11, ref="I", when=when)["work-b"], 2)
+            self.assertEqual(self.values_by_session(11, ref="J", when=when)["work-a"], 2)
+        finally:
+            self.publish(original, "cwo_codex_command_telemetry_ready", 1)
 
-    def test_ring_empty_stale_and_historical_bounds_do_not_create_slices(self):
-        self.assertEqual(self.value(3, project="ring", session="absent"), 0)
-        self.assertEqual(self.ring_counts(project="ring", session="absent"), {})
-        self.assertEqual(self.ring_counts(project="ring", end=self.now - 11), {})
-        self.assertEqual(self.ring_counts(project="ring", start=self.now - 9), {})
-        self.assertEqual(self.ring_counts(project="ring", when=self.now + 30), {})
-        self.assertEqual(self.ring_counts(project="ring", when=self.now - 1), {})
+    def test_missing_source_never_becomes_a_partial_zero(self):
+        original = self.endpoint._payload
+        try:
+            when = self.publish(original.replace(b"cwo_codex_collector_source_available 1\n", b"cwo_codex_collector_source_available 0\n"), "cwo_codex_collector_source_available", 0)
+            for identity in (51, 52):
+                self.assertEqual(self.counts(identity, when=when), [])
+            self.assertEqual(self.query(58, when=when), [])
+            self.assertEqual(self.query(11, ref="F", when=when), [])
+        finally:
+            self.publish(original, "cwo_codex_collector_source_available", 1)
 
-    def test_ring_status_messages_distinguish_empty_from_unavailable_without_slices(self):
-        for selection in ({"project": "ring", "session": "absent"},
-                          {"project": "ring", "session": "orphan"},
-                          {"project": "ring", "end": self.now - 11},
-                          {"project": "ring", "start": self.now - 9}):
-            with self.subTest(selection=selection):
-                self.assertEqual(self.value(3, **selection), 0)
-                self.assertTrue(math.isnan(self.value(23, ref="F", **selection)))
-                self.assertEqual(self.query(23, ref="G", **selection), [])
-                self.assertEqual(self.ring_counts(**selection), {})
-        for selection in ({"project": "ring-missing"}, {"project": "ring-invalid"},
-                          {"project": "ring-fractional"}, {"project": "ring-conflict"},
-                          {"project": "ring", "when": self.now + 30},
-                          {"project": "ring", "when": self.now - 1},
-                          {"project": "ring", "session": "absent", "when": self.now + 30}):
-            with self.subTest(selection=selection):
-                self.assertEqual(self.query(23, ref="F", **selection), [])
-                self.assertTrue(math.isnan(self.value(23, ref="G", **selection)))
-                self.assertEqual(self.ring_counts(**selection), {})
-        for session in (".+", "working", "waiting", "unknown"):
-            with self.subTest(session=session):
-                for ref in ("F", "G"):
-                    self.assertEqual(self.query(23, ref=ref, project="ring", session=session), [])
+    def test_duplicate_event_identity_is_counted_once(self):
+        original = self.endpoint._payload
+        duplicate = original + (f'cwo_codex_command_event_timestamp_seconds{{project_id="fixture",session_id="work-a",observation_id="failure",outcome="failed",replica="second"}} {self.now - 900}\nfixture_generation 2\n').encode()
+        try:
+            when = self.publish(duplicate, "fixture_generation", 2)
+            self.assertEqual(self.count(51, when=when), 5)
+            self.assertEqual(self.count(52, when=when), 1)
+        finally:
+            self.publish(original + b"fixture_generation 1\n", "fixture_generation", 1)
 
-    def test_empty_covered_range_has_zero_counts_but_no_fake_duration(self):
-        self.assertEqual(self.value("Commands recorded", session="absent"), 0)
-        self.assertEqual(self.value("Recorded failures", session="absent"), 0)
-        self.assertEqual(self.query("Longest recorded command", session="absent"), [])
-        self.assertEqual(self.value("Longest recorded command", session="work-b"), 0)
-        self.assertEqual(
-            self.values_by_session(11, ref="D", session="work-zero"),
-            {"work-zero": 0},
-        )
-        self.assertEqual(
-            self.values_by_session(11, ref="F", session="work-zero"),
-            {"work-zero": 0},
-        )
-        self.assert_work_nan("E", expected={"work-zero"}, session="work-zero")
-
-    def test_missing_command_duration_stays_missing_while_count_is_recorded(self):
-        self.assertEqual(
-            self.values_by_session(11, ref="D", session="work-missing"),
-            {"work-missing": 0},
-        )
-        self.assertEqual(
-            self.values_by_session(11, ref="F", session="work-missing"),
-            {"work-missing": 1},
-        )
-        self.assert_work_nan("E", expected={"work-missing"}, session="work-missing")
-        self.assertEqual(self.query("Longest recorded command", session="work-missing"), [])
-
-    def test_watermark_is_exclusive_and_pre_activation_or_stale_is_unavailable(self):
-        for title in ("Commands recorded", "Recorded failures", "Longest recorded command"):
-            self.assertEqual(self.query(title, start=self.now - 604800), [], title)
-            self.assertEqual(self.query(title, start=self.now - 604801), [], title)
-            self.assertEqual(self.query(title, when=self.now + 30), [], title)
-            self.assertEqual(self.query(title, when=self.now - 1), [], title)
-        for ref in ("D", "E", "F"):
-            self.assert_work_nan(ref, start=self.now - 604800)
-            self.assert_work_nan(ref, start=self.now - 604801)
-            self.assertEqual(self.query(11, ref=ref, when=self.now + 30), [], ref)
-            self.assertEqual(self.query(11, ref=ref, when=self.now - 1), [], ref)
-        self.assertEqual(self.value(58, start=self.now - 604800), 0)
-        self.assertEqual(self.value("Unknown outcomes", start=self.now - 604800), 2)
-        self.assertEqual(self.query("Unknown outcomes", when=self.now + 30), [])
-        self.assertEqual(self.query("Unknown outcomes", when=self.now - 1), [])
-
-    def test_consolidated_work_table_preserves_per_work_command_semantics(self):
+    def test_consolidated_work_table_keeps_numeric_sortable_values(self):
         rows = self.query(11, ref="A")
-        self.assertEqual(
-            {row["metric"]["session_id"] for row in rows},
-            {"work-a", "work-b", "work-zero", "work-missing"},
-        )
-        self.assertTrue(
-            all(row["metric"]["work"] == row["metric"]["session_id"] for row in rows)
-        )
+        self.assertEqual({r["metric"]["session_id"] for r in rows}, {"work-a", "work-b", "work-zero", "work-missing"})
+        self.assertTrue(all(r["metric"]["work"] == r["metric"]["session_id"] for r in rows))
+        self.assertTrue(all(r["metric"]["kind"] == "session" for r in rows))
         failures = self.values_by_session(11, ref="D")
-        longest = self.values_by_session(11, ref="E")
         commands = self.values_by_session(11, ref="F")
-        self.assertEqual(
-            failures,
-            {"work-a": 1, "work-b": 0, "work-zero": 0, "work-missing": 0},
-        )
-        self.assertEqual(longest["work-a"], 40)
-        self.assertEqual(longest["work-b"], 0)
-        self.assertTrue(math.isnan(longest["work-zero"]))
-        self.assertTrue(math.isnan(longest["work-missing"]))
-        self.assertEqual(
-            commands,
-            {"work-a": 2, "work-b": 2, "work-zero": 0, "work-missing": 1},
-        )
-        self.assertEqual(sum(failures.values()), self.value("Recorded failures"))
-        self.assertEqual(sum(commands.values()), self.value("Commands recorded"))
+        self.assertEqual(failures, {"work-a": 1, "work-b": 0, "work-zero": 0, "work-missing": 0})
+        self.assertEqual(sum(failures.values()), self.count(52))
+        self.assertEqual(sum(commands.values()), self.count(51))
 
-    def test_last_observed_age_is_anchored_to_range_end_and_keeps_exact_time(self):
+    def test_last_seen_is_anchored_to_range_end(self):
         end = self.now - 5
-        expected_ages = {
-            "work-a": 5,
-            "work-b": 15,
-            "work-zero": 25,
-            "work-missing": 35,
-        }
-        self.assertEqual(
-            self.values_by_session(11, ref="C", start=self.now - 60, end=end),
-            expected_ages,
-        )
-        self.assertEqual(
-            self.values_by_session(
-                11,
-                ref="C",
-                start=self.now - 60,
-                end=end,
-                when=self.query_at + 10,
-            ),
-            expected_ages,
-        )
-        self.assertEqual(
-            self.values_by_session(11, ref="G", start=self.now - 60, end=end),
-            {
-                "work-a": (self.now - 10) * 1000,
-                "work-b": (self.now - 20) * 1000,
-                "work-zero": (self.now - 30) * 1000,
-                "work-missing": (self.now - 40) * 1000,
-            },
-        )
+        expected = {"work-a": 5, "work-b": 15, "work-zero": 25, "work-missing": 35}
+        for when in (self.query_at, self.query_at + 10):
+            self.assertEqual(self.values_by_session(11, ref="C", start=self.now - 60, end=end, when=when), expected)
+        self.assertEqual(self.values_by_session(11, ref="G", end=end)["work-a"], (self.now - 10) * 1000)
 
-    def test_ranked_history_keeps_source_eligibility_zero_and_missing_distinct(self):
-        self.assertEqual(
-            self.values_by_session(80),
-            {"work-a": 140, "work-b": 360, "work-missing": 0},
-        )
-        self.assertEqual(
-            self.values_by_session(81),
-            {"work-a": 55, "work-zero": 0},
-        )
+    def test_ranked_history_preserves_eligibility_zero_missing_and_range_scope(self):
+        self.assertEqual(self.values_by_session(80), {"work-a": 140, "work-b": 360, "work-missing": 0})
+        self.assertEqual(self.values_by_session(81), {"work-a": 55, "work-zero": 0})
+        for identity, expected in ((80, 140), (81, 55)):
+            self.assertEqual(self.value(identity, session="work-a", start=self.now - 15, end=self.now - 5), expected)
         self.assertEqual(self.query(80, session="work-zero"), [])
         self.assertEqual(self.query(81, session="work-b"), [])
 
-    def test_ranked_history_values_are_not_selected_interval_spend(self):
-        default_tokens = self.value(80, session="work-a")
-        default_turn_time = self.value(81, session="work-a")
-        historical_scope = {
-            "start": self.now - 15,
-            "end": self.now - 5,
-            "session": "work-a",
-        }
-        self.assertEqual(self.value(80, **historical_scope), default_tokens)
-        self.assertEqual(self.value(81, **historical_scope), default_turn_time)
-        self.assertEqual(default_tokens, 140)
-        self.assertEqual(default_turn_time, 55)
+    def test_history_coverage_and_share_ratios_remain_distinct(self):
+        for session, expected in (("work-a", 1), ("work-missing", 1), ("work-b", 2), ("work-zero", 2), ("absent", 0)):
+            self.assertEqual(self.value(39, session=session), expected)
+        self.assertAlmostEqual(self.value(34), 37.5)
+        self.assertAlmostEqual(self.value(36), 30)
+        self.assertEqual(self.value(34, session="work-a"), 0)
+        for session in ("work-zero", "work-missing", "absent"):
+            self.assertEqual(self.query(34, session=session), [])
+            self.assertEqual(self.query(36, session=session), [])
 
-    def test_unknown_outcome_table_keeps_positive_lower_bound(self):
-        self.assertEqual(self.value("Work with unknown outcomes", ref="B"), 2)
-        self.assertEqual(self.query("Work with unknown outcomes")[0]["metric"]["work"], "work-b")
-
-    def test_history_coverage_distinguishes_complete_partial_missing_and_empty(self):
-        self.assertEqual(self.value("History coverage", session="work-a"), 1)
-        self.assertEqual(self.value("History coverage", session="work-missing"), 1)
-        self.assertEqual(self.value("History coverage", session="work-b"), 2)
-        self.assertEqual(self.value("History coverage", session="work-zero"), 2)
-        self.assertEqual(self.value("History coverage"), 2)
-        self.assertEqual(self.value("History coverage", session="absent"), 0)
-        self.assertEqual(self.query("History coverage", when=self.now + 30), [])
-
-    def test_history_share_ratios_keep_denominators_and_missingness_distinct(self):
-        self.assertAlmostEqual(self.value("Cached input / total input"), 37.5)
-        self.assertAlmostEqual(self.value("Reasoning output / total output"), 30)
-        self.assertEqual(self.value("Cached input / total input", session="work-a"), 0)
-        self.assertEqual(self.value("Reasoning output / total output", session="work-a"), 0)
-        self.assertEqual(self.value("Cached input / total input", session="work-b"), 50)
-        self.assertEqual(self.value("Reasoning output / total output", session="work-b"), 50)
-        for session in ("work-missing", "work-zero", "absent"):
-            self.assertEqual(self.query("Cached input / total input", session=session), [])
-            self.assertEqual(self.query("Reasoning output / total output", session=session), [])
-
-    def test_unready_collection_suppresses_zero_and_positive_counts(self):
+    def test_compactions_keep_independent_coverage_and_source_time(self):
+        self.assertEqual(self.values_by_session(11, ref="J"), {"work-a": 2, "work-b": 1, "work-zero": 0, "work-missing": 0})
+        self.assertEqual(self.values_by_session(11, ref="J", start=self.now - 60)["work-a"], 1)
+        self.assertEqual(self.values_by_session(11, ref="J", end=self.now - 60), {})
         original = self.endpoint._payload
-        with self.endpoint._lock:
-            self.endpoint._payload = original.replace(
-                b"cwo_codex_command_telemetry_ready 1\n",
-                b"cwo_codex_command_telemetry_ready 0\n",
-            ).replace(b'observation_id="ambiguous",outcome="unknown"', b'observation_id="ambiguous",outcome="conflict"')
-        def wait_for(value):
-            deadline = time.monotonic() + 5
-            while time.monotonic() < deadline:
-                rows = self.client.query("cwo_codex_command_telemetry_ready", time.time())
-                if rows and float(rows[0]["value"][1]) == value:
-                    return time.time()
-                time.sleep(0.05)
-            self.fail("temporary Prometheus did not observe readiness change")
         try:
-            when = wait_for(0)
-            for title in ("Commands recorded", "Recorded failures", "Longest recorded command"):
-                self.assertEqual(self.query(title, when=when), [], title)
-                self.assertEqual(self.query(title, when=when, session="absent"), [], title)
-            for ref in ("D", "E", "F"):
-                self.assert_work_nan(ref, when=when)
+            when = self.publish(original.replace(b"cwo_codex_compaction_telemetry_ready 1\n", b"cwo_codex_compaction_telemetry_ready 0\n"), "cwo_codex_compaction_telemetry_ready", 0)
+            self.assertEqual(self.values_by_session(11, ref="J", when=when), {"work-a": 2, "work-b": 1})
+            self.assertEqual(self.value(76, ref="B", when=when), 0)
+            self.assertEqual(self.count(51, when=when), 5)
+        finally:
+            self.publish(original, "cwo_codex_compaction_telemetry_ready", 1)
+
+    def test_unknown_history_start_is_partial_instead_of_missing(self):
+        original = self.endpoint._payload
+        missing = b"\n".join(line for line in original.split(b"\n") if b"complete_after_timestamp_seconds" not in line)
+        try:
+            when = self.publish(missing + b"fixture_generation 3\n", "fixture_generation", 3)
+            self.assertEqual(self.query(51, when=when), [])
+            self.assertEqual(self.value(51, ref="B", when=when), 5)
             self.assertEqual(self.value(58, when=when), 0)
-            self.assertEqual(self.value("Unknown outcomes", when=when), 2)
-            self.assertEqual(self.value("Work with unknown outcomes", ref="B", when=when), 2)
-            self.assertEqual(self.query("Unknown outcomes", when=when, session="absent"), [])
+            self.assertEqual(self.value(76, ref="A", when=when), 0)
+            self.assertEqual(self.value(76, ref="B", when=when), 0)
+            self.assertEqual(self.values_by_session(11, ref="F", when=when)["work-a"], 2)
         finally:
-            with self.endpoint._lock:
-                self.endpoint._payload = original
-            wait_for(1)
-
-    def test_compaction_event_bounds_and_named_work(self):
-        self.assertEqual(self.value("Observed compactions"), 3)
-        self.assertEqual(self.value("Observed compactions", start=self.now - 60), 2)
-        self.assertEqual(self.value("Observed compactions", end=self.now - 60), 2)
-        self.assertEqual(self.value("Observed compactions", project="elsewhere"), 1)
-        self.assertEqual(self.value("Observed compactions", session="absent"), 0)
-        rows = self.query("Work with observed compactions")
-        self.assertEqual({r["metric"]["work"] for r in rows}, {"work-a", "work-b"})
-        self.assertEqual(self.value("Work with observed compactions", ref="B", session="work-a"), 2)
-
-    def test_compaction_uncovered_stale_and_pre_activation_are_unavailable(self):
-        for title in ("Observed compactions", "Work with observed compactions"):
-            self.assertEqual(self.query(title, start=self.now - 604800), [])
-            self.assertEqual(self.query(title, start=self.now - 604801), [])
-            self.assertEqual(self.query(title, when=self.now + 30), [])
-            self.assertEqual(self.query(title, when=self.now - 1), [])
-        self.assertEqual(self.value("Compaction coverage", start=self.now - 604800), 0)
-
-    def test_compaction_readiness_gates_zero_and_does_not_change_commands(self):
-        original = self.endpoint._payload
-        with self.endpoint._lock:
-            self.endpoint._payload = original.replace(
-                b"cwo_codex_compaction_telemetry_ready 1\n",
-                b"cwo_codex_compaction_telemetry_ready 0\n",
-            )
-        def wait_for(value):
-            deadline = time.monotonic() + 5
-            while time.monotonic() < deadline:
-                rows = self.client.query("cwo_codex_compaction_telemetry_ready", time.time())
-                if rows and float(rows[0]["value"][1]) == value:
-                    return time.time()
-                time.sleep(0.05)
-            self.fail("temporary Prometheus did not observe compaction readiness change")
-        try:
-            when = wait_for(0)
-            self.assertEqual(self.query("Observed compactions", when=when), [])
-            self.assertEqual(self.query("Observed compactions", when=when, session="absent"), [])
-            self.assertEqual(self.query("Work with observed compactions", when=when), [])
-            self.assertEqual(self.value("Compaction coverage", when=when), 0)
-            self.assertEqual(self.value("Commands recorded", when=when), 5)
-        finally:
-            with self.endpoint._lock:
-                self.endpoint._payload = original
-            wait_for(1)
+            self.publish(original + b"fixture_generation 4\n", "fixture_generation", 4)

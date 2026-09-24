@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
@@ -48,32 +49,20 @@ class UnifiedInheritedQueryContractTests(unittest.TestCase):
     def test_account_queries_are_inherited_unchanged(self) -> None:
         for panel_id in range(91, 95):
             with self.subTest(panel_id=panel_id):
+                # Compact active-strip labels differ from the frozen view;
+                # datasource, expressions, references and evaluation mode do not.
+                def query_contract(target):
+                    return {key: value for key, value in target.items() if key != "legendFormat"}
                 self.assertEqual(
-                    self.unified[panel_id]["targets"], self.beta[panel_id]["targets"]
+                    [query_contract(t) for t in self.unified[panel_id]["targets"]],
+                    [query_contract(t) for t in self.beta[panel_id]["targets"]],
                 )
 
-    def test_command_and_compaction_queries_are_inherited_unchanged(self) -> None:
-        for panel_id in (51, 52, 53, 54, 58, 59, 61, 71, 73, 74, 75):
-            with self.subTest(panel_id=panel_id):
-                unified = {
-                    target["refId"]: (
-                        target["expr"],
-                        target.get("instant"),
-                        target.get("range"),
-                    )
-                    for target in self.unified[panel_id]["targets"]
-                }
-                inherited = {
-                    target["refId"]: (
-                        target["expr"],
-                        target.get("instant"),
-                        target.get("range"),
-                    )
-                    for target in self.beta[panel_id]["targets"]
-                }
-                self.assertEqual(
-                    {ref: unified[ref] for ref in inherited}, inherited
-                )
+    def test_deprecated_unified_template_is_frozen_independently_of_work_overview(self):
+        # Frozen compatibility surface; active Work Overview now has separate
+        # partial-data semantics. An intentional retirement needs its own change.
+        self.assertEqual(hashlib.sha256(UNIFIED.read_bytes()).hexdigest(),
+                         '44c78e1da815ff933d9cc7da7cd3fc2c4572e5b9b3213c57d5799a90f48beaa3')
 
 
 @unittest.skipUnless(

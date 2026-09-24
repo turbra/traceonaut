@@ -193,8 +193,8 @@ class StoredSampleIntegrationTests(unittest.TestCase):
         active_expression = next(
             panel["targets"][0]["expr"]
             for panel in walk_panels(dashboard["panels"])
-            if panel["title"] == "Active distinct agents"
-        ).replace("$__range", "5m")
+            if panel["title"] == "Agents working"
+        ).replace("$__range", "5m").replace("$dispatch", ".+")
         active = client.query(
             active_expression.replace("$project", fixture.project_id), time.time()
         )
@@ -228,23 +228,16 @@ class StoredSampleIntegrationTests(unittest.TestCase):
             return expr.replace("$project", project or fixture.project_id).replace(
                 "$dispatch", fixture.dispatch_id).replace("$__range", "5m")
 
-        for title, expected in (("Input tokens reported", 22), ("Output tokens reported", 2),
-                                ("Completed model responses", 3), ("Observed agent activity", 0)):
+        for title, expected in (("Tokens reported", 24), ("Completed tasks", 1),
+                                ("Stopped or failed", 0), ("Agents working", 0)):
             rows = client.query(panel_query(title), time.time())
             self.assertEqual(len(rows), 1, title)
             self.assertEqual(float(rows[0]["value"][1]), expected, title)
             self.assertEqual(client.query(panel_query(title, project="unobserved-project"), time.time()), [])
-        # History must not invent zero activity before this project's first
-        # stored observation. All four outcome slices have a known cohort.
-        self.assertEqual(client.query(panel_query("Observed agent activity"), time.time() - 600), [])
-        self.assertEqual(client.query(panel_query("Observed agent activity"), time.time() + 60), [])
-        for reference, expected in {"A": 1, "B": 0, "C": 0, "D": 0}.items():
-            rows = client.query(panel_query("Task outcomes", reference), time.time())
-            if expected:
-                self.assertEqual(float(rows[0]["value"][1]), expected, reference)
-            else:
-                self.assertEqual(rows, [], reference)
-            self.assertEqual(client.query(panel_query("Task outcomes", reference, project="unobserved-project"), time.time()), [])
+        self.assertEqual(client.query(panel_query("Agents working"), time.time() - 600), [])
+        last_response = client.query(work_queries["F"], time.time())
+        self.assertEqual(len(last_response), 1)
+        self.assertGreater(float(last_response[0]["value"][1]), 1_000_000_000_000)
 
         # A later contradiction must hide previously stored totals in the new
         # overview too, while keeping the task and measured duration visible.
@@ -262,7 +255,7 @@ class StoredSampleIntegrationTests(unittest.TestCase):
         self.assertEqual(client.query(work_queries["D"], time.time()), [])
         self.assertEqual(len(client.query(work_queries["A"], time.time())), 1)
         self.assertEqual(float(client.query(work_queries["C"], time.time())[0]["value"][1]), 410)
-        for title in ("Input tokens reported", "Output tokens reported", "Completed model responses"):
+        for title in ("Tokens reported", "Where tokens went"):
             self.assertEqual(client.query(panel_query(title), time.time()), [], title)
 
 

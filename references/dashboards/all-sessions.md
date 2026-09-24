@@ -35,4 +35,6 @@ Select **Project**, **Session** and a time range. Choose **All** in the Session 
 
 The session table combines the latest selected model and effort in **Model / effort**.
 **Turn time** adds up recorded completed-turn durations. Expand a cell to inspect a long name.
-The **Diagnostics** section holds **Usage source** and **Runtime reported** for checking token coverage.
+The collapsed **Diagnostics** section holds **Usage source** and **Runtime reported** for checking token coverage.
+
+The status strip leads directly into the inventory. **Usage** contains ranked comparisons; the working-sessions chart shows activity over time. The default refresh is 30 seconds.

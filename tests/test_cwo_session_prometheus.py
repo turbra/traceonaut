@@ -15,7 +15,9 @@ class CwoSessionQueryTests(unittest.TestCase):
     def test_population_usage_commands_and_unavailable_states(self):
         dashboard=json.loads((ROOT/'examples/observability/cwo-overview.json').read_text())
         queries={p['id']:p['targets'][0]['expr'].replace('$__range','1h').replace('$__from','3600000').replace('$__to','7200000')
-                 for p in dashboard['panels'] if p.get('targets') and p['id']>=300}
+                 for p in dashboard['panels']+[c for r in dashboard['panels'] for c in r.get('panels',[])] if p.get('targets') and p['id']>=300}
+        coverage = next(p for p in dashboard['panels'] if p['id'] == 309)['targets'][1]['expr']
+        queries["coverage"] = coverage
         for panel in dashboard['panels']:
             if panel['id'] >= 300:
                 for target in panel.get('targets',[]):
@@ -43,10 +45,10 @@ class CwoSessionQueryTests(unittest.TestCase):
         populated+=expired
         commands=[command('old',3599),command('start',3600),command('end',7200),command('future',7201),command('start',3600,'copy')]
         fixtures=[
-            {'input_series':populated+commands+[series('cwo_codex_cwo_scan_ready',1)],'promql_expr_test':checks({301:2,302:1,303:150,304:2,306:1})},
+            {'input_series':populated+commands+[series('cwo_codex_cwo_scan_ready',1)],'promql_expr_test':checks({301:2,302:1,303:150,304:2,"coverage":1})},
             {'input_series':[series('cwo_codex_cwo_scan_ready',1)],'promql_expr_test':checks({301:0,302:0,303:None,304:0})},
-            {'input_series':[series('cwo_codex_cwo_scan_ready',0)],'promql_expr_test':checks({301:None,302:None,303:None,304:None,306:0})},
-            {'input_series':[],'promql_expr_test':checks({301:None,302:None,303:None,304:None,306:None})},
+            {'input_series':[series('cwo_codex_cwo_scan_ready',0)],'promql_expr_test':checks({301:None,302:None,303:None,304:None,"coverage":0})},
+            {'input_series':[],'promql_expr_test':checks({301:None,302:None,303:None,304:None,"coverage":None})},
             {'input_series':session('unknown',state=0)+[series('cwo_codex_cwo_scan_ready',1)],'promql_expr_test':checks({301:1,303:None})},
         ]
         for case in fixtures:case['interval']='1m'

@@ -6,6 +6,8 @@ description: Combine session and agent inventory, activity, usage and execution 
 
 # Unified
 
+**Deprecated.** Use [Work Overview](work-overview.md) for new installs. The existing Unified dashboard and renderer remain available unchanged for existing users.
+
 ![Unified with synthetic example data](../../assets/screenshots/unified.png)
 
 *Example data. No personal sessions are shown.*

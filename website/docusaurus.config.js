@@ -49,7 +49,6 @@ const config = {
         {to: '/', label: 'Documentation', position: 'left', activeBaseRegex: '^/traceonaut/$'},
         {label: 'Dashboards', position: 'left', items: [
           {to: '/dashboards/work-overview/', label: 'Work Overview'},
-          {to: '/dashboards/unified/', label: 'Unified'},
           {to: '/dashboards/all-sessions/', label: 'All Sessions'},
           {to: '/dashboards/cwo/', label: 'CWO Overview'},
         ]},

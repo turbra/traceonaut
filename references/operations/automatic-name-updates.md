@@ -24,7 +24,7 @@ python3 scripts/render_codex_beta_dashboard.py \
   --template examples/observability/codex-work-overview-beta.json \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
   --datasource-uid "replace-with-existing-prometheus-uid" \
-  --output "$TRACEONAUT_DASHBOARD_DIR/beta.json" --watch-seconds 2
+  --output "$TRACEONAUT_DASHBOARD_DIR/work-overview.json" --watch-seconds 2
 ```
 
 Point the provider at a protected copy of the output directory that Grafana can read. Keep the private snapshot separate. Use the actual datasource UID because provisioning skips the import-time picker.

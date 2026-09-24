@@ -18,7 +18,7 @@ Token, response and turn totals cover each selected session's recorded history. 
 
 | Value | Meaning |
 | --- | --- |
-| Token counts | Whole numbers with digit grouping, such as `1,400,000,000`. Older sessions may lack records, so treat totals as minimums rather than a bill. |
+| Token counts | Tokens reported by the available response records for the selected sessions. Total tokens combine input and output. Older sessions may lack records, so treat totals as minimums rather than a bill. |
 | Cached input / reasoning output | Parts of input / output respectively. Total tokens already include them. |
 | Observed turn time | Sum of reported completed-turn durations. Parallel agents can overlap. |
 | Model / effort | The latest selected settings for that session. Historical usage can span other settings. |
@@ -26,6 +26,8 @@ Token, response and turn totals cover each selected session's recorded history. 
 | Waiting | The last turn finished and no new turn has started. |
 | Stopped / failed | The latest turn stopped or failed. |
 | No recent signal | A turn remains open but has had no recent activity. |
+
+Counts use digit grouping, such as `1,400,000,000`, rather than abbreviated prefixes.
 
 ## Missing Values
 

@@ -75,8 +75,8 @@ class DocumentationTests(unittest.TestCase):
 
     def test_readme_layout_and_apache_license(self):
         readme = (ROOT / "README.md").read_text()
-        self.assertIn('<h1 align="center"><img src="assets/traceonaut.png" '
-                      'alt="Traceonaut: Explore every run" width="840"></h1>', readme)
+        self.assertIn('<h1 align="center"><a href="https://turbra.github.io/traceonaut/"><img src="assets/traceonaut.png" '
+                      'alt="Traceonaut: Explore every run" width="840"></a></h1>', readme)
         self.assertIn('<a href="https://www.apache.org/licenses/LICENSE-2.0">'
                       '<img src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square" '
                       'alt="License: Apache-2.0"></a>', readme)
@@ -108,6 +108,17 @@ class DocumentationTests(unittest.TestCase):
             for file in ("README.md", "website/docs/home.mdx"):
                 with self.subTest(marker=name, file=file):
                     self.assertEqual(re.search(pattern, (ROOT / file).read_text(), re.S)[1], expected)
+
+    def test_network_scrape_examples_change_only_target_and_token_path(self):
+        guide = (ROOT / "references/getting-started.mdx").read_text()
+        def block(marker):
+            return re.search(r"<!-- " + marker + r" -->(?:\s*\*/})?\s*```yaml\n(.*?)\n```", guide, re.S)[1]
+        local = block("prometheus-scrape")
+        remote = local.replace("127.0.0.1:9464", "192.0.2.10:9464").replace(
+            "/absolute/path/to/traceonaut/metrics.token", "/etc/prometheus/traceonaut/metrics.token"
+        )
+        self.assertEqual(block("prometheus-scrape-remote"), remote)
+        self.assertEqual(block("prometheus-scrape-container"), remote)
 
     def test_all_guides_have_explicit_pages_and_metadata(self):
         manifest = json.loads((ROOT / "website/docs-manifest.json").read_text())

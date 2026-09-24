@@ -18,6 +18,11 @@ const config = {
     format: 'detect',
     hooks: {onBrokenMarkdownLinks: 'throw'},
   },
+  plugins: [
+    ['@docusaurus/plugin-client-redirects', {
+      redirects: require('./redirects.json').filter(rule => !rule.fragments),
+    }],
+  ],
   presets: [
     ['classic', {
       docs: {
@@ -43,9 +48,9 @@ const config = {
         {to: '/getting-started/', label: 'Quick Start', position: 'left'},
         {to: '/', label: 'Documentation', position: 'left', activeBaseRegex: '^/traceonaut/$'},
         {label: 'Dashboards', position: 'left', items: [
-          {to: '/dashboards/beta/', label: 'Work Overview'},
+          {to: '/dashboards/work-overview/', label: 'Work Overview'},
           {to: '/dashboards/unified/', label: 'Unified'},
-          {to: '/dashboards/stable/', label: 'All Sessions'},
+          {to: '/dashboards/all-sessions/', label: 'All Sessions'},
           {to: '/dashboards/cwo/', label: 'CWO Dispatches'},
         ]},
         {href: 'https://github.com/turbra/traceonaut', label: 'GitHub', position: 'right'},

@@ -106,6 +106,7 @@ class BuildChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "website").mkdir()
+            (root / "website/redirects.json").write_text("[]")
             (root / "references").mkdir()
             manifest = root / "website/docs-manifest.json"
             guide = root / "references/guide.md"
@@ -123,6 +124,44 @@ class BuildChecks(unittest.TestCase):
             guide.write_text("---\nslug: /../private\ntitle: Guide\ndescription: A guide.\n---\n")
             with self.assertRaisesRegex(ValueError, "route"):
                 expected_pages(root)
+
+    def test_redirects_require_unique_routes_and_document_targets(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "website").mkdir()
+            (root / "references").mkdir()
+            (root / "website/docs-manifest.json").write_text('["references/guide.md"]')
+            (root / "references/guide.md").write_text("---\nslug: /guide\ntitle: Guide\ndescription: A guide.\n---\n")
+            manifest = root / "website/redirects.json"
+            valid = {"from": "/old/", "to": "/guide/", "fragments": {"#legacy": "/guide/"}}
+            manifest.write_text(json.dumps([valid]))
+            self.assertEqual(expected_pages(root), {"404.html", "guide/index.html", "old/index.html"})
+            invalid = [
+                [valid, valid], [{"from": "/guide/", "to": "/guide/"}],
+                [{"from": "/old/", "to": "/missing/"}],
+                [{"from": "/../private/", "to": "/guide/"}],
+                [{**valid, "fragments": {"#legacy": "/missing/"}}],
+                [{**valid, "to": "https://example.org/"}],
+            ]
+            for rules in invalid:
+                with self.subTest(rules=rules):
+                    manifest.write_text(json.dumps(rules))
+                    with self.assertRaises(ValueError):
+                        expected_pages(root)
+
+    def test_built_redirect_canonical_must_match_manifest(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "old").mkdir()
+            (root / "guide").mkdir()
+            (root / "guide/index.html").write_text("")
+            alias = root / "old/index.html"
+            rule = {"from": "/old/", "to": "/guide/"}
+            expected = {"old/index.html", "guide/index.html"}
+            alias.write_text('<link rel="canonical" href="/traceonaut/guide/">')
+            self.assertEqual(validate_build(root, expected, redirects=[rule]), [])
+            alias.write_text('<link rel="canonical" href="https://example.org/">')
+            self.assertTrue(any("Invalid redirect" in e for e in validate_build(root, expected, redirects=[rule])))
 
 
 if __name__ == "__main__":

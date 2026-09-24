@@ -1,22 +1,24 @@
 ---
 slug: /integrations/observed-job-runner
 title: Observed Job Runner
-description: Run explicitly authorized read-only jobs with dispatch observation.
+description: Launch authorized read-only Codex jobs and record their dispatch metrics.
 ---
 
 # Observed Job Runner
 
-[scripts/run_observed_codex.py](../../scripts/run_observed_codex.py) launches one or two fresh read-only jobs and
-records their dispatch telemetry. **This starts model work and can incur usage.**
-Its observations cover the jobs it launches.
+The [Observed Job Runner](../../scripts/run_observed_codex.py) starts one or two fresh Codex jobs and records their metrics for [CWO Dispatches](../dashboards/cwo.md).
 
-The runner requires Codex CLI **0.154.0** on `PATH` with an existing login. It
-rejects other versions. Tool network access is disabled, but the app-server
-still needs its upstream model connection. The observation configuration must
-admit `standard_codex` and the selected model/effort.
+**Running it starts model work and can incur usage.** Obtain authorization for the tasks before preparing the files below.
 
-Prepare an absolute-path `0600` manifest. Replace the placeholders with a fresh
-job UUID, your checkout, allowed settings, and the authorized task:
+## Requirements
+
+- Codex CLI **0.154.0** on `PATH`, with an existing login. The runner checks this exact version.
+- An [observation configuration](cwo.md#connect-a-controller) that allows `standard_codex` and the chosen model and effort.
+- An upstream connection for the model. Job tools run read-only with network access disabled.
+
+## Prepare the Job
+
+Save a private `0600` manifest at an absolute path. Replace the placeholders with a fresh job UUID, your checkout, allowed settings and authorized task:
 
 ```json
 {
@@ -32,12 +34,11 @@ job UUID, your checkout, allowed settings, and the authorized task:
 }
 ```
 
-Optional `task_name` and `agent_name` must be supplied together;
-`work_item_title` is also optional. Names are bounded single-line display text,
-not prompts or secrets. Do not use Grafana variable expressions in names.
+For readable dashboard names, supply `task_name` and `agent_name` together. `work_item_title` is optional. Use short, single-line display labels; keep prompts, secrets and Grafana variable expressions out of them.
 
-A separate `0600` authorization JSON file binds the existing decision and exact
-inputs. It is not an independent grant of permission:
+## Record the Authorization
+
+Save a separate `0600` authorization JSON file. It records the user's prior approval and binds it to these exact inputs:
 
 | Field | Required value |
 | --- | --- |
@@ -51,7 +52,11 @@ inputs. It is not an independent grant of permission:
 | `sandbox`, `network_access` | `read-only`, `false`. |
 | `native_attestation_claimed`, `native_policy_override` | Both `false`. |
 
-From the checkout root or dispatch release directory, replace the paths to those prepared files:
+## Run
+
+The runner serves its own metrics endpoint. Stop any standalone exporter using the same address and port before starting it.
+
+From the checkout root or dispatch release directory:
 
 ```bash
 CWO_OBSERVABILITY_MANIFEST="/absolute/path/to/private/jobs.json"
@@ -66,14 +71,12 @@ python3 scripts/run_observed_codex.py \
   --receipt-dir "$CWO_OBSERVABILITY_RECEIPTS" --linger-seconds 30
 ```
 
-To populate a name registry, supply names in the manifest and add
-`--presentation-file "$CWO_PRESENTATION_FILE" --project-name "Example project"`.
-These options must be supplied together. The registry belongs in a private
-`0700` directory and must not contain sensitive descriptions.
+To save dashboard names, set `CWO_PRESENTATION_FILE` to an absolute registry path in a private `0700` directory. Add both `--presentation-file "$CWO_PRESENTATION_FILE"` and `--project-name "Example project"`. Use non-sensitive names.
 
-The runner owns its metrics endpoint while executing. Stop any standalone
-exporter using that endpoint first, then restart it afterward if needed. The
-linger period permits final scrapes but does not guarantee publication.
-Inspect job statuses, timeout, cleanup, and observation state, not just
-`runner_status: completed`. The runner records metadata and receipts, not model
-answer text.
+## Check the Result
+
+Read each job's status, timeout, cleanup and observation fields. `runner_status: completed` describes the runner; individual jobs and telemetry delivery have their own outcomes.
+
+The linger period keeps the endpoint available for final scrapes. Confirm the final samples reached Prometheus before relying on them. Restart the standalone exporter afterward if you use one.
+
+Saved output contains metadata and receipts. Model answers are not saved. See [Limits and Internals](../reference/limits-and-internals.md#cwo-embedding-and-recovery) for final-sample confirmation and recovery.

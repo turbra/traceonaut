@@ -34,7 +34,7 @@ module.exports = {
         },
         {
           "type": "doc",
-          "id": "references/dashboards/beta",
+          "id": "references/dashboards/work-overview",
           "label": "Work Overview"
         },
         {
@@ -44,7 +44,7 @@ module.exports = {
         },
         {
           "type": "doc",
-          "id": "references/dashboards/stable",
+          "id": "references/dashboards/all-sessions",
           "label": "All Sessions"
         },
         {
@@ -58,12 +58,8 @@ module.exports = {
       "type": "category",
       "label": "Operations",
       "collapsed": true,
+      "link": {"type": "doc", "id": "references/operations"},
       "items": [
-        {
-          "type": "doc",
-          "id": "references/operations",
-          "label": "Operations"
-        },
         {
           "type": "doc",
           "id": "references/operations/run-as-a-service",

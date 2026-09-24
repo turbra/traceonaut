@@ -29,8 +29,8 @@ Add `--once` for a single read. For continuous use, polling runs about once per 
 
 Restart the session collector with:
 
-```text
---account-snapshot-file /absolute/path/to/traceonaut/account-state/allowance.json
+```bash
+--account-snapshot-file "$TRACEONAUT_DATA_DIR/account-state/allowance.json"
 ```
 
 Use the same code version for both collectors and keep the account snapshot separate from session state. The [service guide](../operations/run-as-a-service.md) applies to this reader too; it needs upstream network access.

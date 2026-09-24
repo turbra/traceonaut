@@ -1,5 +1,5 @@
 ---
-slug: /dashboards/beta
+slug: /dashboards/work-overview
 title: Work Overview
 description: View session activity, token usage, command outcomes and collector health.
 ---

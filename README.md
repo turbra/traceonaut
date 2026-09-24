@@ -1,4 +1,4 @@
-<h1 align="center"><img src="assets/traceonaut.png" alt="Traceonaut: Explore every run" width="840"></h1>
+<h1 align="center"><a href="https://turbra.github.io/traceonaut/"><img src="assets/traceonaut.png" alt="Traceonaut: Explore every run" width="840"></a></h1>
 
 <p align="center">
   <strong>Codex session metrics for your existing Prometheus and Grafana.</strong>
@@ -107,19 +107,19 @@ export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 python3 scripts/render_codex_beta_dashboard.py \
   --template examples/observability/codex-work-overview-beta.json \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
-  --output "$TRACEONAUT_DATA_DIR/beta.json"
+  --output "$TRACEONAUT_DATA_DIR/work-overview.json"
 ```
 
-In Grafana, open **Dashboards → New → Import**, upload `beta.json`, and select
+In Grafana, open **Dashboards → New → Import**, upload `work-overview.json`, and select
 your Prometheus datasource. The dashboard opens as **Work Overview**.
 
 ## Dashboards at a Glance
 
 | Dashboard | Use it for |
 | --- | --- |
-| [Work Overview](https://turbra.github.io/traceonaut/dashboards/beta/) | Session activity, command outcomes, token totals and collector health. Start here. |
+| [Work Overview](https://turbra.github.io/traceonaut/dashboards/work-overview/) | Session activity, command outcomes, token totals and collector health. Start here. |
 | [Unified](https://turbra.github.io/traceonaut/dashboards/unified/) | Sessions, agent relationships and recorded usage in one view. |
-| [All Sessions](https://turbra.github.io/traceonaut/dashboards/stable/) | A compact session inventory and usage summary. |
+| [All Sessions](https://turbra.github.io/traceonaut/dashboards/all-sessions/) | A compact session inventory and usage summary. |
 | [CWO Dispatches](https://turbra.github.io/traceonaut/dashboards/cwo/) | Optional orchestration jobs, resources and outcomes from [CWO](https://github.com/gprocunier/complex-work-orchestration), a Codex skill for coordinating agents. |
 
 ## Documentation

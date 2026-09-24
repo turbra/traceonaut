@@ -34,6 +34,14 @@ systemctl --user enable --now traceonaut.service
 systemctl --user status traceonaut.service
 ```
 
-User-service startup follows your system's login/linger policy. For remote Prometheus, append `--host <workstation-LAN-or-VPN-IP>` to `ExecStart`; see [Network and Security](network-and-security.md).
+To start the user service at boot and keep it running after logout, enable lingering:
+
+```bash
+loginctl enable-linger "$USER"
+```
+
+This optional setting applies to your user services. Your system may request administrator authentication.
+
+For remote Prometheus, append `--host <workstation-LAN-or-VPN-IP>` to `ExecStart`; see [Network and Security](network-and-security.md).
 
 A sleeping or disconnected workstation stops delivering samples. Stored history remains available; missed scrape intervals remain gaps.

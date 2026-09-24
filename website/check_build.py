@@ -9,6 +9,27 @@ from urllib.parse import unquote, urljoin, urlsplit
 
 BASE = "https://turbra.github.io/traceonaut/"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def redirect_rules(project_root=PROJECT_ROOT):
+    rules = json.loads((project_root / "website/redirects.json").read_text())
+    if not isinstance(rules, list):
+        raise ValueError("Invalid redirect manifest")
+    route = r"/(?:[a-z-]+/)+"
+    for rule in rules:
+        if not isinstance(rule, dict) or set(rule) not in ({"from", "to"}, {"from", "to", "fragments"}):
+            raise ValueError("Invalid redirect rule")
+        if any(not isinstance(rule[key], str) or not re.fullmatch(route, rule[key]) for key in ("from", "to")):
+            raise ValueError("Invalid redirect route")
+        fragments = rule.get("fragments", {})
+        if not isinstance(fragments, dict) or any(
+            not re.fullmatch(r"#[a-z-]+", key) or not isinstance(value, str) or not re.fullmatch(route, value)
+            for key, value in fragments.items()
+        ):
+            raise ValueError("Invalid redirect fragment")
+    return rules
+
+
 def expected_pages(project_root=PROJECT_ROOT):
     """Resolve only explicitly declared public sources, never a repository crawl."""
     manifest = json.loads((project_root / "website/docs-manifest.json").read_text())
@@ -33,10 +54,21 @@ def expected_pages(project_root=PROJECT_ROOT):
         if page in pages:
             raise ValueError(f"Duplicate page route: {slug}")
         pages.add(page)
+    aliases = set()
+    for rule in redirect_rules(project_root):
+        alias = rule["from"].lstrip("/") + "index.html"
+        if alias in pages or alias in aliases:
+            raise ValueError("Duplicate redirect route")
+        for target in [rule["to"], *rule.get("fragments", {}).values()]:
+            if target.lstrip("/") + "index.html" not in pages:
+                raise ValueError("Redirect target is not a document")
+        aliases.add(alias)
+    pages.update(aliases)
     return pages
 
 
 PAGES = expected_pages()
+REDIRECTS = redirect_rules()
 PUBLIC_ASSETS = {
     "traceonaut-favicon.png", "traceonaut.png",
     "screenshots/work-overview.png", "screenshots/unified.png",
@@ -49,12 +81,15 @@ class Page(HTMLParser):
         super().__init__()
         self.ids = set()
         self.links = []
+        self.canonical = []
         self.feed(text)
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         if "id" in attrs:
             self.ids.add(attrs["id"])
+        if tag == "link" and attrs.get("rel") == "canonical":
+            self.canonical.append(attrs.get("href"))
         # Canonical/alternate metadata is not a navigation or asset request.
         if tag == "link" and attrs.get("rel") not in ("stylesheet", "preload", "modulepreload", "icon"):
             return
@@ -63,13 +98,19 @@ class Page(HTMLParser):
                 self.links.append(attrs[key])
 
 
-def validate_build(root, expected=PAGES, public_assets=(), readme=None):
+def validate_build(root, expected=PAGES, public_assets=(), readme=None, redirects=()):
     root = Path(root)
     errors = []
     files = {p.relative_to(root).as_posix(): p for p in root.rglob("*") if p.is_file()}
     pages = {name: Page(path.read_text()) for name, path in files.items() if name.endswith(".html")}
     if set(pages) != expected:
         errors.append(f"Unexpected page set: missing={expected - set(pages)}, extra={set(pages) - expected}")
+    for rule in redirects:
+        name = rule["from"].lstrip("/") + "index.html"
+        page = pages.get(name)
+        target = BASE + rule["to"].lstrip("/")
+        if page is None or len(page.canonical) != 1 or urljoin(BASE, page.canonical[0]) != target:
+            errors.append(f"Invalid redirect destination: {name}")
     for name in public_assets:
         if name not in files:
             errors.append(f"Missing public asset: {name}")
@@ -115,6 +156,7 @@ if __name__ == "__main__":
     errors = validate_build(
         Path(__file__).parent / "build", public_assets=PUBLIC_ASSETS,
         readme=(PROJECT_ROOT / "README.md").read_text(),
+        redirects=REDIRECTS,
     )
     if errors:
         raise SystemExit("\n".join(errors))

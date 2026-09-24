@@ -13,13 +13,13 @@ test('renders only explicit public documents, directly from source', () => {
   assert.equal(path.isAbsolute(docs.sidebarPath), false);
   assert.equal(path.isAbsolute(config.presets[0][1].theme.customCss), false);
   assert.deepEqual(docs.include, require('../docs-manifest.json'));
-  assert.equal(docs.include.length, 28);
+  assert.equal(docs.include.length, 27);
   assert.equal(new Set(docs.include).size, docs.include.length);
   for (const file of docs.include) {
     assert.match(file, /^(references\/(?:[a-z-]+\/)*[a-z-]+\.mdx?|website\/docs\/home\.mdx)$/);
     assert(fs.lstatSync(path.join(root, file)).isFile());
   }
-  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 27);
+  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 26);
 });
 
 test('sidebar document IDs resolve to the same authoritative files', () => {
@@ -32,6 +32,7 @@ test('sidebar document IDs resolve to the same authoritative files', () => {
         const source = fs.readFileSync(path.join(root, file), 'utf8');
         assert.equal(source.match(/^title: (.+)$/m)[1], item.label);
       }
+      if (item.link?.type === 'doc') assert(ids.has(item.link.id), item.link.id);
       if (item.items) visit(item.items);
     }
   }
@@ -90,14 +91,14 @@ test('README and site navigation use matching guide destinations', () => {
 
 test('all dashboards are discoverable and CWO setup stays optional', () => {
   const dashboards = sidebars.docs.find(item => item.type === 'category' && item.label === 'Dashboards');
-  assert(dashboards.items.some(item => item.id === 'references/dashboards/stable'));
+  assert(dashboards.items.some(item => item.id === 'references/dashboards/all-sessions'));
   const optional = sidebars.docs.find(item => item.label === 'Optional');
   assert(optional.items.some(item => item.id === 'references/dashboards/cwo'));
   const home = fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8');
   const section = home.split('\n## Dashboards\n')[1].split('\n## ')[0];
   const routes = [
-    '/dashboards/beta/', '/dashboards/unified/',
-    '/dashboards/stable/', '/dashboards/cwo/',
+    '/dashboards/work-overview/', '/dashboards/unified/',
+    '/dashboards/all-sessions/', '/dashboards/cwo/',
   ];
   const menu = config.themeConfig.navbar.items.find(item => item.label === 'Dashboards');
   assert.deepEqual(menu.items.map(item => item.to), routes);

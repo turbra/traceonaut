@@ -235,9 +235,9 @@ class OnboardingTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
         for guide, marker, output, uid in (
-            ("getting-started.mdx", "render-beta", "beta.json", "cwo-codex-beta"),
+            ("getting-started.mdx", "render-beta", "work-overview.json", "cwo-codex-beta"),
             ("dashboards/unified.md", "render-unified", "unified.json", "cwo-codex-unified"),
-            ("dashboards/stable.md", "render-stable", "stable.json", "cwo-supervisor-observability-v1"),
+            ("dashboards/all-sessions.md", "render-stable", "all-sessions.json", "cwo-supervisor-observability-v1"),
         ):
             with self.subTest(dashboard=output):
                 result = subprocess.run(["bash", "-eu", "-c", documented_block(marker, guide)],

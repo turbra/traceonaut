@@ -1,5 +1,5 @@
 ---
-slug: /dashboards/stable
+slug: /dashboards/all-sessions
 title: All Sessions
 description: Use a compact session-centered view of recorded usage and activity.
 ---
@@ -10,7 +10,7 @@ description: Use a compact session-centered view of recorded usage and activity.
 
 *Example data. No personal sessions are shown.*
 
-Use a compact session-centered view of recorded usage and activity.
+All Sessions pairs a session inventory with activity and recorded token totals.
 
 ## Import
 
@@ -22,12 +22,12 @@ export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 python3 scripts/render_codex_sessions_dashboard.py \
   --template examples/observability/codex-all-sessions.json \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
-  --output "$TRACEONAUT_DATA_DIR/stable.json"
+  --output "$TRACEONAUT_DATA_DIR/all-sessions.json"
 ```
 
-Import `stable.json` in Grafana and select your Prometheus datasource.
+Import `all-sessions.json` in Grafana and select your Prometheus datasource.
 
-## Use the View
+## Use the Dashboard
 
 Select **Project**, **Session** and a time range. Choose **All** in the Session selector to include all matching sessions. Subagents appear as their own sessions.
 

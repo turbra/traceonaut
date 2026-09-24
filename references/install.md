@@ -10,16 +10,16 @@ Run Traceonaut on the workstation that holds your Codex profile. Use your existi
 
 ## Requirements
 
-| Component | Supported baseline | Tested / qualified |
-| --- | --- | --- |
-| Operating system | Linux | Linux; macOS is untested. |
-| Python | 3.13 | Python 3.13.13. Earlier versions are unqualified. |
-| Codex session files | [Supported record formats](reference/data-sources-and-privacy.md) | Parser fixtures cover those formats; no CLI-release compatibility matrix is claimed. |
-| Prometheus | 3.1 | Prometheus 3.1.0 query tests. |
-| Grafana | 11.5 | Grafana 11.5.0, using built-in panels. |
-| Git and Bash | Available on the workstation | Used by the commands below. |
+| Requirement | Tested with |
+| --- | --- |
+| Linux workstation | Linux. macOS has not been tested. |
+| Python | 3.13.13 |
+| Codex session files | Fixtures for the [supported record formats](reference/data-sources-and-privacy.md). Compatibility is checked by record format rather than CLI version. |
+| Prometheus | 3.1.0 |
+| Grafana with built-in panels | 11.5.0 |
+| Git and Bash | Used by the setup commands. |
 
-These are supported baselines, not claims that older releases cannot work. The optional [observed-job runner](integrations/observed-job-runner.md) has its own exact Codex version requirement.
+Use the tested versions above; older versions have not been tested. The optional [Observed Job Runner](integrations/observed-job-runner.md) requires an exact Codex CLI version.
 
 ## Get the Code
 

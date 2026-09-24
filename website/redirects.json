@@ -1,0 +1,9 @@
+[
+  {"from": "/dashboards/beta/", "to": "/dashboards/work-overview/"},
+  {"from": "/dashboards/stable/", "to": "/dashboards/all-sessions/"},
+  {
+    "from": "/data-and-limits/",
+    "to": "/reference/data-sources-and-privacy/",
+    "fragments": {"#add-the-stable-dashboard": "/dashboards/all-sessions/"}
+  }
+]

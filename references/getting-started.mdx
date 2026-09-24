@@ -45,7 +45,13 @@ Replace this documentation address with one assigned to your workstation. Use th
 </TabItem>
 <TabItem value="container" label="Container Prometheus">
 
-Use a workstation LAN/VPN address reachable from the Prometheus container. Set `TRACEONAUT_LISTEN_ADDRESS` to that numeric address. Mount the token into the container read-only and use its container path in `credentials_file`.
+Use a workstation LAN/VPN address reachable from the Prometheus container:
+
+```bash
+export TRACEONAUT_LISTEN_ADDRESS="192.0.2.10"
+```
+
+Replace this documentation address with one assigned to your workstation. Mount the token into the container read-only; step 2 uses `/etc/prometheus/traceonaut/metrics.token` as the container path.
 
 A container's loopback points to the container itself. Host networking is an alternative when both processes share the host network.
 
@@ -91,6 +97,11 @@ Leave it running; **Ctrl+C** stops it. For persistent collection, use [Run as a 
 
 Give Prometheus a protected copy of the token, readable by its service user. Use its absolute path as seen by Prometheus. Add this job to your existing configuration:
 
+<Tabs groupId="network">
+<TabItem value="local" label="Same Machine" default>
+
+Use the token's absolute path on this workstation:
+
 {/* <!-- prometheus-scrape --> */}
 ```yaml
 scrape_configs:
@@ -104,7 +115,46 @@ scrape_configs:
       - targets: ['127.0.0.1:9464']
 ```
 
-For remote or container Prometheus, replace `127.0.0.1:9464` with the reachable workstation address. The [scrape example](../examples/observability/prometheus-scrape.yaml) also includes a separate optional dispatch job.
+</TabItem>
+<TabItem value="remote" label="Remote Server">
+
+Copy the token securely to the Prometheus server. In this example, its protected copy is `/etc/prometheus/traceonaut/metrics.token`. Replace `192.0.2.10` with the workstation address selected in step 1.
+
+{/* <!-- prometheus-scrape-remote --> */}
+```yaml
+scrape_configs:
+  - job_name: traceonaut
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/traceonaut/metrics.token
+    static_configs:
+      - targets: ['192.0.2.10:9464']
+```
+
+</TabItem>
+<TabItem value="container" label="Container Prometheus">
+
+Mount the token read-only at `/etc/prometheus/traceonaut/metrics.token` inside the Prometheus container. Replace `192.0.2.10` with the reachable workstation address selected in step 1.
+
+{/* <!-- prometheus-scrape-container --> */}
+```yaml
+scrape_configs:
+  - job_name: traceonaut
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/traceonaut/metrics.token
+    static_configs:
+      - targets: ['192.0.2.10:9464']
+```
+
+</TabItem>
+</Tabs>
+
+The [scrape example](../examples/observability/prometheus-scrape.yaml) also includes a separate optional dispatch job.
 
 ```bash
 promtool check config /path/to/prometheus.yml
@@ -129,10 +179,10 @@ export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 python3 scripts/render_codex_beta_dashboard.py \
   --template examples/observability/codex-work-overview-beta.json \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
-  --output "$TRACEONAUT_DATA_DIR/beta.json"
+  --output "$TRACEONAUT_DATA_DIR/work-overview.json"
 ```
 
-Open **Dashboards → New → Import**, upload `beta.json`, and select your Prometheus datasource. The dashboard title is **Work Overview**.
+Open **Dashboards → New → Import**, upload `work-overview.json`, and select your Prometheus datasource. The dashboard title is **Work Overview**.
 
 Metrics refresh automatically. See [Automatic Name Updates](operations/automatic-name-updates.md) when new sessions need to appear in the selectors.
 

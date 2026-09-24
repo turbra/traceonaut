@@ -20,7 +20,7 @@ The output directory is separate from the ledger. The exporter creates private d
 
 Each `terminal_dispatch_projection.v1` record includes identity, requested/acknowledged configuration, available token values, outcome, elapsed time, allowances and collection health.
 
-A job is exported after it is terminal, its bindings/connections are closed and queues are drained. Failed and interrupted jobs can still have useful observations. Missing values remain nullable; shared health is marked separately from job-attributed health.
+A job is exported after it is terminal, its bindings/connections are closed and queues are drained. Failed and interrupted jobs can still have useful observations. Missing values are null; shared health is marked separately from job-attributed health.
 
 Files under `observations/` have stable opaque names. Later corrections update the same logical job. Interrupted writes can be retried without creating duplicate runs.
 

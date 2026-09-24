@@ -10,7 +10,7 @@ description: Combine session and agent inventory, activity, usage and execution 
 
 *Example data. No personal sessions are shown.*
 
-Combine session and agent inventory, activity, usage and execution in one view.
+Unified brings session and agent inventory, activity, recorded usage and command outcomes into one dashboard.
 
 ## Import
 
@@ -27,7 +27,7 @@ python3 scripts/render_codex_unified_dashboard.py \
 
 Import `unified.json` in Grafana and select your Prometheus datasource.
 
-## Use the View
+## Use the Dashboard
 
 Select Project, Work and a time range. Subagents are included in the session inventory. Choose a work title to focus it and **All work** to clear that filter.
 

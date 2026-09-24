@@ -45,7 +45,36 @@ class SetupHelperTests(unittest.TestCase):
         self.assertEqual(self.token.stat().st_mode & 0o777, 0o600)
         output = self.invoke(create_metrics_token.main, ["--credential-file", str(self.token)], 1)
         self.assertNotIn(token, output)
+        self.assertIn("A valid token already exists. Reuse it", output)
         self.assertEqual(read_credential(self.token).decode(), token)
+
+    def test_invalid_existing_paths_never_suggest_reuse(self):
+        for content, mode in (("short", 0o600), ("synthetic-private-token", 0o644)):
+            with self.subTest(mode=mode):
+                self.token.write_text(content)
+                self.token.chmod(mode)
+                output = self.invoke(create_metrics_token.main, ["--credential-file", str(self.token)], 1)
+                self.assertIn("not a valid private token", output)
+                self.assertNotIn("Reuse", output)
+                self.assertNotIn(content, output)
+                self.assertEqual(self.token.read_text(), content)
+                self.assertEqual(self.token.stat().st_mode & 0o777, mode)
+                self.token.unlink()
+        for kind in ("directory", "fifo", "symlink"):
+            with self.subTest(kind=kind):
+                if kind == "directory":
+                    self.token.mkdir()
+                elif kind == "fifo":
+                    os.mkfifo(self.token, 0o600)
+                else:
+                    self.token.symlink_to(self.root / "missing")
+                output = self.invoke(create_metrics_token.main, ["--credential-file", str(self.token)], 1)
+                self.assertIn("not a valid private token", output)
+                self.assertNotIn("Reuse", output)
+                if kind == "directory":
+                    self.token.rmdir()
+                else:
+                    self.token.unlink()
 
     def test_creation_uses_exact_private_mode_with_restrictive_umask(self):
         previous = os.umask(0o777)

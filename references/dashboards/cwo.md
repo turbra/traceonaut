@@ -10,7 +10,7 @@ description: View observed CWO jobs, token usage, outcomes and declared budgets.
 
 *Example data. No personal jobs are shown.*
 
-This view covers jobs observed through [CWO Integration](../integrations/cwo.md). Check for `cwo_telemetry_component_state` in Prometheus first.
+This dashboard shows jobs recorded through [CWO Integration](../integrations/cwo.md) or the [Observed Job Runner](../integrations/observed-job-runner.md). Check for `cwo_telemetry_component_state` in Prometheus first.
 
 ## Import
 
@@ -30,10 +30,10 @@ python3 scripts/render_observability_dashboard.py \
 
 Import the generated file. Names remain presentation metadata; missing names have explicit fallbacks. See [Automatic Name Updates](../operations/automatic-name-updates.md) for watcher/provisioning use.
 
-## Read the View
+## Use the Dashboard
 
 Summary values use the last stored sample per dispatch within the selected range, which defaults to 30 days. They describe observed jobs retained in that range, rather than jobs started inside it.
 
 Dispatches, agents and completed responses are separate counts. Requested/acknowledged settings describe configuration. Token totals carry availability/coverage states. Declared allowances and enforced limits are separate fields.
 
-Ordinary sessions, Beads, native-pool reports and unobserved work belong outside this source. [Reading the Values](reading-values.md) explains common token and missing-value conventions.
+[Reading the Values](reading-values.md) explains common token and missing-value conventions.

@@ -24,6 +24,22 @@ def objects(value):
 
 
 class DashboardPresentationTests(unittest.TestCase):
+    def test_session_table_reserves_space_for_full_headers(self):
+        data = json.loads((ROOT / "examples/observability/codex-all-sessions.json").read_text())
+        table = next(node for node in objects(data) if node.get("id") == 110)
+        widths = {
+            override["matcher"]["options"]: next(
+                (prop["value"] for prop in override["properties"] if prop["id"] == "custom.width"), 0
+            ) for override in table["fieldConfig"]["overrides"]
+        }
+        for name, minimum in {
+            "Latest selected model": 190, "Latest selected effort": 180,
+            "Observed turn time": 180, "Last seen": 190,
+            "Completed turns": 160, "Failed turns": 130,
+        }.items():
+            with self.subTest(column=name):
+                self.assertGreaterEqual(widths[name], minimum)
+
     def test_titles_match_guides_and_uids_remain_compatible(self):
         for name, (title, uid) in DASHBOARDS.items():
             with self.subTest(dashboard=name):

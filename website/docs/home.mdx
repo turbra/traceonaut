@@ -7,8 +7,6 @@ hide_title: true
 
 import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 
 <h1 className="traceonaut-hero">
   <img src={useBaseUrl('/traceonaut.png')} alt="Traceonaut: Explore every run" />
@@ -23,7 +21,7 @@ Grafana queries Prometheus.
 <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square" alt="License: Apache-2.0" /></a>
 
 <figure className="traceonaut-screenshot">
-  <Link to="/dashboards/beta/">
+  <Link to="/dashboards/work-overview/">
     <img src={useBaseUrl('/screenshots/work-overview.png')} alt="Work Overview showing session activity and collector health with synthetic example data" />
   </Link>
   <figcaption>Work Overview. All screenshots use synthetic example data.</figcaption>
@@ -35,8 +33,7 @@ Complete [Install](/install/), then run these steps from the checkout root.
 This example uses Prometheus on the same machine. See [Quick Start](/getting-started/)
 for remote and container setups.
 
-<Tabs>
-<TabItem value="collector" label="1. Run the Collector" default>
+### 1. Run the Collector
 
 Choose your Codex profile and a private data directory:
 
@@ -68,8 +65,7 @@ python3 scripts/collect_codex_sessions.py \
 
 Leave the collector running. Use a second terminal for rendering.
 
-</TabItem>
-<TabItem value="prometheus" label="2. Add the Scrape Job">
+### 2. Add the Scrape Job
 
 Merge this job into your Prometheus configuration. Replace the credential path
 with the token's absolute path as seen by Prometheus, then validate and reload:
@@ -87,8 +83,7 @@ scrape_configs:
       - targets: ['127.0.0.1:9464']
 ```
 
-</TabItem>
-<TabItem value="grafana" label="3. Import into Grafana">
+### 3. Import into Grafana
 
 Run in a second terminal from the checkout root:
 
@@ -98,19 +93,17 @@ export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 python3 scripts/render_codex_beta_dashboard.py \
   --template examples/observability/codex-work-overview-beta.json \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
-  --output "$TRACEONAUT_DATA_DIR/beta.json"
+  --output "$TRACEONAUT_DATA_DIR/work-overview.json"
 ```
 
-Open **Dashboards → New → Import**, upload `beta.json`, and select your Prometheus
+Open **Dashboards → New → Import**, upload `work-overview.json`, and select your Prometheus
 datasource. The dashboard title is **Work Overview**.
 
-</TabItem>
-</Tabs>
 
 ## Dashboards
 
 <div className="traceonaut-cards traceonaut-cards--explore">
-  <Link className="traceonaut-card" to="/dashboards/beta/">
+  <Link className="traceonaut-card" to="/dashboards/work-overview/">
     <strong>Work Overview</strong>
     <span>Start here for session activity, command outcomes, tokens and collector health.</span>
   </Link>
@@ -118,7 +111,7 @@ datasource. The dashboard title is **Work Overview**.
     <strong>Unified</strong>
     <span>Sessions, agent relationships and recorded usage in one view.</span>
   </Link>
-  <Link className="traceonaut-card" to="/dashboards/stable/">
+  <Link className="traceonaut-card" to="/dashboards/all-sessions/">
     <strong>All Sessions</strong>
     <span>A compact session inventory and usage summary.</span>
   </Link>

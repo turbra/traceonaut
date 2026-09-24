@@ -1276,7 +1276,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 130
+                "value": 190
               },
               {
                 "id": "unit",
@@ -1372,7 +1372,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 130
+                "value": 190
               }
             ]
           },
@@ -1384,7 +1384,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 100
+                "value": 180
               }
             ]
           },
@@ -1416,7 +1416,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 135
+                "value": 180
               },
               {
                 "id": "unit",
@@ -1518,6 +1518,30 @@
                     }
                   }
                 ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completed turns"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed turns"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
               }
             ]
           }

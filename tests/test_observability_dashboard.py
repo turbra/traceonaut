@@ -43,7 +43,6 @@ class ObservabilityDashboardTests(unittest.TestCase):
         for other in (
             "codex-all-sessions.json",
             "codex-work-overview-beta.json",
-            "codex-unified-overview.json",
         ):
             session = json.loads((DASHBOARD_PATH.parent / other).read_text())
             self.assertNotEqual(self.dashboard["uid"], session["uid"])

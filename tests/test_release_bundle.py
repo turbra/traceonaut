@@ -22,9 +22,13 @@ class ReleaseBundleTests(unittest.TestCase):
         templates = {
             "stable": ("codex-all-sessions.json", "All Sessions"),
             "beta": ("codex-work-overview-beta.json", "Work Overview"),
-            "unified": ("codex-unified-overview.json", "Unified"),
             "dispatch": ("cwo-overview.json", "CWO Overview"),
         }
+        self.assertEqual(set(COMPONENTS), {"sessions", "account", *templates})
+        self.assertEqual(
+            {p.name for p in (ROOT / "examples/observability").glob("*.json")},
+            {filename for filename, _ in templates.values()},
+        )
         for component, (filename, title) in templates.items():
             with self.subTest(component=component):
                 path = ROOT / "examples" / "observability" / filename
@@ -58,7 +62,7 @@ class ReleaseBundleTests(unittest.TestCase):
             self.assertNotIn("${DS_PROMETHEUS}", output.read_text())
             self.assertGreater(len(dashboard["panels"]), 0)
 
-    def test_beta_and_unified_render_nonempty_metadata_from_their_bundles(self):
+    def test_beta_renders_nonempty_metadata_from_its_bundle(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             snapshot = root / "sessions.json"
@@ -72,7 +76,6 @@ class ReleaseBundleTests(unittest.TestCase):
                              build_release("account", root / "releases"))
             templates = {
                 "beta": "codex-work-overview-beta.json",
-                "unified": "codex-unified-overview.json",
             }
             for component, template_name in templates.items():
                 with self.subTest(component=component):
@@ -103,7 +106,6 @@ class ReleaseBundleTests(unittest.TestCase):
             "account": ["collect_codex_sessions.py", "collect_codex_account.py"],
             "stable": ["render_codex_sessions_dashboard.py"],
             "beta": ["render_codex_beta_dashboard.py"],
-            "unified": ["render_codex_unified_dashboard.py"],
             "dispatch": ["run_observed_codex.py", "export_dispatch_observability.py",
                          "export_terminal_observations.py", "render_observability_dashboard.py"],
         }
@@ -137,11 +139,11 @@ class ReleaseBundleTests(unittest.TestCase):
     def test_existing_release_corruption_is_not_overwritten(self):
         with tempfile.TemporaryDirectory() as temporary:
             releases = Path(temporary)
-            release = build_release("unified", releases)
-            template = release / "examples/observability/codex-unified-overview.json"
+            release = build_release("beta", releases)
+            template = release / "examples/observability/codex-work-overview-beta.json"
             template.write_text("changed")
             with self.assertRaisesRegex(ValueError, "content changed"):
-                build_release("unified", releases)
+                build_release("beta", releases)
             self.assertEqual(template.read_text(), "changed")
 
     def test_release_directory_symlink_is_not_followed(self):

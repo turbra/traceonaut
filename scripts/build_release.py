@@ -27,13 +27,6 @@ COMPONENTS = {
         "scripts/render_codex_beta_dashboard.py",
         TEMPLATES + "codex-work-overview-beta.json",
     ),
-    "unified": (
-        "scripts/render_codex_sessions_dashboard.py",
-        "scripts/render_codex_beta_dashboard.py",
-        "scripts/render_codex_unified_dashboard.py",
-        TEMPLATES + "codex-work-overview-beta.json",
-        TEMPLATES + "codex-unified-overview.json",
-    ),
     "dispatch": (
         "scripts/run_observed_codex.py",
         "scripts/export_dispatch_observability.py",

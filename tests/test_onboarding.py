@@ -236,7 +236,6 @@ class OnboardingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         for guide, marker, output, uid in (
             ("getting-started.mdx", "render-beta", "work-overview.json", "cwo-codex-beta"),
-            ("dashboards/unified.md", "render-unified", "unified.json", "cwo-codex-unified"),
             ("dashboards/all-sessions.md", "render-stable", "all-sessions.json", "cwo-supervisor-observability-v1"),
         ):
             with self.subTest(dashboard=output):

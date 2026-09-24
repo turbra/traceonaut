@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
-import math
 import os
 from pathlib import Path
 import socket
@@ -23,8 +21,6 @@ from traceonaut.observability_exporter import MetricsEndpoint, PrometheusQueryCl
 
 
 OBSERVABILITY = ROOT / "examples" / "observability"
-UNIFIED = OBSERVABILITY / "codex-unified-overview.json"
-BETA = OBSERVABILITY / "codex-work-overview-beta.json"
 ALL_SESSIONS = OBSERVABILITY / "codex-all-sessions.json"
 
 
@@ -40,43 +36,18 @@ def panels_by_id(dashboard: dict) -> dict[int, dict]:
     return result
 
 
-class UnifiedInheritedQueryContractTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.unified = panels_by_id(json.loads(UNIFIED.read_text(encoding="utf-8")))
-        cls.beta = panels_by_id(json.loads(BETA.read_text(encoding="utf-8")))
-
-    def test_account_queries_are_inherited_unchanged(self) -> None:
-        for panel_id in range(91, 95):
-            with self.subTest(panel_id=panel_id):
-                # Compact active-strip labels differ from the frozen view;
-                # datasource, expressions, references and evaluation mode do not.
-                def query_contract(target):
-                    return {key: value for key, value in target.items() if key != "legendFormat"}
-                self.assertEqual(
-                    [query_contract(t) for t in self.unified[panel_id]["targets"]],
-                    [query_contract(t) for t in self.beta[panel_id]["targets"]],
-                )
-
-    def test_deprecated_unified_template_is_frozen_independently_of_work_overview(self):
-        # Frozen compatibility surface; active Work Overview now has separate
-        # partial-data semantics. An intentional retirement needs its own change.
-        self.assertEqual(hashlib.sha256(UNIFIED.read_bytes()).hexdigest(),
-                         '44c78e1da815ff933d9cc7da7cd3fc2c4572e5b9b3213c57d5799a90f48beaa3')
-
-
 @unittest.skipUnless(
     os.environ.get("CWO_TEST_PROMETHEUS_BINARY"),
     "separately verified Prometheus binary not supplied",
 )
-class UnifiedQueryIntegrationTests(unittest.TestCase):
+class AllSessionsQueryIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.tmp = tempfile.TemporaryDirectory()
         cls.addClassCleanup(cls.tmp.cleanup)
         root = Path(cls.tmp.name)
         cls.now = int(time.time())
-        credential = b"synthetic-unified-fixture"
+        credential = b"synthetic-sessions-fixture"
         lines = [
             "cwo_codex_collector_source_available 1",
             f"cwo_codex_collector_scan_timestamp_seconds {cls.now}",
@@ -348,7 +319,7 @@ class UnifiedQueryIntegrationTests(unittest.TestCase):
                     "global": {"scrape_interval": "250ms"},
                     "scrape_configs": [
                         {
-                            "job_name": "unified-fixture",
+                            "job_name": "sessions-fixture",
                             "scrape_interval": "250ms",
                             "scrape_timeout": "200ms",
                             "authorization": {
@@ -401,8 +372,6 @@ class UnifiedQueryIntegrationTests(unittest.TestCase):
             raise AssertionError("temporary Prometheus did not scrape fixture")
 
         cls.query_at = time.time()
-        dashboard = json.loads(UNIFIED.read_text(encoding="utf-8"))
-        cls.panels = panels_by_id(dashboard)
 
     @classmethod
     def _stop_prometheus(cls) -> None:
@@ -414,37 +383,6 @@ class UnifiedQueryIntegrationTests(unittest.TestCase):
                 cls.process.kill()
                 cls.process.wait(timeout=5)
 
-    def query(
-        self,
-        panel_id: int,
-        *,
-        ref: str = "A",
-        project: str = "mixed",
-        session: str = ".+",
-        start: int | None = None,
-        end: int | None = None,
-        when: float | None = None,
-    ) -> list[dict]:
-        start = self.now - 1800 if start is None else start
-        end = self.now if end is None else end
-        target = next(
-            target
-            for target in self.panels[panel_id]["targets"]
-            if target["refId"] == ref
-        )
-        expression = (
-            target["expr"]
-            .replace("$project", project)
-            .replace("$session", session)
-            .replace("$__from", str(start * 1000))
-            .replace("$__to", str(end * 1000))
-        )
-        return self.client.query(expression, self.query_at if when is None else when)
-
-    def value(self, panel_id: int, **kwargs) -> float:
-        rows = self.query(panel_id, **kwargs)
-        self.assertEqual(len(rows), 1, (panel_id, kwargs, rows))
-        return float(rows[0]["value"][1])
 
     def query_expression(
         self,
@@ -466,20 +404,6 @@ class UnifiedQueryIntegrationTests(unittest.TestCase):
         )
         return self.client.query(expression, self.query_at if when is None else when)
 
-    def by_session(self, panel_id: int, **kwargs) -> dict[str, float]:
-        rows = self.query(panel_id, **kwargs)
-        self.assertEqual(len(rows), len({row["metric"]["session_id"] for row in rows}))
-        return {
-            row["metric"]["session_id"]: float(row["value"][1]) for row in rows
-        }
-
-    def ring_counts(self, **kwargs) -> dict[str, float]:
-        return {
-            target["legendFormat"]: float(rows[0]["value"][1])
-            for target in self.panels[23]["targets"]
-            if target["refId"] in "ABCDE"
-            and (rows := self.query(23, ref=target["refId"], **kwargs))
-        }
 
     def test_all_sessions_combines_selected_settings_without_changing_selection(self) -> None:
         panels = panels_by_id(json.loads(ALL_SESSIONS.read_text()))
@@ -511,260 +435,6 @@ class UnifiedQueryIntegrationTests(unittest.TestCase):
         rows = self.query_expression(recorded, project="mixed", session="complete|partial|unknown|conflicted")
         self.assertEqual({r["metric"]["session_id"]: float(r["value"][1]) for r in rows},
                          {"complete": 140, "partial": 360})
-
-    def test_matching_state_counts_share_one_complete_population(self) -> None:
-        self.assertEqual(self.value(3), 4)
-        self.assertEqual(self.value(4), 1)
-        self.assertEqual(self.value(6), 3)
-        self.assertEqual(
-            self.ring_counts(), {"Working": 1, "Waiting": 3}
-        )
-        self.assertEqual(self.by_session(11, ref="B"), {
-            "complete": 1,
-            "partial": 2,
-            "unknown": 2,
-            "conflicted": 2,
-        })
-
-        self.assertEqual(self.value(3, project="single"), 1)
-        self.assertEqual(self.value(4, project="single"), 0)
-        self.assertEqual(self.value(6, project="single"), 1)
-        self.assertEqual(self.ring_counts(project="single"), {"Waiting": 1})
-
-    def test_activity_prefilter_matches_original_edge_case_semantics(self) -> None:
-        original = (
-            '(sum(((max by (project_id, session_id) '
-            '(cwo_codex_session_state{project_id=~"$project",session_id=~"$session"}) '
-            '== 1)) and on (project_id, session_id) '
-            '((max by (project_id, session_id) '
-            '(cwo_codex_session_last_event_timestamp_seconds{project_id=~"$project",session_id=~"$session"}) '
-            '>= $__from / 1000) and (max by (project_id, session_id) '
-            '(cwo_codex_session_last_event_timestamp_seconds{project_id=~"$project",session_id=~"$session"}) '
-            '<= $__to / 1000))) or vector(0)) and on () '
-            '(max(cwo_codex_collector_source_available) == 1) and on () '
-            '((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)'
-        )
-        self.assertEqual(self.panels[21]["maxDataPoints"], 180)
-        self.assertEqual(
-            self.panels[21]["targets"][0]["expr"].count(
-                "cwo_codex_session_last_event_timestamp_seconds"
-            ),
-            1,
-        )
-
-        optimized_rows = self.query(21, project="activity-edge")
-        original_rows = self.query_expression(original, project="activity-edge")
-        self.assertEqual(optimized_rows, original_rows)
-        self.assertEqual(float(optimized_rows[0]["value"][1]), 3)
-
-        stale = self.now + 30
-        self.assertEqual(
-            self.query(21, project="activity-edge", when=stale),
-            self.query_expression(original, project="activity-edge", when=stale),
-        )
-        self.assertEqual(self.query(21, project="activity-edge", when=stale), [])
-
-    def test_fresh_empty_is_zero_but_stale_state_is_unavailable(self) -> None:
-        for panel_id in (3, 4, 6):
-            self.assertEqual(self.value(panel_id, project="absent"), 0)
-        self.assertEqual(self.ring_counts(project="absent"), {})
-        self.assertTrue(math.isnan(self.value(23, ref="F", project="absent")))
-        self.assertEqual(self.query(23, ref="G", project="absent"), [])
-
-        stale = self.now + 30
-        for panel_id in (3, 4, 6):
-            self.assertEqual(self.query(panel_id, project="single", when=stale), [])
-        self.assertEqual(self.ring_counts(project="single", when=stale), {})
-        self.assertTrue(
-            math.isnan(self.value(23, ref="G", project="single", when=stale))
-        )
-
-    def test_missing_or_conflicting_state_suppresses_partial_counts(self) -> None:
-        for project in ("state-missing", "state-conflict"):
-            with self.subTest(project=project):
-                self.assertEqual(self.value(3, project=project), 2)
-                self.assertEqual(self.query(4, project=project), [])
-                self.assertEqual(self.query(6, project=project), [])
-                self.assertEqual(self.ring_counts(project=project), {})
-                self.assertTrue(
-                    math.isnan(self.value(23, ref="G", project=project))
-                )
-                self.assertEqual(
-                    self.by_session(11, ref="B", project=project), {"known": 2}
-                )
-
-    def test_subagent_count_accepts_internal_and_rejects_kind_conflict(self) -> None:
-        self.assertEqual(self.value(3, project="kinds"), 3)
-        self.assertEqual(self.value(7, project="kinds"), 1)
-
-        self.assertEqual(self.value(3, project="metadata"), 2)
-        self.assertEqual(self.query(7, project="metadata"), [])
-
-    def test_usage_summaries_exclude_orphans_unknown_and_conflicted_sources(self) -> None:
-        self.assertEqual(self.value(32), 500)
-        self.assertEqual(self.value(33), 400)
-        self.assertEqual(self.value(35), 100)
-        self.assertEqual(self.value(37), 5)
-        self.assertAlmostEqual(self.value(34), 42.5)
-        self.assertAlmostEqual(self.value(36), 40)
-        self.assertEqual(self.by_session(80), {"complete": 140, "partial": 360})
-        self.assertEqual(
-            self.by_session(81), {"complete": 55, "partial": 0, "unknown": 7}
-        )
-
-        self.assertEqual(
-            self.by_session(42, ref="A"),
-            {"complete": 1, "partial": 1, "unknown": 1, "conflicted": 1},
-        )
-        self.assertEqual(
-            self.by_session(42, ref="B"), {"complete": 140, "partial": 360}
-        )
-        self.assertEqual(
-            self.by_session(42, ref="G"), {"complete": 2, "partial": 3}
-        )
-        self.assertEqual(
-            self.by_session(42, ref="H"),
-            {"complete": 1, "partial": 4, "unknown": 0, "conflicted": 3},
-        )
-
-    def test_selected_record_coverage_partitions_matching_population(self) -> None:
-        expected = {
-            "A": 1,
-            "B": 1,
-            "C": 0,
-            "D": 1,
-            "E": 1,
-            "F": 0,
-        }
-        actual = {ref: self.value(38, ref=ref) for ref in expected}
-        self.assertEqual(actual, expected)
-        self.assertEqual(sum(actual.values()), self.value(3))
-
-    def test_ambiguous_usage_is_unavailable_and_coverage_is_partial(self) -> None:
-        expected = {
-            "A": 1,
-            "B": 0,
-            "C": 0,
-            "D": 0,
-            "E": 0,
-            "F": 1,
-        }
-        actual = {
-            ref: self.value(38, ref=ref, project="metadata") for ref in expected
-        }
-        self.assertEqual(actual, expected)
-        self.assertEqual(sum(actual.values()), self.value(3, project="metadata"))
-        self.assertEqual(self.value(39, project="metadata"), 2)
-
-    def test_every_population_scoped_table_target_excludes_orphans(self) -> None:
-        expected_sessions = {"complete", "partial", "unknown", "conflicted"}
-        table_panel_ids = (11, 41, 42, 141, 143)
-        for panel_id in table_panel_ids:
-            targets = self.panels[panel_id]["targets"]
-            self.assertEqual(
-                {
-                    row["metric"]["session_id"]
-                    for row in self.query(panel_id, ref=targets[0]["refId"])
-                },
-                expected_sessions,
-                panel_id,
-            )
-            for target in targets:
-                with self.subTest(panel_id=panel_id, ref=target["refId"]):
-                    rows = self.query(panel_id, ref=target["refId"])
-                    self.assertTrue(
-                        all("session_id" in row["metric"] for row in rows), rows
-                    )
-                    self.assertNotIn(
-                        "orphan",
-                        {row["metric"]["session_id"] for row in rows},
-                        rows,
-                    )
-
-    def test_percentages_preserve_safe_zero_and_absent_denominators(self) -> None:
-        for panel_id in (34, 36):
-            self.assertEqual(self.value(panel_id, project="ratio-zero"), 0)
-            self.assertEqual(self.query(panel_id, project="ratio-absent"), [])
-        for panel_id in (32, 33, 35, 37):
-            self.assertEqual(self.value(panel_id, project="ratio-absent"), 0)
-
-    def test_metadata_conflicts_keep_one_identity_row_with_fallback_labels(self) -> None:
-        identity_rows = self.query(11, ref="A", project="metadata")
-        self.assertEqual(
-            sorted(row["metric"]["session_id"] for row in identity_rows),
-            ["ambiguous", "stable"],
-        )
-        model_rows = {
-            row["metric"]["session_id"]: row["metric"]["model_effort"]
-            for row in self.query(11, ref="M", project="metadata")
-        }
-        role_rows = {
-            row["metric"]["session_id"]: row["metric"]["kind"]
-            for row in self.query(11, ref="R", project="metadata")
-        }
-        self.assertEqual(
-            model_rows, {"stable": "model-a · high", "ambiguous": "Not observed"}
-        )
-        self.assertEqual(
-            role_rows, {"stable": "session", "ambiguous": "unavailable"}
-        )
-
-    def test_inherited_command_queries_keep_event_time_bounds(self) -> None:
-        self.assertEqual(self.value(51), 3)
-        self.assertEqual(self.value(52), 1)
-        self.assertEqual(self.value(54), 4)
-
-    def test_local_coverage_preserves_complete_incomplete_and_unavailable(self) -> None:
-        self.assertEqual(
-            self.panels[158]["targets"], self.panels[159]["targets"]
-        )
-        for panel_id in (158, 159):
-            with self.subTest(panel_id=panel_id, coverage="complete"):
-                self.assertEqual(self.value(panel_id), 1)
-            with self.subTest(panel_id=panel_id, coverage="incomplete"):
-                self.assertEqual(
-                    self.value(panel_id, start=self.now - 700000), 0
-                )
-            with self.subTest(panel_id=panel_id, coverage="unavailable"):
-                self.assertEqual(self.value(panel_id, when=self.now + 30), -1)
-
-    def test_recorded_turn_sums_preserve_missing_zero_and_lower_bounds(self) -> None:
-        self.assertEqual(self.value(201, ref="A", project="turns-recorded"), 5)
-        self.assertEqual(self.value(201, ref="B", project="turns-recorded"), 1)
-
-        self.assertEqual(self.value(201, ref="A", project="turns-zero"), 0)
-        self.assertEqual(self.value(201, ref="B", project="turns-zero"), 0)
-
-        self.assertEqual(self.query(201, ref="A", project="turns-missing"), [])
-        self.assertEqual(self.query(201, ref="B", project="turns-missing"), [])
-
-        incomplete_start = self.now - 700000
-        self.assertEqual(
-            self.value(
-                158,
-                project="turns-partial",
-                start=incomplete_start,
-            ),
-            0,
-        )
-        self.assertEqual(
-            self.value(
-                201,
-                ref="A",
-                project="turns-partial",
-                start=incomplete_start,
-            ),
-            3,
-        )
-        self.assertEqual(
-            self.value(
-                201,
-                ref="B",
-                project="turns-partial",
-                start=incomplete_start,
-            ),
-            0,
-        )
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ Traceonaut provides Codex collectors, telemetry contracts, Grafana dashboards,
 renderers, and validation tools.
 
 - Keep runtime helpers Python standard-library only.
-- Keep stable, beta, and unified dashboard identities and existing metric names
+- Keep stable and beta dashboard identities and existing metric names
   compatible. Beta remains the experimentation dashboard.
 - Preserve observed versus requested data, unavailable versus zero values,
   interval versus recorded-history totals, and account versus session scope.

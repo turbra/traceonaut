@@ -7,13 +7,11 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 DASHBOARDS = {
     "codex-work-overview-beta": ("Work Overview", "cwo-codex-beta"),
-    "codex-unified-overview": ("Unified", "cwo-codex-unified"),
     "codex-all-sessions": ("All Sessions", "cwo-supervisor-observability-v1"),
     "cwo-overview": ("CWO Overview", "cwo-dispatch-observability-v1"),
 }
 TOKEN_PANELS = {
     "codex-work-overview-beta": {32, 33, 35, 80},
-    "codex-unified-overview": {32, 33, 35, 80},
     "codex-all-sessions": {104, 111},
     "cwo-overview": {104, 111, 303},
 }
@@ -67,16 +65,12 @@ class DashboardPresentationTests(unittest.TestCase):
                     if panel["id"] in expected_ids:
                         self.assertIn(panel["type"], ("stat", "bargauge"))
                         self.assertEqual(panel["fieldConfig"]["defaults"]["decimals"], 1)
-                if name == "codex-unified-overview":
-                    legends = [p for p in panels if p["type"] == "text" and "Token scale:" in p["options"]["content"]]
-                    self.assertEqual(len(legends), 1)
-                else:
-                    self.assertFalse(any(p["type"] == "text" for p in panels))
-                    for panel in panels:
-                        if panel["id"] in expected_ids:
-                            for label in ("K = thousand", "Mil = million", "Bil = billion", "Tri = trillion"):
-                                self.assertIn(label, panel["description"])
-                            self.assertIn("reading-values/", panel["description"])
+                self.assertFalse(any(p["type"] == "text" for p in panels))
+                for panel in panels:
+                    if panel["id"] in expected_ids:
+                        for label in ("K = thousand", "Mil = million", "Bil = billion", "Tri = trillion"):
+                            self.assertIn(label, panel["description"])
+                        self.assertIn("reading-values/", panel["description"])
 
     def test_exact_counts_stay_grouped_and_si_prefixes_are_absent(self):
         for name in DASHBOARDS:
@@ -89,8 +83,7 @@ class DashboardPresentationTests(unittest.TestCase):
                         self.assertIn(node["decimals"], (0, 1))
                         grouped += 1
                     if node.get("type") == "stat" and "token" in node.get("title", "").lower():
-                        if name != "codex-unified-overview":
-                            self.assertLessEqual(node.get("options", {}).get("text", {}).get("valueSize", 20), 22)
+                        self.assertLessEqual(node.get("options", {}).get("text", {}).get("valueSize", 20), 22)
                     properties = {item["id"]: item["value"] for item in node.get("properties", [])}
                     self.assertNotIn(properties.get("unit"), ("short", "sishort"))
                     if properties.get("unit") == "locale":
@@ -113,8 +106,6 @@ class DashboardPresentationTests(unittest.TestCase):
 
     def test_active_dashboards_have_consistent_compact_status_and_no_prose_panels(self):
         for name in DASHBOARDS:
-            if name == "codex-unified-overview":
-                continue
             data = json.loads((ROOT / f"examples/observability/{name}.json").read_text())
             top = sorted([p for p in data["panels"] if p["gridPos"]["y"] == 0], key=lambda p: p["gridPos"]["x"])
             self.assertEqual(sum(p["gridPos"]["w"] for p in top), 24)
@@ -142,8 +133,6 @@ class DashboardPresentationTests(unittest.TestCase):
     def test_session_state_colors_are_identical_everywhere(self):
         states = []
         for name in DASHBOARDS:
-            if name == "codex-unified-overview":
-                continue
             data = json.loads((ROOT / f"examples/observability/{name}.json").read_text())
             for p in objects(data):
                 if p.get("matcher", {}).get("options") == "State":

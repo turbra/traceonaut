@@ -6,7 +6,7 @@ description: Enable the optional account reader for weekly allowance and reset c
 
 # Account Allowance
 
-The account strip shows available earned resets, remaining weekly allowance, scheduled reset and read freshness. It appears in Work Overview, Unified and All Sessions, independently of their session filters.
+The status strip shows remaining weekly allowance, available earned resets and the next scheduled reset. It appears in Work Overview and All Sessions, independently of their session filters. Read freshness is in Diagnostics.
 
 This collector makes upstream account requests using an existing Codex login. It reads the account signed into the selected profile. History begins when collection is enabled.
 

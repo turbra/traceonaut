@@ -22,13 +22,13 @@ test('renders only explicit public documents, directly from source', () => {
   assert.equal(path.isAbsolute(docs.sidebarPath), false);
   assert.equal(path.isAbsolute(config.presets[0][1].theme.customCss), false);
   assert.deepEqual(docs.include, require('../docs-manifest.json'));
-  assert.equal(docs.include.length, 27);
+  assert.equal(docs.include.length, 26);
   assert.equal(new Set(docs.include).size, docs.include.length);
   for (const file of docs.include) {
     assert.match(file, /^(references\/(?:[a-z-]+\/)*[a-z-]+\.mdx?|website\/docs\/home\.mdx)$/);
     assert(fs.lstatSync(path.join(root, file)).isFile());
   }
-  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 26);
+  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 25);
 });
 
 test('sidebar document IDs resolve to the same authoritative files', () => {
@@ -98,7 +98,7 @@ test('README and site navigation use matching guide destinations', () => {
   assert.match(fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8'), /^## Quick Start$/m);
 });
 
-test('active dashboards are discoverable and Unified remains documented as legacy', () => {
+test('dashboard choices match the three shipped templates', () => {
   const dashboards = sidebars.docs.find(item => item.type === 'category' && item.label === 'Dashboards');
   assert(dashboards.items.some(item => item.id === 'references/dashboards/all-sessions'));
   const optional = sidebars.docs.find(item => item.label === 'Optional');
@@ -119,12 +119,21 @@ test('active dashboards are discoverable and Unified remains documented as legac
     assert.equal(menu.items[index].label, title);
     assert(readme.includes(`[${title}](https://turbra.github.io/traceonaut${routes[index]})`), title);
   }
-  assert(!dashboards.items.some(item => item.id === 'references/dashboards/unified'));
-  assert(!section.includes('/dashboards/unified/'));
+  const expectedFiles = ['codex-all-sessions.json', 'codex-work-overview-beta.json', 'cwo-overview.json'];
+  const actualFiles = fs.readdirSync(path.join(root, 'examples/observability'))
+    .filter(file => file.endsWith('.json')).sort();
+  assert.deepEqual(actualFiles, expectedFiles);
+  const chooser = fs.readFileSync(path.join(root, 'references/dashboards/index.md'), 'utf8');
   const reference = fs.readFileSync(path.join(root, 'references/reference/dashboards.md'), 'utf8');
-  assert(reference.includes('Unified (deprecated)'));
-  assert(reference.includes('../dashboards/unified.md'));
-  assert(docs.include.includes('references/dashboards/unified.md'));
+  const referenceFiles = [...reference.matchAll(/`([a-z-]+\.json)`/g)].map(match => match[1]).sort();
+  assert.deepEqual(referenceFiles, actualFiles);
+  const chooserTitles = [...chooser.matchAll(/^\| \[([^\]]+)\]/gm)].map(match => match[1]).sort();
+  assert.deepEqual(chooserTitles, actualFiles.map(file =>
+    JSON.parse(fs.readFileSync(path.join(root, 'examples/observability', file), 'utf8')).title
+  ).sort());
+  assert(!docs.include.includes('references/dashboards/unified.md'));
+  for (const file of ['scripts/render_codex_unified_dashboard.py', 'references/dashboards/unified.md',
+    'assets/screenshots/unified.png']) assert(!fs.existsSync(path.join(root, file)), file);
   assert(!config.themeConfig.navbar.items.some(item => item.to === '/dashboards/cwo/'));
   assert(config.themeConfig.footer.links[0].items.some(item => item.to === '/dashboards/'));
 });

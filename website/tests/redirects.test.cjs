@@ -16,6 +16,7 @@ test('dashboard aliases use the matching Docusaurus redirect plugin', () => {
   assert.deepEqual(plugin[1].redirects, [
     {from: '/dashboards/beta/', to: '/dashboards/work-overview/'},
     {from: '/dashboards/stable/', to: '/dashboards/all-sessions/'},
+    {from: '/dashboards/unified/', to: '/dashboards/work-overview/'},
   ]);
 });
 

@@ -1,5 +1,4 @@
 """Keep historical labels while avoiding duplicate presentation metadata."""
-import hashlib
 import json
 from pathlib import Path
 import sys
@@ -9,7 +8,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import render_codex_beta_dashboard as beta
 import render_codex_sessions_dashboard as stable
-import render_codex_unified_dashboard as unified
 
 
 def snapshot(count=1000):
@@ -64,8 +62,3 @@ class HistoricalNameTests(unittest.TestCase):
         names = next(p["value"] for p in parent["properties"] if p["id"] == "mappings")[0]["options"]
         self.assertEqual(names["session-0"]["text"], "Historical work 0")
         self.assertIn("parent_id", main["targets"][0]["expr"])
-
-    def test_legacy_unified_render_is_unchanged(self):
-        result = unified.render_dashboard(template("codex-unified-overview.json"), snapshot(4), "example-prometheus")
-        fingerprint = hashlib.sha256(json.dumps(result, sort_keys=True).encode()).hexdigest()
-        self.assertEqual(fingerprint, "748fd5c3d2b8fa67ffb4fac4e7ce4c616011a54cd71f2bccbb054df9c3d0cb0e")

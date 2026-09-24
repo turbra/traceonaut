@@ -1,6 +1,7 @@
 [
   {"from": "/dashboards/beta/", "to": "/dashboards/work-overview/"},
   {"from": "/dashboards/stable/", "to": "/dashboards/all-sessions/"},
+  {"from": "/dashboards/unified/", "to": "/dashboards/work-overview/"},
   {
     "from": "/data-and-limits/",
     "to": "/reference/data-sources-and-privacy/",

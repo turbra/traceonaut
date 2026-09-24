@@ -25,12 +25,11 @@ Session collection also accepts `--session-retention-seconds 2592000` and `--ses
 
 ## Dashboard Renderers
 
-All four require `--template` and `--output`. Session renderers also require `--snapshot-file`; the CWO renderer requires `--presentation-file`, `--session-snapshot-file`, or both. The session snapshot supplies session/project names; the presentation registry supplies observed-job names.
+All three require `--template` and `--output`. Session renderers also require `--snapshot-file`; the CWO renderer requires `--presentation-file`, `--session-snapshot-file`, or both. The session snapshot supplies session/project names; the presentation registry supplies observed-job names.
 
 | Script | Output / additional option |
 | --- | --- |
 | `render_codex_beta_dashboard.py` | Work Overview; optional `--labels-file` aliases. |
-| `render_codex_unified_dashboard.py` | Unified, using collected names. |
 | `render_codex_sessions_dashboard.py` | All Sessions. |
 | `render_observability_dashboard.py` | CWO Overview. |
 
@@ -43,5 +42,5 @@ All accept `--datasource-uid` for provisioning and `--watch-seconds` (1–60). O
 | `export_dispatch_observability.py` | `--state-dir`; `--credential-file` when serving | Loopback `--host 127.0.0.1`, default `--port 9464`. Use **9465** alongside session collection. `--once` prints metrics; `--capacity-report` prints local counts. These modes are exclusive. |
 | `export_terminal_observations.py` | `--state-dir`, `--output-dir` | Exports eligible completed jobs, then exits. |
 | `run_observed_codex.py` | `--manifest`, `--authorization-file`, `--observability-config`, `--receipt-dir` | Starts authorized model work. `--linger-seconds 0`; optional `--presentation-file` and `--project-name` must be paired. See [Observed Job Runner](../integrations/observed-job-runner.md). |
-| `build_release.py` | `--component`, `--output-dir` | Builds a content-hashed bundle. Components: `sessions`, `account`, `stable`, `beta`, `unified`, `dispatch`. |
+| `build_release.py` | `--component`, `--output-dir` | Builds a content-hashed bundle. Components: `sessions`, `account`, `stable`, `beta`, `dispatch`. |
 | `validate_repository.py` | None | Checks source assets and links. `--staged` checks the exact Git index before publication. |

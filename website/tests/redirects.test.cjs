@@ -35,12 +35,20 @@ test('legacy data links preserve their dashboard destination and query string', 
   assert.match(html, /<a href="\.\.\/dashboards\/all-sessions\/">/);
 });
 
+test('Quick Start step headings match across all three documents', () => {
+  const guide = fs.readFileSync(path.join(root, 'references/getting-started.mdx'), 'utf8');
+  const headings = (text, level) => [...text.matchAll(new RegExp(`^#{${level}} (\\d+\\. .+)$`, 'gm'))]
+    .map(match => match[1]);
+  const expected = headings(guide, 2);
+  assert.deepEqual(expected.map(heading => parseInt(heading, 10)), [1, 2, 3]);
+  for (const source of ['README.md', 'website/docs/home.mdx']) {
+    assert.deepEqual(headings(fs.readFileSync(path.join(root, source), 'utf8'), 3), expected, source);
+  }
+});
+
 test('sequential home setup stays visible and networking choices synchronize', () => {
   const home = fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8');
   assert(!home.includes('<Tabs'));
-  for (const heading of ['1. Run the Collector', '2. Add the Scrape Job', '3. Import into Grafana']) {
-    assert(home.includes('### ' + heading));
-  }
   const guide = fs.readFileSync(path.join(root, 'references/getting-started.mdx'), 'utf8');
   const tabs = [...guide.matchAll(/<Tabs groupId="network">([\s\S]*?)<\/Tabs>/g)];
   assert.equal(tabs.length, 2);

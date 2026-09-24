@@ -65,7 +65,7 @@ python3 scripts/collect_codex_sessions.py \
 
 Leave the collector running. Use a second terminal for rendering.
 
-### 2. Add the Scrape Job
+### 2. Add the Prometheus Scrape Job
 
 Merge this job into your Prometheus configuration. Replace the credential path
 with the token's absolute path as seen by Prometheus, then validate and reload:
@@ -83,7 +83,7 @@ scrape_configs:
       - targets: ['127.0.0.1:9464']
 ```
 
-### 3. Import into Grafana
+### 3. Import a Dashboard into Grafana
 
 Run in a second terminal from the checkout root:
 

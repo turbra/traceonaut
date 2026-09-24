@@ -31,7 +31,7 @@ const config = {
         include: require('./docs-manifest.json'),
         routeBasePath: '/',
         sidebarPath: './sidebars.js',
-        editUrl: 'https://github.com/turbra/traceonaut/edit/main/',
+        editUrl: ({docPath}) => `https://github.com/turbra/traceonaut/edit/main/${docPath}`,
         beforeDefaultRemarkPlugins: [require('./remark-source-links.cjs')],
       },
       blog: false,

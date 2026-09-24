@@ -8,6 +8,7 @@ import re
 from urllib.parse import unquote, urljoin, urlsplit
 
 BASE = "https://turbra.github.io/traceonaut/"
+EDIT_BASE = "https://github.com/turbra/traceonaut/edit/main/"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -30,12 +31,12 @@ def redirect_rules(project_root=PROJECT_ROOT):
     return rules
 
 
-def expected_pages(project_root=PROJECT_ROOT):
+def document_pages(project_root=PROJECT_ROOT):
     """Resolve only explicitly declared public sources, never a repository crawl."""
     manifest = json.loads((project_root / "website/docs-manifest.json").read_text())
     if not isinstance(manifest, list) or not manifest or len(set(manifest)) != len(manifest):
         raise ValueError("Invalid public document manifest")
-    pages = {"404.html"}
+    pages = {}
     for name in manifest:
         if not re.fullmatch(r"references/(?:[a-z-]+/)*[a-z-]+\.mdx?|website/docs/home\.mdx", name):
             raise ValueError(f"Unexpected public source: {name}")
@@ -53,7 +54,12 @@ def expected_pages(project_root=PROJECT_ROOT):
         page = slug.lstrip("/") + "/index.html" if slug != "/" else "index.html"
         if page in pages:
             raise ValueError(f"Duplicate page route: {slug}")
-        pages.add(page)
+        pages[page] = name
+    return pages
+
+
+def expected_pages(project_root=PROJECT_ROOT):
+    pages = {"404.html", *document_pages(project_root)}
     aliases = set()
     for rule in redirect_rules(project_root):
         alias = rule["from"].lstrip("/") + "index.html"
@@ -68,6 +74,7 @@ def expected_pages(project_root=PROJECT_ROOT):
 
 
 PAGES = expected_pages()
+EDIT_LINKS = {page: EDIT_BASE + source for page, source in document_pages().items()}
 REDIRECTS = redirect_rules()
 PUBLIC_ASSETS = {
     "traceonaut-favicon.png", "traceonaut.png",
@@ -82,6 +89,7 @@ class Page(HTMLParser):
         self.ids = set()
         self.links = []
         self.canonical = []
+        self.edit_links = []
         self.feed(text)
 
     def handle_starttag(self, tag, attrs):
@@ -90,6 +98,8 @@ class Page(HTMLParser):
             self.ids.add(attrs["id"])
         if tag == "link" and attrs.get("rel") == "canonical":
             self.canonical.append(attrs.get("href"))
+        if tag == "a" and "theme-edit-this-page" in attrs.get("class", "").split():
+            self.edit_links.append(attrs.get("href"))
         # Canonical/alternate metadata is not a navigation or asset request.
         if tag == "link" and attrs.get("rel") not in ("stylesheet", "preload", "modulepreload", "icon"):
             return
@@ -98,13 +108,17 @@ class Page(HTMLParser):
                 self.links.append(attrs[key])
 
 
-def validate_build(root, expected=PAGES, public_assets=(), readme=None, redirects=()):
+def validate_build(root, expected=PAGES, public_assets=(), readme=None, redirects=(), edit_links=None):
     root = Path(root)
     errors = []
     files = {p.relative_to(root).as_posix(): p for p in root.rglob("*") if p.is_file()}
     pages = {name: Page(path.read_text()) for name, path in files.items() if name.endswith(".html")}
     if set(pages) != expected:
         errors.append(f"Unexpected page set: missing={expected - set(pages)}, extra={set(pages) - expected}")
+    for name, target in (edit_links or {}).items():
+        page = pages.get(name)
+        if page is None or page.edit_links != [target]:
+            errors.append(f"Invalid source edit link: {name}")
     for rule in redirects:
         name = rule["from"].lstrip("/") + "index.html"
         page = pages.get(name)
@@ -157,7 +171,8 @@ if __name__ == "__main__":
         Path(__file__).parent / "build", public_assets=PUBLIC_ASSETS,
         readme=(PROJECT_ROOT / "README.md").read_text(),
         redirects=REDIRECTS,
+        edit_links=EDIT_LINKS,
     )
     if errors:
         raise SystemExit("\n".join(errors))
-    print(f"Validated {len(PAGES)} HTML pages, README Pages links, anchors and declared public assets.")
+    print(f"Validated {len(PAGES)} HTML pages, source edit links, README Pages links, anchors and declared public assets.")

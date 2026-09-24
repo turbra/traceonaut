@@ -1168,11 +1168,14 @@
           "custom": {
             "align": "left",
             "cellOptions": {
-              "type": "auto"
+              "type": "auto",
+              "wrapText": true
             },
-            "inspect": false
+            "inspect": false,
+            "minWidth": 80
           },
-          "decimals": 0
+          "decimals": 0,
+          "unit": "locale"
         },
         "overrides": [
           {
@@ -1182,13 +1185,14 @@
             },
             "properties": [
               {
-                "id": "custom.minWidth",
-                "value": 210
+                "id": "custom.width",
+                "value": 220
               },
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "type": "auto"
+                  "type": "auto",
+                  "wrapText": true
                 }
               },
               {
@@ -1217,6 +1221,10 @@
                     "url": "/d/cwo-supervisor-observability-v1?var-project=$__all&var-session=${__value.raw}&from=${__from}&to=${__to}"
                   }
                 ]
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
               }
             ]
           },
@@ -1227,13 +1235,10 @@
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 130
-              },
-              {
                 "id": "custom.cellOptions",
                 "value": {
-                  "type": "color-text"
+                  "type": "color-text",
+                  "wrapText": true
                 }
               },
               {
@@ -1275,10 +1280,6 @@
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 190
-              },
-              {
                 "id": "unit",
                 "value": "dateTimeFromNow"
               }
@@ -1287,12 +1288,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Recorded tokens"
+              "options": "Tokens"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 180
+                "value": 150
               },
               {
                 "id": "unit",
@@ -1311,10 +1312,6 @@
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 150
-              },
-              {
                 "id": "mappings",
                 "value": [
                   {
@@ -1331,6 +1328,10 @@
                     }
                   }
                 ]
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
               }
             ]
           },
@@ -1341,10 +1342,6 @@
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 150
-              },
-              {
                 "id": "mappings",
                 "value": [
                   {
@@ -1361,30 +1358,26 @@
                     }
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Latest selected model"
-            },
-            "properties": [
+              },
               {
-                "id": "custom.width",
-                "value": 190
+                "id": "custom.inspect",
+                "value": true
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Latest selected effort"
+              "options": "Model / effort"
             },
             "properties": [
               {
                 "id": "custom.width",
                 "value": 180
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
               }
             ]
           },
@@ -1394,10 +1387,6 @@
               "options": "Responses"
             },
             "properties": [
-              {
-                "id": "custom.width",
-                "value": 105
-              },
               {
                 "id": "unit",
                 "value": "locale"
@@ -1411,13 +1400,9 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Observed turn time"
+              "options": "Turn time"
             },
             "properties": [
-              {
-                "id": "custom.width",
-                "value": 180
-              },
               {
                 "id": "unit",
                 "value": "s"
@@ -1431,75 +1416,9 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Usage source"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 150
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "Unavailable",
-                        "color": "gray"
-                      },
-                      "1": {
-                        "text": "Response records",
-                        "color": "green"
-                      },
-                      "2": {
-                        "text": "Runtime snapshot only",
-                        "color": "blue"
-                      },
-                      "3": {
-                        "text": "Usage invalid or conflicted",
-                        "color": "red"
-                      },
-                      "4": {
-                        "text": "Partial backfill",
-                        "color": "yellow"
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Runtime reported"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 180
-              },
-              {
-                "id": "unit",
-                "value": "locale"
-              },
-              {
-                "id": "decimals",
-                "value": 0
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "Kind"
             },
             "properties": [
-              {
-                "id": "custom.width",
-                "value": 100
-              },
               {
                 "id": "mappings",
                 "value": [
@@ -1520,30 +1439,6 @@
                 ]
               }
             ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Completed turns"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 160
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Failed turns"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 130
-              }
-            ]
           }
         ]
       },
@@ -1555,7 +1450,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "(max by (project_id, session_id, project, agent, kind, model, effort) (label_replace(label_replace(cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\"}, \"project\", \"$1\", \"project_id\", \"(.+)\"), \"agent\", \"$1\", \"session_id\", \"(.+)\"))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "expr": "(max by (project_id, session_id, project, agent, kind, model_effort) (label_join(label_replace(label_replace(cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\"}, \"project\", \"$1\", \"project_id\", \"(.+)\"), \"agent\", \"$1\", \"session_id\", \"(.+)\"), \"model_effort\", \" · \", \"model\", \"effort\"))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
           "instant": true,
           "range": false,
           "format": "table",
@@ -1582,19 +1477,6 @@
           },
           "editorMode": "code",
           "expr": "((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
-        },
-        {
-          "refId": "D",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "(max by (project_id, session_id) (cwo_codex_session_reported_tokens{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
           "instant": true,
           "range": false,
           "format": "table",
@@ -1664,19 +1546,6 @@
           "range": false,
           "format": "table",
           "legendFormat": ""
-        },
-        {
-          "refId": "J",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "(max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
         }
       ],
       "transformations": [
@@ -1693,20 +1562,17 @@
             "include": {
               "names": [
                 "session_id",
+                "Value #B",
+                "Value #I",
+                "Value #C",
                 "project",
                 "agent",
-                "kind",
-                "model",
-                "effort",
-                "Value #B",
-                "Value #C",
-                "Value #D",
+                "model_effort",
                 "Value #E",
-                "Value #F",
-                "Value #G",
                 "Value #H",
-                "Value #I",
-                "Value #J"
+                "kind",
+                "Value #F",
+                "Value #G"
               ]
             }
           }
@@ -1722,32 +1588,26 @@
               "Value #C": 3,
               "project": 4,
               "agent": 5,
-              "model": 6,
-              "effort": 7,
-              "Value #E": 8,
-              "Value #H": 9,
-              "Value #J": 10,
-              "Value #D": 11,
-              "kind": 12,
-              "Value #F": 13,
-              "Value #G": 14
+              "model_effort": 6,
+              "Value #E": 7,
+              "Value #H": 8,
+              "kind": 9,
+              "Value #F": 10,
+              "Value #G": 11
             },
             "renameByName": {
               "session_id": "Session",
+              "Value #B": "State",
+              "Value #I": "Last seen",
+              "Value #C": "Tokens",
               "project": "Project",
               "agent": "Agent",
-              "kind": "Kind",
-              "model": "Latest selected model",
-              "effort": "Latest selected effort",
-              "Value #B": "State",
-              "Value #C": "Recorded tokens",
-              "Value #D": "Runtime reported",
+              "model_effort": "Model / effort",
               "Value #E": "Responses",
-              "Value #F": "Completed turns",
-              "Value #G": "Failed turns",
-              "Value #H": "Observed turn time",
-              "Value #I": "Last seen",
-              "Value #J": "Usage source"
+              "Value #H": "Turn time",
+              "kind": "Kind",
+              "Value #F": "Completed",
+              "Value #G": "Failed"
             }
           }
         }
@@ -2232,7 +2092,7 @@
     {
       "id": 153,
       "type": "row",
-      "title": "Collection coverage",
+      "title": "Diagnostics",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -2393,6 +2253,228 @@
       "options": {
         "mode": "markdown",
         "content": "### How to read this dashboard\n\nThe selected range includes sessions by **latest observed event**. Token, response, turn, and duration values cover **available observed session history**, not activity spent within the selected range, and may omit older usage or records. Recorded tokens come from deduplicated observed response records; runtime-reported tokens remain separate because they can be estimated. Model and effort are latest selected settings without per-model attribution. Activity history begins when the collector starts and is not backfilled."
+      }
+    },
+    {
+      "id": 173,
+      "type": "table",
+      "title": "Session usage diagnostics",
+      "description": "Usage source shows whether response records or only a runtime snapshot are available for each selected session. Runtime reported is the latest runtime token total. It is a separate source and is not added to recorded tokens.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Not reported",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Session"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {}
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^.+$",
+                      "result": {
+                        "text": "Name unavailable"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Focus on this session",
+                    "url": "/d/cwo-supervisor-observability-v1?var-project=$__all&var-session=${__value.raw}&from=${__from}&to=${__to}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Usage source"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unavailable",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "Response records",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "Runtime snapshot only",
+                        "color": "blue"
+                      },
+                      "3": {
+                        "text": "Usage invalid or conflicted",
+                        "color": "red"
+                      },
+                      "4": {
+                        "text": "Partial backfill",
+                        "color": "yellow"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Runtime reported"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id, project, agent, kind, model, effort) (label_replace(label_replace(cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\"}, \"project\", \"$1\", \"project_id\", \"(.+)\"), \"agent\", \"$1\", \"session_id\", \"(.+)\"))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_reported_tokens{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "session_id",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "session_id",
+                "Value #J",
+                "Value #D"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "session_id": 0,
+              "Value #J": 1,
+              "Value #D": 2
+            },
+            "renameByName": {
+              "session_id": "Session",
+              "Value #J": "Usage source",
+              "Value #D": "Runtime reported"
+            }
+          }
+        }
+      ],
+      "options": {
+        "cellHeight": "md",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Session",
+            "desc": false
+          }
+        ],
+        "footer": {
+          "show": false
+        },
+        "enablePagination": true
       }
     }
   ],

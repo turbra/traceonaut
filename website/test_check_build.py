@@ -3,11 +3,11 @@ import json
 import tempfile
 import unittest
 
-from check_build import PROJECT_ROOT, PUBLIC_ASSETS, expected_pages, validate_build
+from check_build import EDIT_BASE, EDIT_LINKS, PROJECT_ROOT, PUBLIC_ASSETS, expected_pages, validate_build
 
 
 class BuildChecks(unittest.TestCase):
-    def check(self, html, extras=None, public_assets=(), readme=None):
+    def check(self, html, extras=None, public_assets=(), readme=None, edit_links=None):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "index.html").write_text(html)
@@ -15,7 +15,33 @@ class BuildChecks(unittest.TestCase):
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(content if isinstance(content, bytes) else content.encode())
-            return validate_build(root, {"index.html"}, public_assets=public_assets, readme=readme)
+            return validate_build(root, {"index.html"}, public_assets=public_assets, readme=readme, edit_links=edit_links)
+
+    def test_each_document_has_its_exact_source_edit_link(self):
+        for target in EDIT_LINKS.values():
+            with self.subTest(target=target):
+                html = f'<a class="theme-edit-this-page" href="{target}">Edit this page</a>'
+                self.assertEqual(self.check(html, edit_links={"index.html": target}), [])
+                source = target.removeprefix(EDIT_BASE)
+                self.assertTrue((PROJECT_ROOT / source).is_file())
+        self.assertEqual(EDIT_LINKS["install/index.html"], EDIT_BASE + "references/install.md")
+
+    def test_missing_duplicate_or_wrong_source_edit_link_is_rejected(self):
+        expected = {"index.html": EDIT_BASE + "website/docs/home.mdx"}
+        valid = f'<a class="theme-edit-this-page" href="{expected["index.html"]}">Edit</a>'
+        invalid_targets = [
+            "https://github.com/turbra/traceonaut/edit/references/install.md",
+            EDIT_BASE + "../references/install.md",
+            EDIT_BASE + "references/install.md",
+            EDIT_BASE + "missing.md",
+        ]
+        invalid = ["", valid * 2, *[
+            f'<a class="theme-edit-this-page" href="{target}">Edit</a>'
+            for target in invalid_targets
+        ]]
+        for html in invalid:
+            with self.subTest(html=html):
+                self.assertIn("Invalid source edit link", self.check(html, edit_links=expected)[0])
 
     def test_project_links_assets_fragments_and_external_links(self):
         self.assertEqual(self.check(

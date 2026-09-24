@@ -8,6 +8,15 @@ const sourceLinks = require('../remark-source-links.cjs');
 const root = path.resolve(__dirname, '../..');
 const docs = config.presets[0][1].docs;
 
+test('edit links point to each repository source on main', () => {
+  assert.equal(typeof docs.editUrl, 'function');
+  for (const docPath of docs.include) {
+    const url = docs.editUrl({docPath, versionDocsDirPath: '..', version: 'current', locale: 'en'});
+    assert.equal(url, `https://github.com/turbra/traceonaut/edit/main/${docPath}`);
+    assert.equal(new URL(url).pathname, `/turbra/traceonaut/edit/main/${docPath}`);
+  }
+});
+
 test('renders only explicit public documents, directly from source', () => {
   assert.equal(docs.path, '..');
   assert.equal(path.isAbsolute(docs.sidebarPath), false);

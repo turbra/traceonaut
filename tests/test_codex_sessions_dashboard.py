@@ -129,11 +129,9 @@ class CodexSessionsDashboardTests(unittest.TestCase):
                 "Last seen",
                 "Project",
                 "Agent",
-                "Latest selected model",
-                "Latest selected effort",
-                "Recorded tokens",
-                "Runtime reported",
-                "Usage source",
+                "Model / effort",
+                "Tokens",
+                "Turn time",
             }.issubset(renamed)
         )
         session_override = next(
@@ -211,8 +209,9 @@ class CodexSessionsDashboardTests(unittest.TestCase):
             self.assertIn("cwo_codex_session_usage_state", expression)
             self.assertIn("== 1", expression)
             self.assertIn("== 4", expression)
+        diagnostics = self.panel("Session usage diagnostics")
         usage = next(
-            item for item in table["fieldConfig"]["overrides"]
+            item for item in diagnostics["fieldConfig"]["overrides"]
             if item["matcher"]["options"] == "Usage source"
         )
         mapping = next(prop["value"] for prop in usage["properties"] if prop["id"] == "mappings")
@@ -221,11 +220,37 @@ class CodexSessionsDashboardTests(unittest.TestCase):
     def test_model_and_effort_are_labeled_as_latest_selected_settings(self) -> None:
         table = self.panel("Sessions and latest activity")
         names = set(table["transformations"][2]["options"]["renameByName"].values())
-        self.assertIn("Latest selected model", names)
-        self.assertIn("Latest selected effort", names)
-        self.assertNotIn("Model", names)
-        self.assertNotIn("Effort", names)
+        self.assertIn("Model / effort", names)
+        self.assertNotIn("Latest selected model", names)
+        self.assertNotIn("Latest selected effort", names)
+        identity = next(target["expr"] for target in table["targets"] if target["refId"] == "A")
+        self.assertIn('"model_effort", " · ", "model", "effort"', identity)
+        self.assertIn("label_join(", identity)
+        self.assertIn("model_effort)", identity)
         self.assertIn("not per-model lifetime attribution", table["description"])
+
+    def test_usage_diagnostics_are_separate_without_losing_scope_or_values(self) -> None:
+        table = self.panel("Sessions and latest activity")
+        main_names = set(table["transformations"][2]["options"]["renameByName"].values())
+        self.assertTrue({"Usage source", "Runtime reported"}.isdisjoint(main_names))
+        self.assertTrue({"Completed", "Failed", "Turn time", "Tokens"}.issubset(main_names))
+        self.assertTrue({"D", "J"}.isdisjoint(t["refId"] for t in table["targets"]))
+        diagnostics = self.panel("Session usage diagnostics")
+        self.assertGreater(diagnostics["gridPos"]["y"], self.panel("Diagnostics")["gridPos"]["y"])
+        self.assertEqual(diagnostics["transformations"][0]["options"], {"byField": "session_id", "mode": "outer"})
+        self.assertEqual(set(diagnostics["transformations"][2]["options"]["renameByName"].values()),
+                         {"Session", "Usage source", "Runtime reported"})
+        targets = {t["refId"]: t for t in diagnostics["targets"]}
+        self.assertEqual(set(targets), {"A", "D", "J"})
+        self.assertIn("cwo_codex_session_reported_tokens", targets["D"]["expr"])
+        self.assertIn("cwo_codex_session_usage_state", targets["J"]["expr"])
+        for target in targets.values():
+            self.assertTrue(target["instant"])
+            self.assertEqual(target["format"], "table")
+            self.assertIn('project_id=~"$project",session_id=~"$session"', target["expr"])
+            self.assertIn(">= $__from / 1000", target["expr"])
+            self.assertIn("<= $__to / 1000", target["expr"])
+        self.assertIn("not added to recorded tokens", diagnostics["description"])
 
     def test_range_and_history_scope_is_prominent_near_summary_cards(self) -> None:
         scope = self.panel("Selected range and recorded history")
@@ -306,6 +331,11 @@ class CodexSessionsRendererTests(unittest.TestCase):
             self.assertEqual(mapping[0]["options"][keys[field]]["text"], name)
             self.assertEqual(mapping[-1]["options"]["pattern"], "^.+$")
             self.assertNotRegex(mapping[-1]["options"]["result"]["text"], self.session)
+        diagnostics = next(panel for panel in rendered["panels"] if panel.get("id") == 173)
+        session_column = next(item for item in diagnostics["fieldConfig"]["overrides"]
+                              if item["matcher"]["options"] == "Session")
+        mapping = next(prop["value"] for prop in session_column["properties"] if prop["id"] == "mappings")
+        self.assertEqual(mapping[0]["options"][self.session]["text"], "Review collector coverage")
         for panel in rendered["panels"]:
             if panel.get("type") != "bargauge":
                 continue

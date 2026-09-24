@@ -1,4 +1,4 @@
-"""Exercise the Unified dashboard's PromQL against isolated session fixtures."""
+"""Exercise session-dashboard PromQL against isolated session fixtures."""
 
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from traceonaut.observability_exporter import MetricsEndpoint, PrometheusQueryCl
 OBSERVABILITY = ROOT / "examples" / "observability"
 UNIFIED = OBSERVABILITY / "codex-unified-overview.json"
 BETA = OBSERVABILITY / "codex-work-overview-beta.json"
+ALL_SESSIONS = OBSERVABILITY / "codex-all-sessions.json"
 
 
 def panels_by_id(dashboard: dict) -> dict[int, dict]:
@@ -176,6 +177,11 @@ class UnifiedQueryIntegrationTests(unittest.TestCase):
         usage("mixed", "partial", 4, tokens=partial_tokens, responses=3)
         usage("mixed", "unknown", 0, tokens=leaked_tokens, responses=9)
         usage("mixed", "conflicted", 3, tokens=leaked_tokens, responses=7)
+        for session, total in (("complete", 140), ("partial", 360), ("unknown", 11), ("conflicted", 99)):
+            lines.append(
+                'cwo_codex_session_reported_tokens'
+                f'{{project_id="mixed",session_id="{session}"}} {total}'
+            )
         for session, seconds in (("complete", 55), ("partial", 0), ("unknown", 7)):
             lines.append(
                 "cwo_codex_session_observed_turn_seconds"
@@ -485,6 +491,37 @@ class UnifiedQueryIntegrationTests(unittest.TestCase):
             if target["refId"] in "ABCDE"
             and (rows := self.query(23, ref=target["refId"], **kwargs))
         }
+
+    def test_all_sessions_combines_selected_settings_without_changing_selection(self) -> None:
+        panels = panels_by_id(json.loads(ALL_SESSIONS.read_text()))
+        identity = next(t["expr"] for t in panels[110]["targets"] if t["refId"] == "A")
+        rows = self.query_expression(identity, project="mixed")
+        self.assertEqual({row["metric"]["session_id"] for row in rows},
+                         {"complete", "partial", "unknown", "conflicted"})
+        for row in rows:
+            self.assertEqual(row["metric"]["model_effort"], "model-a · medium")
+            self.assertNotIn("model", row["metric"])
+            self.assertNotIn("effort", row["metric"])
+        rows = self.query_expression(identity, project="mixed", session="partial")
+        self.assertEqual([row["metric"]["session_id"] for row in rows], ["partial"])
+        self.assertEqual(self.query_expression(identity, project="mixed", start=self.now - 5), [])
+        self.assertEqual(self.query_expression(identity, project="missing"), [])
+
+    def test_all_sessions_diagnostics_preserve_runtime_values_and_coverage(self) -> None:
+        panels = panels_by_id(json.loads(ALL_SESSIONS.read_text()))
+        targets = {t["refId"]: t["expr"] for t in panels[173]["targets"]}
+        for ref, expected in (
+            ("D", {"complete": 140, "partial": 360, "unknown": 11, "conflicted": 99}),
+            ("J", {"complete": 1, "partial": 4, "unknown": 0, "conflicted": 3}),
+        ):
+            with self.subTest(ref=ref):
+                rows = self.query_expression(targets[ref], project="mixed", session="complete|partial|unknown|conflicted")
+                self.assertEqual({r["metric"]["session_id"]: float(r["value"][1]) for r in rows}, expected)
+                self.assertEqual(self.query_expression(targets[ref], project="mixed", start=self.now - 5), [])
+        recorded = next(t["expr"] for t in panels[110]["targets"] if t["refId"] == "C")
+        rows = self.query_expression(recorded, project="mixed", session="complete|partial|unknown|conflicted")
+        self.assertEqual({r["metric"]["session_id"]: float(r["value"][1]) for r in rows},
+                         {"complete": 140, "partial": 360})
 
     def test_matching_state_counts_share_one_complete_population(self) -> None:
         self.assertEqual(self.value(3), 4)

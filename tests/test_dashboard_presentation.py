@@ -24,7 +24,7 @@ def objects(value):
 
 
 class DashboardPresentationTests(unittest.TestCase):
-    def test_session_table_reserves_space_for_full_headers(self):
+    def test_session_table_keeps_fixed_widths_within_viewport_budget(self):
         data = json.loads((ROOT / "examples/observability/codex-all-sessions.json").read_text())
         table = next(node for node in objects(data) if node.get("id") == 110)
         widths = {
@@ -32,13 +32,14 @@ class DashboardPresentationTests(unittest.TestCase):
                 (prop["value"] for prop in override["properties"] if prop["id"] == "custom.width"), 0
             ) for override in table["fieldConfig"]["overrides"]
         }
-        for name, minimum in {
-            "Latest selected model": 190, "Latest selected effort": 180,
-            "Observed turn time": 180, "Last seen": 190,
-            "Completed turns": 160, "Failed turns": 130,
-        }.items():
-            with self.subTest(column=name):
-                self.assertGreaterEqual(widths[name], minimum)
+        names = set(table["transformations"][2]["options"]["renameByName"].values())
+        default_width = table["fieldConfig"]["defaults"]["custom"].get("width", 0)
+        fixed = [widths.get(name, 0) or default_width for name in names]
+        self.assertLessEqual(sum(fixed), 1700)
+        self.assertLessEqual(sum(bool(width) for width in fixed), 3,
+                             "Most columns should adapt to the available width")
+        minimum = table["fieldConfig"]["defaults"]["custom"].get("minWidth", 150)
+        self.assertLessEqual(sum(width or minimum for width in fixed), 1700)
 
     def test_titles_match_guides_and_uids_remain_compatible(self):
         for name, (title, uid) in DASHBOARDS.items():
@@ -64,8 +65,6 @@ class DashboardPresentationTests(unittest.TestCase):
                     if properties.get("unit") == "locale":
                         self.assertEqual(properties["decimals"], 0)
                         grouped += 1
-                    if node.get("matcher", {}).get("options") in {"Tokens", "Recorded tokens", "Runtime reported"}:
-                        self.assertGreaterEqual(properties["custom.width"], 180)
             self.assertGreater(grouped, 0)
 
 

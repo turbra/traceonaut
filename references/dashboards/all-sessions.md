@@ -32,3 +32,7 @@ Import `all-sessions.json` in Grafana and select your Prometheus datasource.
 Select **Project**, **Session** and a time range. Choose **All** in the Session selector to include all matching sessions. Subagents appear as their own sessions.
 
 [Reading the Values](reading-values.md) explains history totals, activity states and missing values. [Automatic Name Updates](../operations/automatic-name-updates.md) explains selector refreshes.
+
+The session table combines the latest selected model and effort in **Model / effort**.
+**Turn time** adds up recorded completed-turn durations. Expand a cell to inspect a long name.
+The **Diagnostics** section holds **Usage source** and **Runtime reported** for checking token coverage.

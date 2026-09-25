@@ -51,6 +51,12 @@ class CwoSessionQueryTests(unittest.TestCase):
             {'input_series':[],'promql_expr_test':checks({301:None,302:None,303:None,304:None,"coverage":None})},
             {'input_series':session('unknown',state=0)+[series('cwo_codex_cwo_scan_ready',1)],'promql_expr_test':checks({301:1,303:None})},
         ]
+        # The main view and helper chart work with no observed-dispatch metrics.
+        # Old/future records and duplicate exporter copies must not change counts.
+        fixtures[0]['promql_expr_test'].append({'expr':queries[310],'eval_time':'2h',
+            'exp_samples':[{'labels':'{tool="run_checked_command"}','value':2}]})
+        for case in fixtures[1:]:
+            case['promql_expr_test'].append({'expr':queries[310],'eval_time':'2h','exp_samples':[]})
         for case in fixtures:case['interval']='1m'
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'rules.json'

@@ -114,6 +114,9 @@ class AuditCollector:
         self.directories = tuple(dict.fromkeys(Path(os.path.abspath(p)) for p in directories))
         self._cache = {}
 
+    def _candidate(self, name):
+        return name == "audit.jsonl" or name.endswith("-audit.jsonl")
+
     def _discover(self):
         files, errors, limited, visited = set(self.files), 0, False, set()
         pending = [(p, 0) for p in self.directories]
@@ -135,7 +138,7 @@ class AuditCollector:
                         path = Path(child.path)
                         if child.is_symlink():
                             # Never descend through a link or open a linked audit file.
-                            if child.name.endswith("audit.jsonl"):
+                            if self._candidate(child.name):
                                 errors += 1
                             continue
                         if child.is_dir(follow_symlinks=False):
@@ -143,7 +146,7 @@ class AuditCollector:
                                 pending.append((path, depth + 1))
                             else:
                                 limited = True
-                        elif child.name == "audit.jsonl" or child.name.endswith("-audit.jsonl"):
+                        elif self._candidate(child.name):
                             files.add(path)
                             if len(files) > MAX_FILES:
                                 return sorted(files)[:MAX_FILES], errors, True

@@ -35,6 +35,14 @@ With `--cwo-audit-dir` or `--cwo-audit-file`, Traceonaut reads only the selected
 
 With `--cwo-sessions`, Traceonaut scans the indexed rollouts in the selected Codex profile. It recognizes whole user-message skill blocks naming `complex-work-orchestration`, terminal `CommandExecution` items for supported direct Python calls under `complex-work-orchestration/scripts/`, and native parent/subagent session metadata. Internal Codex tasks, such as memory consolidation, are outside this session view. Reading documentation and plain CWO mentions are excluded. Arbitrary shell programs and dynamically constructed helper paths are unclassified.
 
-A direct helper command can optionally be followed by `cat` to read its receipt. Command outcome and duration describe the complete recorded command, including that read. Supported helpers are listed in the [Metrics reference](metrics.md#cwo-associated-sessions).
+Outcome and duration are recorded when the helper is the sole command. A following receipt read or post-processing command uses the [compound-command rules](#compound-cwo-helper-commands). Supported helpers are listed in the [Metrics reference](metrics.md#cwo-associated-sessions).
 
 Only opaque session/command IDs, fixed source/tool/outcome categories and numeric timestamps/duration enter the feature index and metrics. Skill bodies, command arguments and output are inspected transiently, then discarded. Session usage retains its existing accounting rules; association does not claim that every token or turn was CWO work.
+
+## CWO CLI Review Artifacts
+
+The [optional review reader](../integrations/cwo.md#collect-cli-review-results) reads paired launch receipts, Claude CLI results and their local audit file. Metrics contain hashed result identities, requested/reported model names, effort, outcome, source launch time and numeric usage. Prompts, response text, account names, paths and raw UUIDs stay out of metrics.
+
+## Compound CWO Helper Commands
+
+The session reader recognizes a supported helper as the first unconditional Python invocation, including a following receipt read or simple Python post-processing command. Help requests, source reads, shell expansion, pipelines and conditional prefixes are excluded. When other commands follow the helper, the shell's final exit code and total duration do not identify the helper's result. The invocation is counted with unknown outcome and no helper duration.

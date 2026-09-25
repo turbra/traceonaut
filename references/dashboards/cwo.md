@@ -10,7 +10,7 @@ description: View CWO sessions, agents, usage and workflow activity.
 
 *Synthetic data in the current dashboard layout. Counts depend on enabled sources and the selected time range.*
 
-CWO Overview combines three sources: observed jobs, workflow audit events and CWO-associated Codex sessions. Enable the sources you use through [CWO Integration](../integrations/cwo.md).
+CWO Overview combines observed jobs, workflow audit events, optional CLI review results and CWO-associated Codex sessions. Enable the sources you use through [CWO Integration](../integrations/cwo.md).
 
 ## Import
 
@@ -34,24 +34,32 @@ Import the generated file. Names remain presentation metadata; missing names hav
 
 ## Use the Dashboard
 
-The top strip shows session scan coverage, audit scan coverage, dispatch telemetry health and publication backlog. **Partial** marks incomplete source coverage. The collapsed **Technical details** row contains four tables: requested and configured models, token provenance, response/tool limits, and time/runtime limits. The default refresh is one minute.
+The main overview shows CWO-associated sessions, native agents, recorded session tokens and helper commands. Choose **Last 1 hour** to see sessions with activity and helper invocations in that hour. The session table appears directly below the headline values.
 
-### Observed Dispatches
+**Recorded session tokens** covers the selected sessions' whole recorded history, including work outside CWO. It is separate from tokens consumed during the selected hour. Missing values display a dash; known empty counts display zero.
 
-**Project** and **Task** filter this section. It shows jobs recorded by the observation hook or [Observed Job Runner](../integrations/observed-job-runner.md).
+The top strip reports session collection and workflow-source health. **Partial** means the configured sources have incomplete coverage. The default refresh is one minute.
 
-The default range is 30 days. Values use the last stored sample per dispatch in that range. Completed jobs stop being exported after Prometheus confirms their final samples, so widen the range to find older jobs.
+### Sessions and Helper Commands
 
-**Last response** is the latest recorded model response time. Jobs without responses stay in the table with a dash. This is a response timestamp, not a job finish time. Requested model and effort appear in the table; acknowledged settings and token coverage are in Technical details.
+This section covers the whole configured Codex profile. Association comes from a CWO skill block, a supported helper invocation, or an associated parent session. The table shows session names, projects, models, states and last activity.
+
+**CWO helper commands** and **CWO helper commands by tool** count supported invocations in completed Codex command records within the selected interval, including failed attempts. Compound commands retain an unknown helper outcome because the shell result also covers subsequent commands.
 
 ### Workflow Activity
 
-**Workflow events by type** counts events whose original timestamps fall inside the selected range. It covers all configured audit logs, regardless of Project and Task. The chart shows types with recorded events; the audit status in the top strip distinguishes an empty source from incomplete collection.
+**Workflow events by type** counts events whose original timestamps fall inside the selected range, across configured audit logs. It can be empty while session and helper activity is present: only operations that write audit events appear in that chart.
 
-### CWO-Associated Sessions
+**CLI review results · by launch time** shows collected Claude CLI reviews launched in the selected range. It includes failed attempts, requested and reported models, input/output tokens and reported duration. Enable the [paired-artifact reader](../integrations/cwo.md#collect-cli-review-results) for this table.
 
-This section covers the whole Codex profile, regardless of Project and Task. Choose **Today** or **Last 7 days** to find associated sessions with activity in that interval.
+### Optional Observed Jobs
 
-Association comes from a CWO skill block, a supported helper command, or an associated parent. **Recorded session tokens** covers whole-session history, including work outside CWO. **CWO helper commands** counts recorded command completions in the selected interval, including failed attempts.
+Expand **Observed jobs · optional observation hook** for jobs recorded by the observation hook or [Observed Job Runner](../integrations/observed-job-runner.md). Its completion, failure and token metrics describe those recorded jobs. Ordinary CWO sessions remain in the main overview.
 
-Session export and audit history have separate [Retention and Limits](../reference/retention-and-limits.md). [Reading the Values](reading-values.md) explains token totals, partial coverage and missing values.
+**Observed project** and **Observed task** filter only the observed-job panels and their technical details. They leave the profile-wide overview and workflow sources unchanged.
+
+Job values use the last stored sample per dispatch in the selected range. Completed jobs stop being exported after Prometheus confirms their final samples, so widen the range to find older jobs. **Last response** is the latest recorded model response time, rather than a job finish time.
+
+The collapsed **Technical details** row contains requested/configured models, token provenance and recorded limits.
+
+[Retention and Limits](../reference/retention-and-limits.md) explains source history and exports. [Reading the Values](reading-values.md) explains token totals, partial coverage and missing values.

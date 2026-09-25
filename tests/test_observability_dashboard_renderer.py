@@ -44,18 +44,18 @@ class WorkDashboardRendererTests(unittest.TestCase):
         self.assertEqual(rendered, original)
         self.assertNotIn("__inputs", result)
         self.assertNotIn("${DS_PROMETHEUS}", json.dumps(result))
-        work = next(p for p in result["panels"] if p["title"] == "Work and results")
+        work = next(p for p in walk_panels(result["panels"]) if p["title"] == "Work and results")
         overrides = {o["matcher"]["options"]: o for o in work["fieldConfig"]["overrides"]}
         for field, label in (("Task", "Check installation on Linux"), ("Worker", "Compatibility reviewer")):
             mapping = next(p["value"] for p in overrides[field]["properties"] if p["id"] == "mappings")
             self.assertEqual(mapping[0]["options"][self.dispatch]["text"], label)
         variables = {v["name"]: v for v in result["templating"]["list"]}
-        self.assertEqual(variables["dispatch"]["label"], "Task")
+        self.assertEqual(variables["dispatch"]["label"], "Observed task")
         self.assertEqual(variables["project"]["options"][1]["text"], "Release readiness")
         # Technical identities stay available only in collapsed diagnostics.
         row = next(p for p in result["panels"] if p["id"] == 90)
         self.assertTrue(row["collapsed"])
-        for panel in result["panels"]:
+        for panel in walk_panels(result["panels"]):
             if panel["type"] == "bargauge" and any(t["id"] == "rowsToFields" for t in panel.get("transformations", [])):
                 labels = panel["fieldConfig"]["overrides"]
                 named = next(o for o in labels if o["matcher"]["options"] == self.dispatch)
@@ -66,7 +66,7 @@ class WorkDashboardRendererTests(unittest.TestCase):
     def test_missing_names_get_explanatory_fallbacks_and_hidden_id_selectors(self):
         result = render_dashboard(self.template, empty_presentation_registry())
         self.assertTrue(all(v["hide"] == 2 for v in result["templating"]["list"]))
-        work = next(p for p in result["panels"] if p["title"] == "Work and results")
+        work = next(p for p in walk_panels(result["panels"]) if p["title"] == "Work and results")
         text = json.dumps(work["fieldConfig"])
         self.assertIn("Task name not provided", text)
         self.assertIn("Worker name not provided", text)
@@ -102,7 +102,7 @@ class WorkDashboardRendererTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.registry["dispatches"][self.dispatch]["task_name"] = name
                 rendered = render_dashboard(self.template, self.registry)
-                for panel in rendered["panels"]:
+                for panel in walk_panels(rendered["panels"]):
                     if panel["type"] != "bargauge" or not any(t["id"] == "rowsToFields" for t in panel.get("transformations", [])):
                         continue
                     override = next(o for o in panel["fieldConfig"]["overrides"]

@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from traceonaut.observability_contract import METRIC_FAMILIES  # noqa: E402
 from traceonaut.cwo_audit_telemetry import METRICS as AUDIT_METRICS
+from traceonaut.cwo_review_telemetry import METRICS as REVIEW_METRICS
 from traceonaut.cwo_session_telemetry import METRICS as CWO_SESSION_METRICS
 from render_observability_dashboard import walk_panels  # noqa: E402
 
@@ -73,6 +74,13 @@ class ObservabilityDashboardTests(unittest.TestCase):
                 metrics = set(metric_pattern.findall(expression))
                 self.assertTrue(metrics, expression)
                 observed.update(metrics)
+                if panel["id"] == 401:
+                    self.assertLessEqual(metrics, set(REVIEW_METRICS), expression)
+                    self.assertIn("$__from / 1000", expression)
+                    self.assertIn("$__to / 1000", expression)
+                    self.assertNotIn("$project", expression)
+                    self.assertNotIn("$dispatch", expression)
+                    continue
                 if panel["id"] >= 300:
                     native = {"cwo_codex_session_info", "cwo_codex_session_last_event_timestamp_seconds", "cwo_codex_session_usage_tokens", "cwo_codex_session_usage_state", "cwo_codex_session_state"}
                     self.assertLessEqual(metrics, set(CWO_SESSION_METRICS) | native, expression)
@@ -84,7 +92,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
                         self.assertIn("$__to / 1000", expression)
                     continue
                 if panel["id"] >= 200:
-                    self.assertLessEqual(metrics, set(AUDIT_METRICS), expression)
+                    self.assertLessEqual(metrics, set(AUDIT_METRICS) | (set(REVIEW_METRICS) if panel["id"] == 207 else set()), expression)
                     self.assertIn("last_over_time(", expression)
                     self.assertNotIn("$project", expression)
                     self.assertNotIn("$dispatch", expression)
@@ -242,16 +250,33 @@ class ObservabilityDashboardTests(unittest.TestCase):
         self.assertIn("from=${__from}&to=${__to}", links[0]["url"])
         # Coverage has no token_kind label. Filtering it would silently disable
         # conflict suppression in the summary and comparison views.
-        for panel in overview:
+        for panel in walk_panels(overview):
             for expression in self.expressions(panel):
                 for selector in re.findall(r"cwo_dispatch_coverage_state\{([^}]+)\}", expression):
                     self.assertNotIn("token_kind", selector)
 
-    def test_overview_orders_sources_by_filter_scope(self):
+    def test_overview_uses_current_cwo_sources_before_optional_jobs(self):
         sections = [p["title"] for p in self.dashboard["panels"] if p["type"] == "row" and not p["collapsed"]]
-        self.assertEqual(sections, ["Observed dispatches · Project/Task filters apply",
-                                   "Workflow activity · all audit logs",
-                                   "CWO-associated sessions · whole profile"])
+        self.assertEqual(sections, ["CWO activity · whole Codex profile",
+                                   "Helper commands and workflow activity"])
+        root = self.dashboard["panels"]
+        visible = [p for p in root if p["type"] != "row"]
+        # A healthy legacy ledger with no recent jobs cannot blank the main view.
+        for panel in visible:
+            self.assertNotIn("cwo_dispatch_", " ".join(self.expressions(panel)))
+        headlines = [p for p in visible if p["gridPos"]["y"] == 3]
+        self.assertEqual({p["id"] for p in headlines}, {301, 302, 303, 304})
+        for panel in headlines:
+            self.assertTrue(any("cwo_codex_" in q for q in self.expressions(panel)))
+        table = next(p for p in root if p["id"] == 305)
+        self.assertLessEqual(table["gridPos"]["y"], 6)
+        self.assertIn("whole-session", next(p for p in root if p["id"] == 303)["description"].lower())
+        optional = next(p for p in root if p["id"] == 150)
+        self.assertTrue(optional["collapsed"])
+        self.assertEqual({p["id"] for p in optional["panels"]}, {3, 101, 102, 103, 104, 110, 111, 112, 121})
+        variables = {v["name"]: v for v in self.dashboard["templating"]["list"]}
+        self.assertEqual(variables["project"]["label"], "Observed project")
+        self.assertEqual(variables["dispatch"]["label"], "Observed task")
         self.assertFalse(any(p["type"] in ("text", "piechart", "timeseries") for p in walk_panels(self.dashboard["panels"])))
         for title in ("Completed tasks", "Stopped or failed"):
             query = self.panel(title)["targets"][0]["expr"]

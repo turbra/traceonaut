@@ -3,10 +3,14 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from render_observability_dashboard import walk_panels
+
 BINARY = os.environ.get("CWO_TEST_PROMETHEUS_BINARY")
 
 
@@ -14,7 +18,7 @@ BINARY = os.environ.get("CWO_TEST_PROMETHEUS_BINARY")
 class LastResponseTests(unittest.TestCase):
     def test_latest_response_and_response_less_jobs(self):
         data = json.loads((ROOT / "examples/observability/cwo-overview.json").read_text())
-        panels = {p["id"]: p for p in data["panels"]}
+        panels = {p["id"]: p for p in walk_panels(data["panels"])}
         work = panels[110]
         self.assertEqual(work["transformations"][0]["options"], {"byField": "dispatch_id", "mode": "outer"})
         self.assertIn("Last response", work["transformations"][2]["options"]["renameByName"].values())

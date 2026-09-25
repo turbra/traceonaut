@@ -21,6 +21,8 @@ Session collection also accepts `--session-retention-seconds 2592000` and `--ses
 
 `--cwo-sessions` enables CWO association across the configured Codex profile. It adds a private `cwo-sessions.sqlite3` feature index and lock in the existing session state directory; session and usage cursors are preserved. `--once` includes CWO scan status and association count.
 
+`--cwo-review-dir` adds optional paired CWO launch/Claude CLI result artifacts from an absolute directory, recursively. Repeat for separate project roots. Inputs must be separate from collector output. `--once` includes `cwo_reviews` health and counts. See the [supported layout](../integrations/cwo.md#collect-cli-review-results).
+
 `--cwo-audit-dir` and `--cwo-audit-file` add optional read-only CWO workflow logs to the same endpoint. Both take absolute paths and can be repeated, up to 256 combined inputs. Directory discovery includes `audit.jsonl` and `*-audit.jsonl`; custom filenames require `--cwo-audit-file`. Sources must be separate from collector output. With these options, `--once` includes a `cwo_audit` health/count summary. See [CWO Integration](../integrations/cwo.md).
 
 ## Dashboard Renderers

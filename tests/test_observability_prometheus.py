@@ -208,7 +208,7 @@ class StoredSampleIntegrationTests(unittest.TestCase):
             [],
         )
 
-        work = next(p for p in dashboard["panels"] if p["title"] == "Work and results")
+        work = next(p for p in walk_panels(dashboard["panels"]) if p["title"] == "Work and results")
         work_queries = {
             target["refId"]: target["expr"].replace("$project", fixture.project_id)
             .replace("$dispatch", fixture.dispatch_id).replace("$__range", "5m")
@@ -223,7 +223,7 @@ class StoredSampleIntegrationTests(unittest.TestCase):
             self.assertEqual(float(rows[0]["value"][1]), expected, reference)
 
         def panel_query(title, reference="A", *, project=None):
-            panel = next(p for p in dashboard["panels"] if p["title"] == title)
+            panel = next(p for p in walk_panels(dashboard["panels"]) if p["title"] == title)
             expr = next(t["expr"] for t in panel["targets"] if t["refId"] == reference)
             return expr.replace("$project", project or fixture.project_id).replace(
                 "$dispatch", fixture.dispatch_id).replace("$__range", "5m")

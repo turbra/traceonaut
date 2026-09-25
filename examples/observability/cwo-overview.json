@@ -12,7 +12,7 @@
   "annotations": {
     "list": []
   },
-  "description": "CWO-associated Codex sessions and agents, optional workflow audit events, and separately observed app-server dispatches. Whole-session usage remains distinct from CWO-only cost.",
+  "description": "CWO-associated Codex sessions, native agents and helper activity in the selected range. Recorded session tokens cover whole-session history. Workflow audit events and CLI reviews are separate sources; observation-hook jobs are available in the optional Observed jobs row.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -57,12 +57,12 @@
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 6,
+        "w": 12,
         "h": 2
       },
       "fieldConfig": {
         "defaults": {
-          "noValue": "—",
+          "noValue": "\u2014",
           "color": {
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
@@ -164,21 +164,21 @@
     {
       "id": 207,
       "type": "stat",
-      "title": "Audit scan",
-      "description": "Configured audit file scan age and availability, across all audit logs. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "title": "Workflow scans",
+      "description": "Configured workflow audit scan age and coverage; CLI review coverage when enabled. Read means configured sources only. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
-        "x": 6,
+        "x": 12,
         "y": 0,
-        "w": 6,
+        "w": 12,
         "h": 2
       },
       "fieldConfig": {
         "defaults": {
-          "noValue": "—",
+          "noValue": "\u2014",
           "color": {
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
@@ -255,7 +255,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "time() - min(last_over_time(cwo_audit_scan_timestamp_seconds[2m]))",
+          "expr": "time() - min(last_over_time({__name__=~\"cwo_audit_scan_timestamp_seconds|cwo_review_scan_timestamp_seconds\"}[2m]))",
           "instant": true,
           "range": false,
           "format": "time_series",
@@ -268,7 +268,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "min(last_over_time(cwo_audit_collection_complete[2m]))",
+          "expr": "min(last_over_time({__name__=~\"cwo_audit_collection_complete|cwo_review_collection_complete\"}[2m]))",
           "instant": true,
           "range": false,
           "format": "time_series",
@@ -278,1405 +278,14 @@
       "transparent": false
     },
     {
-      "id": 121,
-      "type": "stat",
-      "title": "Dispatch telemetry",
-      "description": "Ledger health for all observed-dispatch sources at the range end. An idle job stream can still be healthy. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 0,
-        "w": 6,
-        "h": 2
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#D8D9DA"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "Up to date",
-                  "color": "green"
-                },
-                "0": {
-                  "text": "Check collector",
-                  "color": "red"
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#D8D9DA",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "min(last_over_time(cwo_telemetry_component_state{component=\"ledger\",state=\"healthy\"}[$__range])) and on () ((time() - max(timestamp(cwo_telemetry_component_state{component=\"ledger\",state=\"healthy\"}))) < 20)",
-          "instant": true,
-          "range": false,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ],
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "left",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value",
-        "text": {
-          "valueSize": 20,
-          "titleSize": 12
-        },
-        "wideLayout": true
-      },
-      "transparent": false
-    },
-    {
-      "id": 3,
-      "type": "stat",
-      "title": "Publication backlog",
-      "description": "Terminal dispatches still awaiting exact-series publication confirmation. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 18,
-        "y": 0,
-        "w": 6,
-        "h": 2
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "unit": "locale",
-          "decimals": 0,
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#D8D9DA"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#D8D9DA",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "left",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value",
-        "wideLayout": true,
-        "text": {
-          "valueSize": 20,
-          "titleSize": 12
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum(last_over_time(cwo_telemetry_publication_pending_dispatches[$__range]))",
-          "instant": true,
-          "legendFormat": "pending dispatches",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "transparent": false
-    },
-    {
-      "id": 150,
+      "id": 300,
       "type": "row",
-      "title": "Observed dispatches · Project/Task filters apply",
+      "title": "CWO activity \u00b7 whole Codex profile",
       "collapsed": false,
       "panels": [],
       "gridPos": {
         "x": 0,
         "y": 2,
-        "w": 24,
-        "h": 1
-      }
-    },
-    {
-      "id": 101,
-      "type": "stat",
-      "title": "Agents working",
-      "description": "Active workers in the selected work. Zero means observed work has finished; missing history stays unavailable. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 3,
-        "w": 6,
-        "h": 3
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#D8D9DA"
-          },
-          "unit": "locale",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#D8D9DA",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "left",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value",
-        "wideLayout": true,
-        "text": {
-          "valueSize": 20,
-          "titleSize": 12
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "count(count by (project_id, agent_id) (last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) <= 2))) or (0 * count(last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])))",
-          "instant": true,
-          "range": false,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ]
-    },
-    {
-      "id": 102,
-      "type": "stat",
-      "title": "Completed tasks",
-      "description": " [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 6,
-        "y": 3,
-        "w": 6,
-        "h": 3
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#D8D9DA"
-          },
-          "unit": "locale",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#D8D9DA",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "left",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value",
-        "wideLayout": true,
-        "text": {
-          "valueSize": 20,
-          "titleSize": 12
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "count((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))) == 3) or (0 * count((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])))))",
-          "instant": true,
-          "range": false,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ]
-    },
-    {
-      "id": 103,
-      "type": "stat",
-      "title": "Stopped or failed",
-      "description": "Stopped, failed or disconnected tasks in the selected history. These are outcomes, not necessarily unresolved problems. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 3,
-        "w": 6,
-        "h": 3
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#D8D9DA"
-          },
-          "unit": "locale",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#D8D9DA",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "left",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value",
-        "wideLayout": true,
-        "text": {
-          "valueSize": 20,
-          "titleSize": 12
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "count(((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))) == 4) or ((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))) == 5) or ((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))) == 6)) or (0 * count((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])))))",
-          "instant": true,
-          "range": false,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ]
-    },
-    {
-      "id": 104,
-      "type": "stat",
-      "title": "Tokens reported",
-      "description": "Sum of reported total usage. Missing usage is excluded and remains visible in the work table. This is not a billing estimate. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 18,
-        "y": 3,
-        "w": 6,
-        "h": 3
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#D8D9DA"
-          },
-          "unit": "short",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#D8D9DA",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "left",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value",
-        "wideLayout": true,
-        "text": {
-          "valueSize": 20,
-          "titleSize": 12
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
-          "instant": true,
-          "range": false,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ]
-    },
-    {
-      "id": 110,
-      "type": "table",
-      "title": "Work and results",
-      "description": "Observed dispatches matching Project and Task. Last response is the latest recorded model response timestamp. Jobs without a response remain in the table with a dash. Model and effort are requested values; acknowledgements are in Technical details. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 6,
-        "w": 24,
-        "h": 8
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#D8D9DA"
-          },
-          "custom": {
-            "align": "left",
-            "cellOptions": {
-              "type": "auto",
-              "wrapText": false
-            },
-            "inspect": false,
-            "minWidth": 60
-          },
-          "decimals": 0
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Task"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "regex",
-                    "options": {
-                      "pattern": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$",
-                      "result": {
-                        "text": "Task name not provided"
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "title": "Focus on this task",
-                    "url": "/d/cwo-dispatch-observability-v1?${project:queryparam}&var-dispatch=${__value.raw}&from=${__from}&to=${__to}",
-                    "targetBlank": false
-                  }
-                ]
-              },
-              {
-                "id": "custom.minWidth",
-                "value": 300
-              },
-              {
-                "id": "custom.width",
-                "value": 480
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "auto",
-                  "wrapText": false
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Worker"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "regex",
-                    "options": {
-                      "pattern": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$",
-                      "result": {
-                        "text": "Worker name not provided"
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Status"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "0": {
-                        "text": "Starting",
-                        "color": "blue"
-                      },
-                      "1": {
-                        "text": "Starting",
-                        "color": "blue"
-                      },
-                      "2": {
-                        "text": "Working",
-                        "color": "blue"
-                      },
-                      "3": {
-                        "text": "Completed",
-                        "color": "green"
-                      },
-                      "4": {
-                        "text": "Failed",
-                        "color": "red"
-                      },
-                      "5": {
-                        "text": "Stopped",
-                        "color": "orange"
-                      },
-                      "6": {
-                        "text": "Connection lost",
-                        "color": "red"
-                      },
-                      "7": {
-                        "text": "Unknown",
-                        "color": "gray"
-                      }
-                    }
-                  }
-                ]
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text",
-                  "wrapText": false
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Model"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "gpt-5.6-sol": {
-                        "text": "GPT-5.6 Sol"
-                      },
-                      "gpt-6-astra": {
-                        "text": "GPT-6 Astra"
-                      },
-                      "gpt-5.6-terra": {
-                        "text": "GPT-5.6 Terra"
-                      },
-                      "gpt-5.6-luna": {
-                        "text": "GPT-5.6 Luna"
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Effort"
-            },
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "minimal": {
-                        "text": "Minimal"
-                      },
-                      "low": {
-                        "text": "Low"
-                      },
-                      "medium": {
-                        "text": "Medium"
-                      },
-                      "high": {
-                        "text": "High"
-                      },
-                      "xhigh": {
-                        "text": "Extra high"
-                      },
-                      "max": {
-                        "text": "Maximum"
-                      },
-                      "ultra": {
-                        "text": "Ultra"
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Elapsed"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "s"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Responses"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "locale"
-              },
-              {
-                "id": "decimals",
-                "value": 0
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Tokens"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "locale"
-              },
-              {
-                "id": "decimals",
-                "value": 0
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Last response"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "dateTimeAsLocal"
-              }
-            ]
-          }
-        ]
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "max by (dispatch_id, worker, requested_model, requested_effort) (label_replace(last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]), \"worker\", \"$1\", \"dispatch_id\", \"(.+)\"))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
-        },
-        {
-          "refId": "C",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_elapsed_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"dispatch_elapsed\"}[$__range]) == 1))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
-        },
-        {
-          "refId": "D",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_completed_cycles_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
-        },
-        {
-          "refId": "E",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "max by (dispatch_id) ((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
-        },
-        {
-          "refId": "F",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "1000 * max by (project_id, dispatch_id) (last_over_time(cwo_cycle_observed_timestamp_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
-        }
-      ],
-      "transformations": [
-        {
-          "id": "joinByField",
-          "options": {
-            "byField": "dispatch_id",
-            "mode": "outer"
-          }
-        },
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "dispatch_id",
-                "worker",
-                "requested_model",
-                "requested_effort",
-                "Value #B",
-                "Value #C",
-                "Value #D",
-                "Value #E",
-                "Value #F"
-              ]
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {
-              "dispatch_id": 0,
-              "Value #B": 1,
-              "Value #C": 2,
-              "Value #E": 3,
-              "requested_model": 4,
-              "requested_effort": 5,
-              "worker": 6,
-              "Value #D": 7,
-              "Value #F": 8
-            },
-            "renameByName": {
-              "dispatch_id": "Task",
-              "worker": "Worker",
-              "Value #B": "Status",
-              "requested_model": "Model",
-              "requested_effort": "Effort",
-              "Value #C": "Elapsed",
-              "Value #D": "Responses",
-              "Value #E": "Tokens",
-              "Value #F": "Last response"
-            }
-          }
-        }
-      ],
-      "options": {
-        "cellHeight": "sm",
-        "showHeader": true,
-        "sortBy": [
-          {
-            "displayName": "Status",
-            "desc": false
-          }
-        ],
-        "footer": {
-          "show": false
-        },
-        "enablePagination": true
-      }
-    },
-    {
-      "id": 111,
-      "type": "bargauge",
-      "title": "Where tokens went",
-      "description": "Reported token usage by task. Tasks without usage are excluded from this comparison and marked Not reported in the work table. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 14,
-        "w": 12,
-        "h": 7
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "blue"
-          },
-          "unit": "short",
-          "decimals": 1,
-          "min": 0,
-          "displayName": "Item"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Task name not provided"
-              }
-            ]
-          }
-        ]
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "topk(10, max by (dispatch_id) ((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
-        }
-      ],
-      "transformations": [
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "dispatch_id",
-                "Value"
-              ]
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {
-              "dispatch_id": 0,
-              "Value": 1
-            },
-            "renameByName": {
-              "dispatch_id": "Task",
-              "Value": "Tokens"
-            }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "sort": [
-              {
-                "field": "Tokens",
-                "desc": true
-              }
-            ]
-          }
-        },
-        {
-          "id": "rowsToFields",
-          "options": {
-            "mappings": [
-              {
-                "fieldName": "Task",
-                "handlerKey": "field.name"
-              },
-              {
-                "fieldName": "Tokens",
-                "handlerKey": "field.value"
-              }
-            ]
-          }
-        }
-      ],
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "basic",
-        "namePlacement": "left",
-        "valueMode": "text",
-        "showUnfilled": false,
-        "sizing": "manual",
-        "minVizHeight": 14,
-        "maxVizHeight": 14,
-        "minVizWidth": 8,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {
-          "titleSize": 12,
-          "valueSize": 14
-        },
-        "legend": {
-          "showLegend": false
-        }
-      }
-    },
-    {
-      "id": 112,
-      "type": "bargauge",
-      "title": "Time spent by task",
-      "description": "Elapsed task time from the controller clock. This is wall time, not model compute time or an estimate of time remaining. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 14,
-        "w": 12,
-        "h": 7
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "purple"
-          },
-          "unit": "s",
-          "decimals": 1,
-          "min": 0,
-          "displayName": "Item"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Task name not provided"
-              }
-            ]
-          }
-        ]
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "topk(10, max by (dispatch_id) (last_over_time(cwo_dispatch_elapsed_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"dispatch_elapsed\"}[$__range]) == 1)))",
-          "instant": true,
-          "range": false,
-          "format": "table",
-          "legendFormat": ""
-        }
-      ],
-      "transformations": [
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "dispatch_id",
-                "Value"
-              ]
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {
-              "dispatch_id": 0,
-              "Value": 1
-            },
-            "renameByName": {
-              "dispatch_id": "Task",
-              "Value": "Elapsed"
-            }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "sort": [
-              {
-                "field": "Elapsed",
-                "desc": true
-              }
-            ]
-          }
-        },
-        {
-          "id": "rowsToFields",
-          "options": {
-            "mappings": [
-              {
-                "fieldName": "Task",
-                "handlerKey": "field.name"
-              },
-              {
-                "fieldName": "Elapsed",
-                "handlerKey": "field.value"
-              }
-            ]
-          }
-        }
-      ],
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "basic",
-        "namePlacement": "left",
-        "valueMode": "text",
-        "showUnfilled": false,
-        "sizing": "manual",
-        "minVizHeight": 14,
-        "maxVizHeight": 14,
-        "minVizWidth": 8,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {
-          "titleSize": 12,
-          "valueSize": 14
-        },
-        "legend": {
-          "showLegend": false
-        }
-      }
-    },
-    {
-      "id": 200,
-      "type": "row",
-      "title": "Workflow activity · all audit logs",
-      "collapsed": false,
-      "panels": [],
-      "gridPos": {
-        "x": 0,
-        "y": 21,
-        "w": 24,
-        "h": 1
-      }
-    },
-    {
-      "id": 205,
-      "type": "bargauge",
-      "title": "Workflow events by type",
-      "description": "Unique source-time events by type across all configured audit logs. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 22,
-        "w": 24,
-        "h": 7
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "blue"
-          },
-          "unit": "locale",
-          "decimals": 0,
-          "min": 0,
-          "displayName": "${__field.labels.event_type}"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "packet_built"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Packets built"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "dispatch_prepared"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Dispatches prepared"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "return_evaluated"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Reviews evaluated"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "review_cli_started"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Review CLI started"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "review_cli_finished"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Review CLI finished"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "astra_adjudication_received"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Adjudication received"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "prompt_coached"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Prompts coached"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "native_pool_rendered"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Pool rendered"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "native_pool_status"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Pool status recorded"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "native_pool_terminal"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Pool terminal recorded"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "native_pool_interrupt_requested"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Pool interrupt requested"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "other"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Other audit events"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "basic",
-        "showUnfilled": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "minVizHeight": 14,
-        "minVizWidth": 8,
-        "valueMode": "text",
-        "namePlacement": "left",
-        "sizing": "manual",
-        "maxVizHeight": 14,
-        "text": {
-          "titleSize": 12,
-          "valueSize": 14
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "topk(10, count by (event_type) (((max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) >= ($__from / 1000)) and (max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) <= ($__to / 1000)))))",
-          "instant": true,
-          "range": false,
-          "format": "time_series",
-          "legendFormat": "{{event_type}}"
-        }
-      ]
-    },
-    {
-      "id": 300,
-      "type": "row",
-      "title": "CWO-associated sessions · whole profile",
-      "collapsed": false,
-      "panels": [],
-      "gridPos": {
-        "x": 0,
-        "y": 29,
         "w": 24,
         "h": 1
       }
@@ -1692,13 +301,13 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 30,
+        "y": 3,
         "w": 6,
         "h": 3
       },
       "fieldConfig": {
         "defaults": {
-          "noValue": "—",
+          "noValue": "\u2014",
           "color": {
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
@@ -1763,13 +372,13 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 30,
+        "y": 3,
         "w": 6,
         "h": 3
       },
       "fieldConfig": {
         "defaults": {
-          "noValue": "—",
+          "noValue": "\u2014",
           "color": {
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
@@ -1824,77 +433,6 @@
       ]
     },
     {
-      "id": 303,
-      "type": "stat",
-      "title": "Recorded session tokens",
-      "description": "Whole-session recorded token totals for the selected CWO-associated sessions and agents. Includes earlier session history; this is not CWO-exclusive cost. Missing or conflicting usage is omitted, so the total can be a lower bound. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 30,
-        "w": 6,
-        "h": 3
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "—",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#D8D9DA"
-          },
-          "unit": "short",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#D8D9DA",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "left",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value",
-        "wideLayout": true,
-        "text": {
-          "valueSize": 20,
-          "titleSize": 12
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum((max by (project_id, session_id) (cwo_codex_session_usage_tokens{token_kind=\"total\"}) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_usage_state) == 1))",
-          "instant": true,
-          "range": false,
-          "format": "time_series",
-          "legendFormat": ""
-        }
-      ]
-    },
-    {
       "id": 304,
       "type": "stat",
       "title": "CWO helper commands",
@@ -1904,14 +442,14 @@
         "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
-        "x": 18,
-        "y": 30,
+        "x": 12,
+        "y": 3,
         "w": 6,
         "h": 3
       },
       "fieldConfig": {
         "defaults": {
-          "noValue": "—",
+          "noValue": "\u2014",
           "color": {
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
@@ -1966,6 +504,77 @@
       ]
     },
     {
+      "id": 303,
+      "type": "stat",
+      "title": "Recorded session tokens",
+      "description": "Whole-session recorded token totals for the selected CWO-associated sessions and agents. Includes earlier session history; this is not CWO-exclusive cost. Missing or conflicting usage is omitted, so the total can be a lower bound. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 3,
+        "w": 6,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "\u2014",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "unit": "short",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#D8D9DA",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 20,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum((max by (project_id, session_id) (cwo_codex_session_usage_tokens{token_kind=\"total\"}) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_usage_state) == 1))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
       "id": 305,
       "type": "table",
       "title": "CWO-associated session activity",
@@ -1976,13 +585,13 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 33,
+        "y": 6,
         "w": 24,
         "h": 13
       },
       "fieldConfig": {
         "defaults": {
-          "noValue": "—",
+          "noValue": "\u2014",
           "color": {
             "mode": "fixed",
             "fixedColor": "#D8D9DA"
@@ -2206,7 +815,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "label_replace(label_join((max by (project_id, session_id, kind, model, effort) (cwo_codex_session_info) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))), \"model_effort\", \" · \", \"model\", \"effort\"), \"project\", \"$1\", \"project_id\", \"(.+)\")",
+          "expr": "label_replace(label_join((max by (project_id, session_id, kind, model, effort) (cwo_codex_session_info) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))), \"model_effort\", \" \u00b7 \", \"model\", \"effort\"), \"project\", \"$1\", \"project_id\", \"(.+)\")",
           "instant": true,
           "range": false,
           "format": "table",
@@ -2317,6 +926,1665 @@
       }
     },
     {
+      "id": 200,
+      "type": "row",
+      "title": "Helper commands and workflow activity",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 310,
+      "type": "bargauge",
+      "title": "CWO helper commands by tool",
+      "description": "Recorded helper invocations completed within the selected range, across the configured Codex profile. Repeated scrapes count once. Compound commands can have unknown helper outcomes; counts include those attempts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "\u2014",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0,
+          "min": 0,
+          "displayName": "${__field.labels.tool}"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "minVizHeight": 14,
+        "minVizWidth": 8,
+        "valueMode": "text",
+        "namePlacement": "left",
+        "sizing": "manual",
+        "maxVizHeight": 14,
+        "text": {
+          "titleSize": 12,
+          "valueSize": 14
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "topk(10, count by (tool) ((max by (project_id, session_id, observation_id, tool, outcome) (cwo_codex_cwo_command_timestamp_seconds) >= ($__from / 1000)) and (max by (project_id, session_id, observation_id, tool, outcome) (cwo_codex_cwo_command_timestamp_seconds) <= ($__to / 1000))))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{tool}}"
+        }
+      ]
+    },
+    {
+      "id": 205,
+      "type": "bargauge",
+      "title": "Workflow events by type",
+      "description": "Unique source-time events by type across all configured audit logs. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "\u2014",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0,
+          "min": 0,
+          "displayName": "${__field.labels.event_type}"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "packet_built"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Packets built"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "dispatch_prepared"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Dispatches prepared"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "return_evaluated"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Reviews evaluated"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "review_cli_started"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Review CLI started"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "review_cli_finished"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Review CLI finished"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "astra_adjudication_received"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Adjudication received"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt_coached"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Prompts coached"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "native_pool_rendered"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pool rendered"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "native_pool_status"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pool status recorded"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "native_pool_terminal"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pool terminal recorded"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "native_pool_interrupt_requested"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pool interrupt requested"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Other audit events"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "minVizHeight": 14,
+        "minVizWidth": 8,
+        "valueMode": "text",
+        "namePlacement": "left",
+        "sizing": "manual",
+        "maxVizHeight": 14,
+        "text": {
+          "titleSize": 12,
+          "valueSize": 14
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "topk(10, count by (event_type) (((max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) >= ($__from / 1000)) and (max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) <= ($__to / 1000)))))",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{event_type}}"
+        }
+      ]
+    },
+    {
+      "id": 401,
+      "type": "table",
+      "title": "CLI review results \u00b7 by launch time",
+      "description": "Collected Claude CLI results for reviews launched in the selected interval, across configured review directories. Input includes uncached, cache-write and cache-read tokens. Output includes thinking tokens. Top-level CLI usage is kept separate from modelUsage and Codex session totals. Requested and reported models may differ. Missing fields stay blank. Project/Task filters apply only to observed dispatches. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000))) * 1000",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(sum by (review_id, outcome, requested_model, reported_model, effort) (max by (review_id, outcome, requested_model, reported_model, effort, kind) (cwo_review_tokens{kind=~\"input|cache_creation|cache_read\"})) and (count by (review_id, outcome, requested_model, reported_model, effort) (max by (review_id, outcome, requested_model, reported_model, effort, kind) (cwo_review_tokens{kind=~\"input|cache_creation|cache_read\"})) == 3)) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_tokens{kind=\"output\"}) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_duration_seconds) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "\u2014",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto",
+              "wrapText": false
+            },
+            "minWidth": 60
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Launched"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              },
+              {
+                "id": "custom.width",
+                "value": 185
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requested model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 210
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reported model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 210
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": true,
+        "sortBy": [
+          {
+            "displayName": "Launched",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "pattern": "^(Time|review_id|outcome|requested_model|reported_model|effort|Value.*)$"
+            }
+          }
+        },
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "review_id": true
+            },
+            "indexByName": {
+              "Value #A": 0,
+              "outcome": 1,
+              "requested_model": 2,
+              "reported_model": 3,
+              "effort": 4,
+              "Value #B": 5,
+              "Value #C": 6,
+              "Value #D": 7
+            },
+            "renameByName": {
+              "Value #A": "Launched",
+              "outcome": "Result",
+              "requested_model": "Requested model",
+              "reported_model": "Reported model",
+              "effort": "Effort",
+              "Value #B": "Input tokens",
+              "Value #C": "Output tokens",
+              "Value #D": "Duration"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 150,
+      "type": "row",
+      "title": "Observed jobs \u00b7 optional observation hook",
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 121,
+          "type": "stat",
+          "title": "Dispatch telemetry",
+          "description": "Ledger health for all observed-dispatch sources at the range end. An idle job stream can still be healthy. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 35,
+            "w": 12,
+            "h": 2
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "\u2014",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#D8D9DA"
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "1": {
+                      "text": "Up to date",
+                      "color": "green"
+                    },
+                    "0": {
+                      "text": "Check collector",
+                      "color": "red"
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#D8D9DA",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "min(last_over_time(cwo_telemetry_component_state{component=\"ledger\",state=\"healthy\"}[$__range])) and on () ((time() - max(timestamp(cwo_telemetry_component_state{component=\"ledger\",state=\"healthy\"}))) < 20)",
+              "instant": true,
+              "range": false,
+              "format": "time_series",
+              "legendFormat": ""
+            }
+          ],
+          "options": {
+            "colorMode": "none",
+            "graphMode": "none",
+            "justifyMode": "left",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value",
+            "text": {
+              "valueSize": 20,
+              "titleSize": 12
+            },
+            "wideLayout": true
+          },
+          "transparent": false
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Publication backlog",
+          "description": "Terminal dispatches still awaiting exact-series publication confirmation. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 35,
+            "w": 12,
+            "h": 2
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "\u2014",
+              "unit": "locale",
+              "decimals": 0,
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#D8D9DA"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#D8D9DA",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "none",
+            "graphMode": "none",
+            "justifyMode": "left",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value",
+            "wideLayout": true,
+            "text": {
+              "valueSize": 20,
+              "titleSize": 12
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum(last_over_time(cwo_telemetry_publication_pending_dispatches[$__range]))",
+              "instant": true,
+              "legendFormat": "pending dispatches",
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "transparent": false
+        },
+        {
+          "id": 101,
+          "type": "stat",
+          "title": "Agents working",
+          "description": "Active workers in the selected work. Zero means observed work has finished; missing history stays unavailable. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 37,
+            "w": 6,
+            "h": 3
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "\u2014",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#D8D9DA"
+              },
+              "unit": "locale",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#D8D9DA",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "none",
+            "graphMode": "none",
+            "justifyMode": "left",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value",
+            "wideLayout": true,
+            "text": {
+              "valueSize": 20,
+              "titleSize": 12
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "count(count by (project_id, agent_id) (last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) <= 2))) or (0 * count(last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])))",
+              "instant": true,
+              "range": false,
+              "format": "time_series",
+              "legendFormat": ""
+            }
+          ]
+        },
+        {
+          "id": 102,
+          "type": "stat",
+          "title": "Completed tasks",
+          "description": " [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 6,
+            "y": 37,
+            "w": 6,
+            "h": 3
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "\u2014",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#D8D9DA"
+              },
+              "unit": "locale",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#D8D9DA",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "none",
+            "graphMode": "none",
+            "justifyMode": "left",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value",
+            "wideLayout": true,
+            "text": {
+              "valueSize": 20,
+              "titleSize": 12
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "count((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))) == 3) or (0 * count((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])))))",
+              "instant": true,
+              "range": false,
+              "format": "time_series",
+              "legendFormat": ""
+            }
+          ]
+        },
+        {
+          "id": 103,
+          "type": "stat",
+          "title": "Stopped or failed",
+          "description": "Stopped, failed or disconnected tasks in the selected history. These are outcomes, not necessarily unresolved problems. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 37,
+            "w": 6,
+            "h": 3
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "\u2014",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#D8D9DA"
+              },
+              "unit": "locale",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#D8D9DA",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "none",
+            "graphMode": "none",
+            "justifyMode": "left",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value",
+            "wideLayout": true,
+            "text": {
+              "valueSize": 20,
+              "titleSize": 12
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "count(((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))) == 4) or ((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))) == 5) or ((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))) == 6)) or (0 * count((max by (project_id, dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])))))",
+              "instant": true,
+              "range": false,
+              "format": "time_series",
+              "legendFormat": ""
+            }
+          ]
+        },
+        {
+          "id": 104,
+          "type": "stat",
+          "title": "Tokens reported",
+          "description": "Sum of reported total usage. Missing usage is excluded and remains visible in the work table. This is not a billing estimate. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 18,
+            "y": 37,
+            "w": 6,
+            "h": 3
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "\u2014",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#D8D9DA"
+              },
+              "unit": "short",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#D8D9DA",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "none",
+            "graphMode": "none",
+            "justifyMode": "left",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value",
+            "wideLayout": true,
+            "text": {
+              "valueSize": 20,
+              "titleSize": 12
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "sum((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
+              "instant": true,
+              "range": false,
+              "format": "time_series",
+              "legendFormat": ""
+            }
+          ]
+        },
+        {
+          "id": 110,
+          "type": "table",
+          "title": "Work and results",
+          "description": "Observed dispatches matching Project and Task. Last response is the latest recorded model response timestamp. Jobs without a response remain in the table with a dash. Model and effort are requested values; acknowledgements are in Technical details. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 40,
+            "w": 24,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "\u2014",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#D8D9DA"
+              },
+              "custom": {
+                "align": "left",
+                "cellOptions": {
+                  "type": "auto",
+                  "wrapText": false
+                },
+                "inspect": false,
+                "minWidth": 60
+              },
+              "decimals": 0
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Task"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "regex",
+                        "options": {
+                          "pattern": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$",
+                          "result": {
+                            "text": "Task name not provided"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "Focus on this task",
+                        "url": "/d/cwo-dispatch-observability-v1?${project:queryparam}&var-dispatch=${__value.raw}&from=${__from}&to=${__to}",
+                        "targetBlank": false
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.minWidth",
+                    "value": 300
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 480
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "auto",
+                      "wrapText": false
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Worker"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "regex",
+                        "options": {
+                          "pattern": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$",
+                          "result": {
+                            "text": "Worker name not provided"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Status"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {
+                            "text": "Starting",
+                            "color": "blue"
+                          },
+                          "1": {
+                            "text": "Starting",
+                            "color": "blue"
+                          },
+                          "2": {
+                            "text": "Working",
+                            "color": "blue"
+                          },
+                          "3": {
+                            "text": "Completed",
+                            "color": "green"
+                          },
+                          "4": {
+                            "text": "Failed",
+                            "color": "red"
+                          },
+                          "5": {
+                            "text": "Stopped",
+                            "color": "orange"
+                          },
+                          "6": {
+                            "text": "Connection lost",
+                            "color": "red"
+                          },
+                          "7": {
+                            "text": "Unknown",
+                            "color": "gray"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text",
+                      "wrapText": false
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Model"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "gpt-5.6-sol": {
+                            "text": "GPT-5.6 Sol"
+                          },
+                          "gpt-6-astra": {
+                            "text": "GPT-6 Astra"
+                          },
+                          "gpt-5.6-terra": {
+                            "text": "GPT-5.6 Terra"
+                          },
+                          "gpt-5.6-luna": {
+                            "text": "GPT-5.6 Luna"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Effort"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "minimal": {
+                            "text": "Minimal"
+                          },
+                          "low": {
+                            "text": "Low"
+                          },
+                          "medium": {
+                            "text": "Medium"
+                          },
+                          "high": {
+                            "text": "High"
+                          },
+                          "xhigh": {
+                            "text": "Extra high"
+                          },
+                          "max": {
+                            "text": "Maximum"
+                          },
+                          "ultra": {
+                            "text": "Ultra"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Elapsed"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "s"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Responses"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "locale"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Tokens"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "locale"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Last response"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "dateTimeAsLocal"
+                  }
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "max by (dispatch_id, worker, requested_model, requested_effort) (label_replace(last_over_time(cwo_dispatch_info{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]), \"worker\", \"$1\", \"dispatch_id\", \"(.+)\"))",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "legendFormat": ""
+            },
+            {
+              "refId": "B",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "legendFormat": ""
+            },
+            {
+              "refId": "C",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_elapsed_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"dispatch_elapsed\"}[$__range]) == 1))",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "legendFormat": ""
+            },
+            {
+              "refId": "D",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "max by (dispatch_id) (last_over_time(cwo_dispatch_completed_cycles_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "legendFormat": ""
+            },
+            {
+              "refId": "E",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "max by (dispatch_id) ((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3))",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "legendFormat": ""
+            },
+            {
+              "refId": "F",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "1000 * max by (project_id, dispatch_id) (last_over_time(cwo_cycle_observed_timestamp_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]))",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "legendFormat": ""
+            }
+          ],
+          "transformations": [
+            {
+              "id": "joinByField",
+              "options": {
+                "byField": "dispatch_id",
+                "mode": "outer"
+              }
+            },
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "dispatch_id",
+                    "worker",
+                    "requested_model",
+                    "requested_effort",
+                    "Value #B",
+                    "Value #C",
+                    "Value #D",
+                    "Value #E",
+                    "Value #F"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {
+                  "dispatch_id": 0,
+                  "Value #B": 1,
+                  "Value #C": 2,
+                  "Value #E": 3,
+                  "requested_model": 4,
+                  "requested_effort": 5,
+                  "worker": 6,
+                  "Value #D": 7,
+                  "Value #F": 8
+                },
+                "renameByName": {
+                  "dispatch_id": "Task",
+                  "worker": "Worker",
+                  "Value #B": "Status",
+                  "requested_model": "Model",
+                  "requested_effort": "Effort",
+                  "Value #C": "Elapsed",
+                  "Value #D": "Responses",
+                  "Value #E": "Tokens",
+                  "Value #F": "Last response"
+                }
+              }
+            }
+          ],
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true,
+            "sortBy": [
+              {
+                "displayName": "Status",
+                "desc": false
+              }
+            ],
+            "footer": {
+              "show": false
+            },
+            "enablePagination": true
+          }
+        },
+        {
+          "id": 111,
+          "type": "bargauge",
+          "title": "Where tokens went",
+          "description": "Reported token usage by task. Tasks without usage are excluded from this comparison and marked Not reported in the work table. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 48,
+            "w": 12,
+            "h": 7
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "\u2014",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "blue"
+              },
+              "unit": "short",
+              "decimals": 1,
+              "min": 0,
+              "displayName": "Item"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Task name not provided"
+                  }
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "topk(10, max by (dispatch_id) ((last_over_time(cwo_dispatch_observed_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) and on (project_id, dispatch_id, token_kind) ((last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 1) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 2) or (last_over_time(cwo_dispatch_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",token_kind=\"total\"}[$__range]) == 4))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)))",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "legendFormat": ""
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "dispatch_id",
+                    "Value"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {
+                  "dispatch_id": 0,
+                  "Value": 1
+                },
+                "renameByName": {
+                  "dispatch_id": "Task",
+                  "Value": "Tokens"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "Tokens",
+                    "desc": true
+                  }
+                ]
+              }
+            },
+            {
+              "id": "rowsToFields",
+              "options": {
+                "mappings": [
+                  {
+                    "fieldName": "Task",
+                    "handlerKey": "field.name"
+                  },
+                  {
+                    "fieldName": "Tokens",
+                    "handlerKey": "field.value"
+                  }
+                ]
+              }
+            }
+          ],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "namePlacement": "left",
+            "valueMode": "text",
+            "showUnfilled": false,
+            "sizing": "manual",
+            "minVizHeight": 14,
+            "maxVizHeight": 14,
+            "minVizWidth": 8,
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "text": {
+              "titleSize": 12,
+              "valueSize": 14
+            },
+            "legend": {
+              "showLegend": false
+            }
+          }
+        },
+        {
+          "id": 112,
+          "type": "bargauge",
+          "title": "Time spent by task",
+          "description": "Elapsed task time from the controller clock. This is wall time, not model compute time or an estimate of time remaining. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 48,
+            "w": 12,
+            "h": 7
+          },
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "\u2014",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "purple"
+              },
+              "unit": "s",
+              "decimals": 1,
+              "min": 0,
+              "displayName": "Item"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": "^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Task name not provided"
+                  }
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "topk(10, max by (dispatch_id) (last_over_time(cwo_dispatch_elapsed_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id) (last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\",field=\"dispatch_elapsed\"}[$__range]) == 1)))",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "legendFormat": ""
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "dispatch_id",
+                    "Value"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {
+                  "dispatch_id": 0,
+                  "Value": 1
+                },
+                "renameByName": {
+                  "dispatch_id": "Task",
+                  "Value": "Elapsed"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "Elapsed",
+                    "desc": true
+                  }
+                ]
+              }
+            },
+            {
+              "id": "rowsToFields",
+              "options": {
+                "mappings": [
+                  {
+                    "fieldName": "Task",
+                    "handlerKey": "field.name"
+                  },
+                  {
+                    "fieldName": "Elapsed",
+                    "handlerKey": "field.value"
+                  }
+                ]
+              }
+            }
+          ],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "namePlacement": "left",
+            "valueMode": "text",
+            "showUnfilled": false,
+            "sizing": "manual",
+            "minVizHeight": 14,
+            "maxVizHeight": 14,
+            "minVizWidth": 8,
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "text": {
+              "titleSize": 12,
+              "valueSize": 14
+            },
+            "legend": {
+              "showLegend": false
+            }
+          }
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
       "id": 90,
       "type": "row",
       "title": "Technical details",
@@ -2333,13 +2601,13 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 47,
+            "y": 36,
             "w": 24,
             "h": 8
           },
           "fieldConfig": {
             "defaults": {
-              "noValue": "—",
+              "noValue": "\u2014",
               "color": {
                 "mode": "fixed",
                 "fixedColor": "#D8D9DA"
@@ -2484,13 +2752,13 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 55,
+            "y": 44,
             "w": 24,
             "h": 8
           },
           "fieldConfig": {
             "defaults": {
-              "noValue": "—",
+              "noValue": "\u2014",
               "unit": "locale",
               "decimals": 0,
               "color": {
@@ -2520,7 +2788,7 @@
                         "type": "value",
                         "options": {
                           "0": {
-                            "text": "—"
+                            "text": "\u2014"
                           },
                           "1": {
                             "text": "Runtime value"
@@ -2683,13 +2951,13 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 63,
+            "y": 52,
             "w": 24,
             "h": 8
           },
           "fieldConfig": {
             "defaults": {
-              "noValue": "—",
+              "noValue": "\u2014",
               "unit": "locale",
               "decimals": 0,
               "color": {
@@ -2899,13 +3167,13 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 71,
+            "y": 60,
             "w": 24,
             "h": 8
           },
           "fieldConfig": {
             "defaults": {
-              "noValue": "—",
+              "noValue": "\u2014",
               "unit": "s",
               "color": {
                 "mode": "fixed",
@@ -3160,13 +3428,13 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 79,
+            "y": 68,
             "w": 6,
             "h": 3
           },
           "fieldConfig": {
             "defaults": {
-              "noValue": "—",
+              "noValue": "\u2014",
               "color": {
                 "mode": "fixed",
                 "fixedColor": "#D8D9DA"
@@ -3231,13 +3499,13 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 79,
+            "y": 68,
             "w": 6,
             "h": 3
           },
           "fieldConfig": {
             "defaults": {
-              "noValue": "—",
+              "noValue": "\u2014",
               "color": {
                 "mode": "fixed",
                 "fixedColor": "#D8D9DA"
@@ -3302,13 +3570,13 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 79,
+            "y": 68,
             "w": 6,
             "h": 3
           },
           "fieldConfig": {
             "defaults": {
-              "noValue": "—",
+              "noValue": "\u2014",
               "color": {
                 "mode": "fixed",
                 "fixedColor": "#D8D9DA"
@@ -3373,13 +3641,13 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 79,
+            "y": 68,
             "w": 6,
             "h": 3
           },
           "fieldConfig": {
             "defaults": {
-              "noValue": "—",
+              "noValue": "\u2014",
               "color": {
                 "mode": "fixed",
                 "fixedColor": "#D8D9DA"
@@ -3436,7 +3704,7 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 46,
+        "y": 35,
         "w": 24,
         "h": 1
       }
@@ -3465,7 +3733,7 @@
         "definition": "label_values(cwo_telemetry_component_state, project_id)",
         "hide": 2,
         "includeAll": true,
-        "label": "Project",
+        "label": "Observed project",
         "multi": true,
         "name": "project",
         "options": [],
@@ -3493,7 +3761,7 @@
         "definition": "label_values(cwo_dispatch_info{project_id=~\"$project\"}, dispatch_id)",
         "hide": 2,
         "includeAll": true,
-        "label": "Task",
+        "label": "Observed task",
         "multi": true,
         "name": "dispatch",
         "options": [],

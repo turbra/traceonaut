@@ -41,48 +41,69 @@ METRICS = {
     "cwo_codex_cwo_source_gaps": ((), "Persisted malformed or oversized candidate records and command conflicts."),
     "cwo_codex_cwo_limit_reached": ((), "Source-file or completed-command export cap reached."),
     "cwo_codex_session_cwo_association_timestamp_seconds": (("project_id", "session_id", "source"), "First CWO association: structured skill block, direct helper command, or parent session; not exclusive token attribution."),
-    "cwo_codex_cwo_command_timestamp_seconds": (("project_id", "session_id", "observation_id", "tool", "outcome"), "Source completion time of a supported direct CWO helper command."),
-    "cwo_codex_cwo_command_duration_seconds": (("project_id", "session_id", "observation_id", "tool", "outcome"), "Reported duration of a supported direct CWO helper command."),
+    "cwo_codex_cwo_command_timestamp_seconds": (("project_id", "session_id", "observation_id", "tool", "outcome"), "Source completion time of a supported CWO helper invocation."),
+    "cwo_codex_cwo_command_duration_seconds": (("project_id", "session_id", "observation_id", "tool", "outcome"), "Reported duration when the CWO helper is the sole command."),
 }
 
 
-def direct_tool(command):
-    """Recognize one Python invocation, never a mention inside a shell program."""
+def helper_invocation(command):
+    """Return (helper, sole command); a shell suffix cannot attest its outcome.
+
+    Only an unconditional first Python invocation is supported. Shell expansion,
+    pipelines, redirection, control flow and help requests are deliberately excluded.
+    """
     if not isinstance(command, list) or not command or any(not isinstance(v, str) for v in command):
         return None
-    argv = command
+    argv, sole = command, True
     if Path(argv[0]).name in {"bash", "sh", "zsh"}:
         if len(argv) != 3 or argv[1] not in {"-c", "-lc"}:
             return None
+        shell = argv[2]
+        if any(c in shell for c in ("\n", "\r", "$", "`")):
+            return None
         try:
-            lexer = shlex.shlex(argv[2], posix=True, punctuation_chars=";&|()<>")
+            lexer = shlex.shlex(shell, posix=True, punctuation_chars=";&|()<>")
             lexer.whitespace_split = True
-            # Accept only a single invocation, optionally followed by reading its receipt.
-            if "\n" in argv[2] or "\r" in argv[2]:
-                return None
-            argv = list(lexer)
-            separators = [i for i,v in enumerate(argv) if v in {";", "&&"}]
-            if len(separators) == 1:
-                split = separators[0]
-                if len(argv[split+1:]) == 2 and argv[split+1] == "cat":
-                    argv = argv[:split]
+            lexer.commenters = ""
+            tokens = list(lexer)
         except ValueError:
             return None
-        if any(v in {";", "&&", "||", "|", "&", "(", ")", "<", ">", "<<", ">>"} for v in argv):
+        # Accept a sequence of simple commands only; never infer that a later
+        # conditional invocation ran. Quoted program text remains one token.
+        if any(v in {"||", "|", "&", "(", ")", "<", ">", "<<", ">>", "#"} for v in tokens):
             return None
+        split = next((i for i, v in enumerate(tokens) if v in {";", "&&"}), len(tokens))
+        if split < len(tokens):
+            suffix = tokens[split + 1:]
+            groups, current = [], []
+            for token in suffix:
+                if token in {";", "&&"}:
+                    groups.append(current); current = []
+                else:
+                    current.append(token)
+            groups.append(current)
+            if any(not g or (g[0] != "cat" and not (re.fullmatch(r"python(?:3(?:\.\d+)?)?", Path(g[0]).name) and len(g) >= 3 and g[1] == "-c")) for g in groups):
+                return None
+            sole = False
+        argv = tokens[:split]
     if not argv or re.fullmatch(r"python(?:3(?:\.\d+)?)?", Path(argv[0]).name) is None:
         return None
     position = 1
     while position < len(argv) and argv[position] in {"-B", "-u", "-I", "-E", "-s"}:
         position += 1
-    if position >= len(argv):
+    if position >= len(argv) or any(v in {"-h", "--help", "--version"} for v in argv[position + 1:]):
         return None
     path = Path(argv[position])
     if len(path.parts) < 3 or path.parts[-3:-1] != ("complex-work-orchestration", "scripts"):
         return None
     if path.suffix != ".py" or path.stem not in TOOLS:
         return None
-    return path.stem
+    return path.stem, sole
+
+
+def direct_tool(command):
+    result = helper_invocation(command)
+    return result[0] if result else None
 
 
 def skill_block(payload):
@@ -159,6 +180,13 @@ class CwoSessionCollector:
                     fingerprint TEXT,conflict INTEGER DEFAULT 0);
                 CREATE TABLE IF NOT EXISTS health(key TEXT PRIMARY KEY,value INTEGER);
             ''')
+            # Rebuild only this derived feature index after recognition changes.
+            # Ordinary session accounting and its cursors are untouched.
+            if self.db.execute("PRAGMA user_version").fetchone()[0] < 2:
+                with self.db:
+                    for table in ("files", "signals", "commands", "health"):
+                        self.db.execute("DELETE FROM " + table)
+                    self.db.execute("PRAGMA user_version=2")
             for suffix in ("", "-wal", "-shm"):
                 path = Path(str(self.path)+suffix)
                 if path.exists():path.chmod(0o600)
@@ -183,10 +211,10 @@ class CwoSessionCollector:
                 return
             is_skill = record.get("type") == "response_item" and skill_block(payload)
             item = payload.get("item")
-            tool = (direct_tool(item.get("command")) if record.get("type") == "event_msg"
+            invocation = (helper_invocation(item.get("command")) if record.get("type") == "event_msg"
                     and payload.get("type") == "item_completed" and isinstance(item, dict)
                     and item.get("type") == "CommandExecution" else None)
-            if not is_skill and tool is None:
+            if not is_skill and invocation is None:
                 return
             at = _timestamp(record.get("timestamp"))
             if at is None:
@@ -208,9 +236,10 @@ class CwoSessionCollector:
             if at < created:return
             self.db.execute("INSERT INTO signals VALUES(?,?,?) ON CONFLICT(sid,source) DO UPDATE SET at=min(at,excluded.at)", (sid, "tool_execution", at))
             if at < now - RETENTION_SECONDS:return
-            code = item.get("exit_code")
+            tool, sole = invocation
+            code = item.get("exit_code") if sole else None
             outcome = "completed" if item["status"] == "completed" and type(code) is int and code == 0 else "failed" if type(code) is int else "unknown"
-            duration = item.get("duration")
+            duration = item.get("duration") if sole else None
             seconds = None
             if isinstance(duration, dict):
                 secs, nanos = duration.get("secs"), duration.get("nanos")

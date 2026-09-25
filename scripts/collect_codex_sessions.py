@@ -16,6 +16,7 @@ from traceonaut.codex_session_telemetry import (
 )
 from traceonaut.codex_account_telemetry import AccountSnapshotMetrics
 from traceonaut.cwo_audit_telemetry import AuditCollector, render_audit_metrics
+from traceonaut.cwo_review_telemetry import ReviewCollector, render_review_metrics
 from traceonaut.cwo_session_telemetry import CwoSessionCollector, render_cwo_session_metrics
 from traceonaut.observability_exporter import (
     MetricsEndpoint, build_samples, metrics_bind_address, read_credential, render_prometheus,
@@ -24,7 +25,7 @@ from traceonaut.observability_ledger import ObservabilityLedger
 
 
 class SessionMetricsEndpoint(MetricsEndpoint):
-    def update_sessions(self, snapshot, legacy=None, account=None, audit=None):
+    def update_sessions(self, snapshot, legacy=None, account=None, audit=None, reviews=None):
         payload = render_session_metrics(snapshot)
         if legacy is not None:
             payload += render_prometheus(build_samples(legacy)[0])
@@ -32,6 +33,8 @@ class SessionMetricsEndpoint(MetricsEndpoint):
             payload += account.render_metrics()
         if audit is not None:
             payload += render_audit_metrics(audit)
+        if reviews is not None:
+            payload += render_review_metrics(reviews)
         if "cwo_sessions" in snapshot:
             payload += render_cwo_session_metrics(snapshot["cwo_sessions"])
         with self._lock:
@@ -50,6 +53,8 @@ def main(argv=None):
                         help="optional CWO audit JSONL file, read-only; repeat for multiple files")
     parser.add_argument("--cwo-audit-dir", type=Path, action="append", default=[],
                         help="optional audit directory; recursively read audit.jsonl and *-audit.jsonl files")
+    parser.add_argument("--cwo-review-dir", type=Path, action="append", default=[],
+                        help="optional directory of paired CWO CLI launch/result artifacts and audit.jsonl; read-only")
     parser.add_argument("--credential-file", type=Path)
     parser.add_argument("--host", default="127.0.0.1",
                         help="numeric bind IP (default: 127.0.0.1); use a specific LAN/VPN IP for remote scraping; HTTP only")
@@ -90,6 +95,7 @@ def main(argv=None):
                 or account_path.is_relative_to(source) or account_path.is_relative_to(state)):
             parser.error("account snapshot must be separate from Codex source and session state")
     try:
+        review_collector = ReviewCollector(directories=args.cwo_review_dir) if args.cwo_review_dir else None
         audit_collector = (AuditCollector(files=args.cwo_audit_file, directories=args.cwo_audit_dir)
                            if args.cwo_audit_file or args.cwo_audit_dir else None)
     except ValueError as error:
@@ -102,6 +108,10 @@ def main(argv=None):
             if (snapshot.is_relative_to(audit_dir) or state.is_relative_to(audit_dir)
                     or audit_dir.is_relative_to(state)):
                 parser.error("audit inputs must be separate from collector output")
+    if review_collector:
+        for directory in review_collector.directories:
+            if snapshot.is_relative_to(directory) or state.is_relative_to(directory) or directory.is_relative_to(state):
+                parser.error("review inputs must be separate from collector output")
     os.umask(0o077)
     stopping = threading.Event()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -134,8 +144,9 @@ def main(argv=None):
                 snapshot["cwo_sessions"] = cwo.scan(collector.db, snapshot)
             write_snapshot(args.snapshot_file, snapshot)
             audit = audit_collector.scan() if audit_collector else None
+            reviews = review_collector.scan() if review_collector else None
             if endpoint:
-                endpoint.update_sessions(snapshot, ledger.snapshot() if ledger else None, account, audit)
+                endpoint.update_sessions(snapshot, ledger.snapshot() if ledger else None, account, audit, reviews)
             if args.once:
                 status = {"sessions": len(snapshot["sessions"]), "pending_files": snapshot["pending_files"], "source_available": snapshot["source_available"]}
                 if cwo:
@@ -144,6 +155,9 @@ def main(argv=None):
                 if audit is not None:
                     status["cwo_audit"] = {key: audit[key] for key in ("source_available", "collection_complete", "source_files", "source_errors", "limit_reached")}
                     status["cwo_audit"]["exported_events"] = len(audit["events"])
+                if reviews is not None:
+                    status["cwo_reviews"] = {key: reviews[key] for key in ("source_available", "collection_complete", "source_files", "source_errors", "pending_results", "limit_reached", "skipped_records")}
+                    status["cwo_reviews"]["exported_reviews"] = len(reviews["reviews"])
                 print(json.dumps(status))
                 break
             stopping.wait(args.poll_seconds)

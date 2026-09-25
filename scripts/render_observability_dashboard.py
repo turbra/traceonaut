@@ -77,9 +77,10 @@ def render_dashboard(
     for variable in dashboard.get("templating", {}).get("list", []):
         if variable["name"] == "project":
             _named_variable(variable, projects)
+            variable["label"] = "Observed project"
         elif variable["name"] == "dispatch":
             _named_variable(variable, tasks)
-            variable["label"] = "Task"
+            variable["label"] = "Observed task"
     for panel in walk_panels(dashboard["panels"]):
         # Technical diagnostics retain original identities for investigation.
         if panel.get("id", 0) < 100:

@@ -19,10 +19,10 @@ Append this flag to your [session collector command](../getting-started.mdx), th
 This covers the **whole configured Codex profile**, across projects. It uses records already written by Codex:
 
 - A structured CWO skill block associates its owning session.
-- A supported direct CWO helper command associates its owning session.
+- A supported CWO helper invocation associates its owning session.
 - A native subagent created after its parent's CWO association inherits that association.
 
-Import [CWO Overview](../dashboards/cwo.md). Its **CWO-associated sessions** section shows sessions and agents active in the selected range, their recorded session usage, and CWO helper command counts. Initial history scanning runs in bounded passes; the dashboard shows pending files and source gaps.
+Import [CWO Overview](../dashboards/cwo.md). Its main overview shows sessions and agents active in the selected range, their recorded session usage, and CWO helper command counts. Initial history scanning runs in bounded passes; the dashboard shows pending files and source gaps.
 
 **Association is session context.** Token totals cover whole sessions, including earlier history, rather than CWO-only cost. Plain mentions of CWO in conversation, reading a guide, or generic agent activity do not establish association. [Data Sources and Privacy](../reference/data-sources-and-privacy.md#cwo-session-association) describes the supported signals.
 
@@ -33,10 +33,10 @@ No per-project audit path or new CWO logging step is needed for this section.
 Append this option to your [session collector command](../getting-started.mdx):
 
 ```text
---cwo-audit-dir /absolute/path/to/project/.orchestration-audit
+--cwo-audit-dir /absolute/path/to/cwo-project-state
 ```
 
-Repeat `--cwo-audit-dir` for each project's audit directory. Traceonaut finds `audit.jsonl` and `*-audit.jsonl` files in that directory and its subdirectories, including new sprint logs created later. For a different filename, use `--cwo-audit-file /absolute/path/to/workflow.jsonl`. Repeat it for additional files.
+Use the stable parent directory where your workflow writes its sprint logs, including a private local-state directory when that is the configured location. Repeat `--cwo-audit-dir` for each project's audit directory. Traceonaut finds `audit.jsonl` and `*-audit.jsonl` files in that directory and its subdirectories, including new sprint logs created later. For a different filename, use `--cwo-audit-file /absolute/path/to/workflow.jsonl`. Repeat it for additional files.
 
 Choose the directories or files that your CWO workflow writes. CWO's `CWO_AUDIT_FILE` setting can select a custom location. Traceonaut reads existing files; enabling collection leaves your CWO launch and review workflow unchanged.
 
@@ -54,6 +54,31 @@ These are workflow events, not completed-job or token totals. The existing audit
 Traceonaut verifies each record's content hash and deduplicates copies. It exports the newest **2,000 events within 30 days**, using their original timestamps. See [Retention and Limits](../reference/retention-and-limits.md#cwo-workflow-audits) for scan bounds and historical views.
 
 Use `--once` with the same options for a first-run check. Its `cwo_audit` summary reports source availability, coverage and exported event count. A **complete** status means every selected audit file was read successfully within the limits. This measures those files, not all CWO usage. Incomplete reads make displayed counts lower bounds.
+
+## Collect CLI Review Results
+
+For workflows that retain paired launch receipts and Claude CLI JSON results, append:
+
+```text
+--cwo-review-dir /absolute/path/to/cwo-project-state
+```
+
+This opt-in reader discovers the following existing layout in that directory and its subdirectories:
+
+```text
+sprint/
+  audit.jsonl
+  reviewer-launch-receipt.json
+  reviewer-response.raw.json
+```
+
+The prefix can vary. A launch receipt must contain `dispatch_id`, `packet_sha256`, a timezone-qualified `started_at`, and `requested_model`; `effort` is optional. The same directory's hash-valid audit must contain a matching `dispatch_prepared` event before the launch. The paired result must be a Claude CLI `type: result` object with `uuid`, `session_id`, and boolean `is_error`.
+
+**CLI review results** shows collected results whose **launch times** fall inside the selected range. It displays requested and reported models separately, the CLI-reported duration, and top-level token usage. Input includes uncached input, cache creation and cache reads. Thinking tokens are already included in output. Missing usage remains missing; a failed attempt with reported zero usage remains zero.
+
+Copies of the same result count once. Conflicting copies are omitted and reported as skipped records. Repeated audit evaluations do not add token usage. These results stay separate from observed Codex jobs and whole-session token totals.
+
+Choose roots that contain this layout. Other result formats need a supported reader; the collector does not infer review usage from prose or filenames alone. `--once` reports `cwo_reviews` source health, pending results and exported reviews. See [Retention and Limits](../reference/retention-and-limits.md#cwo-cli-review-results).
 
 ## Observed Job Metrics
 

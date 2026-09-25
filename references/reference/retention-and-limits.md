@@ -51,3 +51,9 @@ Association uses the session collector's export window and cap. Older parents ca
 Each pass reads at most **64 MiB**, up to **32 MiB per file**, from at most **4,096 selected rollout files**. A candidate record over **8 MiB** is a visible source gap. CWO helper detail retains at most **2,000 command records within 30 days**. Export-cap omissions remain visible until the omitted records age out. Initial backfill can take several scans.
 
 The dashboard selects sessions active in the chosen range that are exported at its end. Token totals cover those sessions' recorded history, including usage before CWO association. Choose a past end time with stored samples to inspect expired sessions.
+
+## CWO CLI Review Results
+
+The optional paired-artifact reader exports at most **256 collected results launched within 30 days**. It shares the audit reader's directory-entry and depth bounds, reads at most **32 MiB per scan**, and limits each file to **2 MiB**. It reads owned regular files without following symlinks. Source files stay unchanged.
+
+Result identity comes from the CLI session and result UUIDs. Launch times select the interval; file modification times never substitute for missing source timestamps. Repeated scans and copied artifacts preserve one result. Prometheus history begins at the first scrape, including results collected from older files.

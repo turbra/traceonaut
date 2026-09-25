@@ -28,6 +28,12 @@ class DetectionTests(unittest.TestCase):
                     ['python3','$CWO/scripts/run_checked_command.py'],None, ' '.join(command),['python3',{}]]:
             self.assertIsNone(direct_tool(bad),bad)
 
+    def test_unconditional_prefix_help_and_shell_controls(self):
+        helper = 'python3 /opt/complex-work-orchestration/scripts/run_checked_command.py /private/spec.json'
+        self.assertEqual(direct_tool(['bash', '-lc', helper + '; python3 -c \'print(1)\'']), 'run_checked_command')
+        for suffix in [' --help', ' -h', ' --version', ' | cat', ' > /tmp/out', ' &', '; if true; then echo ok; fi', ' "$(false)"', '; python3 -c `false`']:
+            self.assertIsNone(direct_tool(['bash', '-lc', helper + suffix]), suffix)
+
     def test_exact_skill_envelope_not_conversation_or_tool_output(self):
         text='<skill>\n<name>complex-work-orchestration</name>\n<path>/opt/complex-work-orchestration/SKILL.md</path>\nPrivate skill instructions\n</skill>'
         payload={'type':'message','role':'user','content':[{'type':'input_text','text':text}]}
@@ -67,6 +73,24 @@ class CwoCollectionTests(unittest.TestCase):
         raw=self.cwo.path.read_bytes()
         self.assertNotIn(b'SECRET',raw);self.assertNotIn(b'/private/spec',raw)
         self.assertEqual(self.f.row()['usage']['total'],30)
+
+    def test_compound_outcome_unknown_and_parser_upgrade_backfills_once(self):
+        event = self.command()
+        event['payload']['item']['command'][2] += '; python3 -c "print(1)"'
+        self.f.write(event, self.f.usage())
+        result = self.scan()
+        self.assertEqual(len(result['commands']), 1)
+        self.assertEqual(result['commands'][0]['outcome'], 'unknown')
+        self.assertIsNone(result['commands'][0]['duration'])
+        self.cwo.db.execute('DELETE FROM commands');self.cwo.db.execute('PRAGMA user_version=0');self.cwo.db.commit()
+        offsets = [tuple(r) for r in self.f.collector.db.execute('SELECT path,offset FROM files')]
+        self.cwo.close();self.cwo = CwoSessionCollector(self.f.home, self.f.state)
+        self.assertEqual(len(self.scan()['commands']), 1)
+        self.assertEqual([tuple(r) for r in self.f.collector.db.execute('SELECT path,offset FROM files')], offsets)
+        self.assertEqual(self.f.row()['usage']['total'], 30)
+        offsets = [tuple(r) for r in self.cwo.db.execute('SELECT path,offset FROM files')]
+        self.cwo.close();self.cwo = CwoSessionCollector(self.f.home, self.f.state)
+        self.assertEqual([tuple(r) for r in self.cwo.db.execute('SELECT path,offset FROM files')], offsets)
 
     def test_backfill_never_resets_usage_or_turn_cursors(self):
         self.f.write(self.skill(),self.command(),self.f.usage());self.f.collector.scan()

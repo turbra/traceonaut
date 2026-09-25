@@ -134,7 +134,7 @@
           "legendFormat": "Collection"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 101,
@@ -207,7 +207,7 @@
           "legendFormat": "Collector scan age"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 102,
@@ -280,7 +280,7 @@
           "legendFormat": "Collector errors / second · 1h"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 107,
@@ -352,7 +352,7 @@
           "legendFormat": "Pending files"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 58,
@@ -437,7 +437,7 @@
           "legendFormat": "Command range"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 92,
@@ -522,7 +522,8 @@
           "range": false,
           "legendFormat": "Shared weekly allowance"
         }
-      ]
+      ],
+      "transparent": false
     },
     {
       "id": 91,
@@ -605,7 +606,8 @@
           "range": false,
           "legendFormat": "Earned resets"
         }
-      ]
+      ],
+      "transparent": false
     },
     {
       "id": 93,
@@ -741,7 +743,8 @@
           "range": false,
           "legendFormat": "In"
         }
-      ]
+      ],
+      "transparent": false
     },
     {
       "id": 4,
@@ -977,7 +980,7 @@
           "legendFormat": "Subagents"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 51,
@@ -1442,7 +1445,7 @@
               "wrapText": false
             },
             "inspect": false,
-            "minWidth": 60
+            "minWidth": 65
           }
         },
         "overrides": [
@@ -1464,13 +1467,6 @@
               "options": "Work"
             },
             "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "auto",
-                  "wrapText": false
-                }
-              },
               {
                 "id": "mappings",
                 "value": [
@@ -1503,8 +1499,19 @@
                 "value": true
               },
               {
+                "id": "custom.width",
+                "value": 480
+              },
+              {
                 "id": "custom.minWidth",
                 "value": 300
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": false
+                }
               }
             ]
           },
@@ -1531,6 +1538,10 @@
                   "mode": "fixed",
                   "fixedColor": "#D8D9DA"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 180
               }
             ]
           },
@@ -1881,12 +1892,16 @@
                 ]
               },
               {
-                "id": "custom.minWidth",
-                "value": 220
-              },
-              {
                 "id": "custom.inspect",
                 "value": true
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 120
+              },
+              {
+                "id": "custom.width",
+                "value": 170
               }
             ]
           }
@@ -2435,7 +2450,7 @@
             "x": 0,
             "y": 26,
             "w": 12,
-            "h": 9
+            "h": 7
           },
           "fieldConfig": {
             "defaults": {
@@ -2540,8 +2555,8 @@
             "valueMode": "text",
             "showUnfilled": false,
             "sizing": "manual",
-            "minVizHeight": 18,
-            "maxVizHeight": 18,
+            "minVizHeight": 14,
+            "maxVizHeight": 14,
             "minVizWidth": 8,
             "reduceOptions": {
               "calcs": [
@@ -2572,7 +2587,7 @@
             "x": 12,
             "y": 26,
             "w": 12,
-            "h": 9
+            "h": 7
           },
           "fieldConfig": {
             "defaults": {
@@ -2677,8 +2692,8 @@
             "valueMode": "text",
             "showUnfilled": false,
             "sizing": "manual",
-            "minVizHeight": 18,
-            "maxVizHeight": 18,
+            "minVizHeight": 14,
+            "maxVizHeight": 14,
             "minVizWidth": 8,
             "reduceOptions": {
               "calcs": [
@@ -2707,7 +2722,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 35,
+            "y": 33,
             "w": 24,
             "h": 10
           },
@@ -2768,8 +2783,19 @@
                     ]
                   },
                   {
+                    "id": "custom.width",
+                    "value": 480
+                  },
+                  {
                     "id": "custom.minWidth",
-                    "value": 220
+                    "value": 300
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "auto",
+                      "wrapText": false
+                    }
                   }
                 ]
               },
@@ -3460,7 +3486,7 @@
           "gridPos": {
             "x": 0,
             "y": 34,
-            "w": 12,
+            "w": 24,
             "h": 4
           },
           "fieldConfig": {
@@ -3584,88 +3610,6 @@
               "legendFormat": "Latest source event age"
             }
           ]
-        },
-        {
-          "id": 3,
-          "type": "stat",
-          "title": "Work count",
-          "description": "Work whose latest observed event falls in the selected range. Zero means no matching work; stale or unavailable collection is distinct. Counts only session groups exported at the selected end time, subject to session age and cap limits. Choose a past end time to view expired sessions. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "gridPos": {
-            "x": 12,
-            "y": 34,
-            "w": 12,
-            "h": 4
-          },
-          "fieldConfig": {
-            "defaults": {
-              "noValue": "—",
-              "mappings": [
-                {
-                  "type": "value",
-                  "options": {
-                    "0": {
-                      "text": "No work matches",
-                      "color": "gray"
-                    }
-                  }
-                }
-              ],
-              "color": {
-                "mode": "fixed",
-                "fixedColor": "#D8D9DA"
-              },
-              "decimals": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "#D8D9DA",
-                    "value": null
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "options": {
-            "colorMode": "none",
-            "graphMode": "none",
-            "justifyMode": "left",
-            "orientation": "horizontal",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "value",
-            "wideLayout": true,
-            "text": {
-              "valueSize": 20,
-              "titleSize": 12
-            }
-          },
-          "targets": [
-            {
-              "refId": "A",
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "(count((max by (project_id, session_id) (cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
-              "instant": true,
-              "range": false,
-              "legendFormat": "Work count"
-            }
-          ],
-          "transparent": true
         },
         {
           "id": 94,

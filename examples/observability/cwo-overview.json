@@ -158,7 +158,8 @@
           "format": "time_series",
           "legendFormat": "Coverage"
         }
-      ]
+      ],
+      "transparent": false
     },
     {
       "id": 207,
@@ -273,7 +274,8 @@
           "format": "time_series",
           "legendFormat": "Coverage"
         }
-      ]
+      ],
+      "transparent": false
     },
     {
       "id": 121,
@@ -357,7 +359,8 @@
           "titleSize": 12
         },
         "wideLayout": true
-      }
+      },
+      "transparent": false
     },
     {
       "id": 3,
@@ -427,7 +430,8 @@
           "range": false,
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": false
     },
     {
       "id": 150,
@@ -793,6 +797,17 @@
               {
                 "id": "custom.minWidth",
                 "value": 300
+              },
+              {
+                "id": "custom.width",
+                "value": 480
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": false
+                }
               }
             ]
           },
@@ -1169,7 +1184,7 @@
         "x": 0,
         "y": 14,
         "w": 12,
-        "h": 9
+        "h": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -1273,8 +1288,8 @@
         "valueMode": "text",
         "showUnfilled": false,
         "sizing": "manual",
-        "minVizHeight": 18,
-        "maxVizHeight": 18,
+        "minVizHeight": 14,
+        "maxVizHeight": 14,
         "minVizWidth": 8,
         "reduceOptions": {
           "calcs": [
@@ -1305,7 +1320,7 @@
         "x": 12,
         "y": 14,
         "w": 12,
-        "h": 9
+        "h": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -1409,8 +1424,8 @@
         "valueMode": "text",
         "showUnfilled": false,
         "sizing": "manual",
-        "minVizHeight": 18,
-        "maxVizHeight": 18,
+        "minVizHeight": 14,
+        "maxVizHeight": 14,
         "minVizWidth": 8,
         "reduceOptions": {
           "calcs": [
@@ -1436,7 +1451,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 21,
         "w": 24,
         "h": 1
       }
@@ -1452,9 +1467,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 24,
+        "y": 22,
         "w": 24,
-        "h": 9
+        "h": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -1626,12 +1641,12 @@
           "fields": "",
           "values": false
         },
-        "minVizHeight": 18,
+        "minVizHeight": 14,
         "minVizWidth": 8,
         "valueMode": "text",
         "namePlacement": "left",
         "sizing": "manual",
-        "maxVizHeight": 18,
+        "maxVizHeight": 14,
         "text": {
           "titleSize": 12,
           "valueSize": 14
@@ -1661,7 +1676,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 33,
+        "y": 29,
         "w": 24,
         "h": 1
       }
@@ -1677,7 +1692,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 34,
+        "y": 30,
         "w": 6,
         "h": 3
       },
@@ -1748,7 +1763,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 34,
+        "y": 30,
         "w": 6,
         "h": 3
       },
@@ -1819,7 +1834,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 34,
+        "y": 30,
         "w": 6,
         "h": 3
       },
@@ -1890,7 +1905,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 34,
+        "y": 30,
         "w": 6,
         "h": 3
       },
@@ -1961,7 +1976,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 33,
         "w": 24,
         "h": 13
       },
@@ -1991,13 +2006,6 @@
               "options": "Session"
             },
             "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "auto",
-                  "wrapText": false
-                }
-              },
               {
                 "id": "mappings",
                 "value": [
@@ -2030,8 +2038,19 @@
                 "value": true
               },
               {
+                "id": "custom.width",
+                "value": 480
+              },
+              {
                 "id": "custom.minWidth",
                 "value": 300
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": false
+                }
               }
             ]
           },
@@ -2187,7 +2206,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "label_replace(label_join((max by (project_id, session_id, kind, model, effort) (cwo_codex_session_info) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))), \"model_effort\", \" / \", \"model\", \"effort\"), \"project\", \"$1\", \"project_id\", \"(.+)\")",
+          "expr": "label_replace(label_join((max by (project_id, session_id, kind, model, effort) (cwo_codex_session_info) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info))), \"model_effort\", \" · \", \"model\", \"effort\"), \"project\", \"$1\", \"project_id\", \"(.+)\")",
           "instant": true,
           "range": false,
           "format": "table",
@@ -2306,17 +2325,17 @@
         {
           "id": 5,
           "type": "table",
-          "title": "Requested dispatch configuration",
-          "description": "Immutable request metadata. Requested configuration is not per-response attribution. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "title": "Requested and configured models",
+          "description": "Requested settings come from the dispatch packet. Configured settings are populated only when acknowledged by the runtime. A dash means no acknowledged value is available. Raw project and dispatch IDs support source lookup. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
           "gridPos": {
             "x": 0,
-            "y": 51,
+            "y": 47,
             "w": 24,
-            "h": 6
+            "h": 8
           },
           "fieldConfig": {
             "defaults": {
@@ -2326,14 +2345,40 @@
                 "fixedColor": "#D8D9DA"
               },
               "custom": {
-                "minWidth": 60,
+                "align": "auto",
                 "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
-                }
+                  "type": "auto"
+                },
+                "inspect": true,
+                "minWidth": 90
               }
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Dispatch"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 335
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Project"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 335
+                  }
+                ]
+              }
+            ]
           },
           "options": {
             "cellHeight": "sm",
@@ -2353,55 +2398,7 @@
               "legendFormat": "request",
               "range": false,
               "refId": "A"
-            }
-          ],
-          "transformations": [
-            {
-              "id": "labelsToFields",
-              "options": {
-                "mode": "columns"
-              }
-            }
-          ]
-        },
-        {
-          "id": 6,
-          "type": "table",
-          "title": "Acknowledged configured model and effort",
-          "description": "Configured model and effort remain independent observations. Neither identifies what served an individual response. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "gridPos": {
-            "x": 0,
-            "y": 57,
-            "w": 24,
-            "h": 6
-          },
-          "fieldConfig": {
-            "defaults": {
-              "noValue": "—",
-              "color": {
-                "mode": "fixed",
-                "fixedColor": "#D8D9DA"
-              },
-              "custom": {
-                "minWidth": 60,
-                "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
-                }
-              }
             },
-            "overrides": []
-          },
-          "options": {
-            "cellHeight": "sm",
-            "showHeader": true,
-            "enablePagination": true
-          },
-          "targets": [
             {
               "datasource": {
                 "type": "prometheus",
@@ -2413,7 +2410,7 @@
               "instant": true,
               "legendFormat": "configured model",
               "range": false,
-              "refId": "A"
+              "refId": "B"
             },
             {
               "datasource": {
@@ -2426,121 +2423,52 @@
               "instant": true,
               "legendFormat": "configured effort",
               "range": false,
-              "refId": "B"
+              "refId": "C"
             }
           ],
           "transformations": [
             {
-              "id": "labelsToFields",
+              "id": "filterFieldsByName",
               "options": {
-                "mode": "columns"
-              }
-            }
-          ]
-        },
-        {
-          "id": 7,
-          "type": "table",
-          "title": "Completed cycles and coverage",
-          "description": "Observed unique completions remain visible with their latest coverage state. Accounting conflicts suppress the numeric total. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "gridPos": {
-            "x": 0,
-            "y": 63,
-            "w": 24,
-            "h": 6
-          },
-          "fieldConfig": {
-            "defaults": {
-              "noValue": "—",
-              "unit": "locale",
-              "decimals": 0,
-              "color": {
-                "mode": "fixed",
-                "fixedColor": "#D8D9DA"
-              },
-              "custom": {
-                "minWidth": 60,
-                "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
+                "include": {
+                  "names": [
+                    "Time",
+                    "project_id",
+                    "dispatch_id",
+                    "requested_model",
+                    "requested_effort",
+                    "configured_model",
+                    "configured_effort"
+                  ]
                 }
               }
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Coverage state"
-                },
-                "properties": [
-                  {
-                    "id": "mappings",
-                    "value": [
-                      {
-                        "type": "value",
-                        "options": {
-                          "0": {
-                            "text": "Unknown"
-                          },
-                          "1": {
-                            "text": "Observed stream; no known gap"
-                          },
-                          "2": {
-                            "text": "Known gap"
-                          },
-                          "3": {
-                            "text": "Accounting conflict"
-                          }
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          "options": {
-            "cellHeight": "sm",
-            "showHeader": true,
-            "enablePagination": true
-          },
-          "targets": [
             {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_dispatch_completed_cycles_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Completed cycles",
-              "range": false,
-              "refId": "A"
+              "id": "merge",
+              "options": {}
             },
             {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Coverage state",
-              "range": false,
-              "refId": "B"
-            }
-          ],
-          "transformations": [
-            {
-              "id": "labelsToFields",
+              "id": "organize",
               "options": {
-                "mode": "columns"
+                "excludeByName": {
+                  "Time": true
+                },
+                "indexByName": {
+                  "project_id": 0,
+                  "dispatch_id": 1,
+                  "requested_model": 2,
+                  "requested_effort": 3,
+                  "configured_model": 4,
+                  "configured_effort": 5
+                },
+                "renameByName": {
+                  "project_id": "Project",
+                  "dispatch_id": "Dispatch",
+                  "requested_model": "Requested model",
+                  "requested_effort": "Requested effort",
+                  "configured_model": "Configured model",
+                  "configured_effort": "Configured effort"
+                }
               }
             }
           ]
@@ -2549,16 +2477,16 @@
           "id": 8,
           "type": "table",
           "title": "Observed token totals with provenance",
-          "description": "Only present, runtime-normalized, or partial latest values render. State 2 means upstream presence is unknown for optional subsets, including nonzero values. Coverage conflict suppresses numeric totals. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "description": "Only present, runtime-normalized, or partial latest values render. State 2 means upstream presence is unknown for optional subsets, including nonzero values. Coverage conflict suppresses numeric totals. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/). Runtime-normalized; upstream presence unknown means the runtime supplied a normalized value without confirming that the upstream response included it.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
           "gridPos": {
             "x": 0,
-            "y": 69,
+            "y": 55,
             "w": 24,
-            "h": 6
+            "h": 8
           },
           "fieldConfig": {
             "defaults": {
@@ -2570,11 +2498,12 @@
                 "fixedColor": "#D8D9DA"
               },
               "custom": {
-                "minWidth": 60,
+                "align": "auto",
                 "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
-                }
+                  "type": "auto"
+                },
+                "inspect": true,
+                "minWidth": 90
               }
             },
             "overrides": [
@@ -2597,7 +2526,7 @@
                             "text": "Runtime value"
                           },
                           "2": {
-                            "text": "Runtime-normalized; upstream presence unknown"
+                            "text": "Runtime-normalized"
                           },
                           "3": {
                             "text": "Invalid"
@@ -2617,36 +2546,34 @@
                         }
                       }
                     ]
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "left"
                   }
                 ]
               },
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Coverage state"
+                  "options": "Dispatch"
                 },
                 "properties": [
                   {
-                    "id": "mappings",
-                    "value": [
-                      {
-                        "type": "value",
-                        "options": {
-                          "0": {
-                            "text": "Unknown"
-                          },
-                          "1": {
-                            "text": "Observed stream; no known gap"
-                          },
-                          "2": {
-                            "text": "Known gap"
-                          },
-                          "3": {
-                            "text": "Accounting conflict"
-                          }
-                        }
-                      }
-                    ]
+                    "id": "custom.width",
+                    "value": 335
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Project"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 335
                   }
                 ]
               }
@@ -2690,19 +2617,6 @@
                 "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
-              "expr": "last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Coverage state",
-              "range": false,
-              "refId": "C"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
               "expr": "last_over_time(cwo_dispatch_token_cycles{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
               "format": "table",
               "instant": true,
@@ -2713,109 +2627,47 @@
           ],
           "transformations": [
             {
-              "id": "labelsToFields",
+              "id": "filterFieldsByName",
               "options": {
-                "mode": "columns"
-              }
-            }
-          ]
-        },
-        {
-          "id": 9,
-          "type": "table",
-          "title": "Cycle detail and observed order",
-          "description": "Cycle ordinal is first accepted bound observation order. Timestamp is local observation time, not response duration or provider compute time. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "gridPos": {
-            "x": 0,
-            "y": 75,
-            "w": 24,
-            "h": 6
-          },
-          "fieldConfig": {
-            "defaults": {
-              "noValue": "—",
-              "color": {
-                "mode": "fixed",
-                "fixedColor": "#D8D9DA"
-              },
-              "custom": {
-                "minWidth": 60,
-                "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
+                "include": {
+                  "names": [
+                    "Time",
+                    "project_id",
+                    "dispatch_id",
+                    "token_kind",
+                    "Value #A",
+                    "Value #B",
+                    "Value #D"
+                  ]
                 }
               }
             },
-            "overrides": []
-          },
-          "options": {
-            "cellHeight": "sm",
-            "showHeader": true,
-            "enablePagination": true
-          },
-          "targets": [
             {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_cycle_present{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Cycle present",
-              "range": false,
-              "refId": "A"
+              "id": "merge",
+              "options": {}
             },
             {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_cycle_observed_timestamp_seconds{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Observed timestamp",
-              "range": false,
-              "refId": "B"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "(last_over_time(cwo_cycle_tokens{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) and on (project_id, dispatch_id, cycle_ordinal, token_kind) ((last_over_time(cwo_cycle_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 1) or (last_over_time(cwo_cycle_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 2))) unless on (project_id, dispatch_id) (last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range]) == 3)",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Cycle tokens",
-              "range": false,
-              "refId": "C"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_cycle_token_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Cycle token state",
-              "range": false,
-              "refId": "D"
-            }
-          ],
-          "transformations": [
-            {
-              "id": "labelsToFields",
+              "id": "organize",
               "options": {
-                "mode": "columns"
+                "excludeByName": {
+                  "Time": true
+                },
+                "indexByName": {
+                  "project_id": 0,
+                  "dispatch_id": 1,
+                  "token_kind": 2,
+                  "Value #A": 3,
+                  "Value #B": 4,
+                  "Value #D": 5
+                },
+                "renameByName": {
+                  "project_id": "Project",
+                  "dispatch_id": "Dispatch",
+                  "token_kind": "Token kind",
+                  "Value #A": "Tokens",
+                  "Value #B": "Token state",
+                  "Value #D": "Responses with values"
+                }
               }
             }
           ]
@@ -2831,9 +2683,9 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 81,
+            "y": 63,
             "w": 24,
-            "h": 6
+            "h": 8
           },
           "fieldConfig": {
             "defaults": {
@@ -2845,14 +2697,74 @@
                 "fixedColor": "#D8D9DA"
               },
               "custom": {
-                "minWidth": 60,
+                "align": "auto",
                 "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
-                }
+                  "type": "auto"
+                },
+                "inspect": true,
+                "minWidth": 90
               }
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Dispatch"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 335
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Project"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 335
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Coverage state"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {
+                            "text": "Unknown"
+                          },
+                          "1": {
+                            "text": "No known gap"
+                          },
+                          "2": {
+                            "text": "Known gap"
+                          },
+                          "3": {
+                            "text": "Accounting conflict"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "left"
+                  }
+                ]
+              }
+            ]
           },
           "options": {
             "cellHeight": "sm",
@@ -2928,9 +2840,50 @@
           ],
           "transformations": [
             {
-              "id": "labelsToFields",
+              "id": "filterFieldsByName",
               "options": {
-                "mode": "columns"
+                "include": {
+                  "names": [
+                    "Time",
+                    "project_id",
+                    "dispatch_id",
+                    "Value #A",
+                    "Value #B",
+                    "Value #C",
+                    "Value #D",
+                    "Value #E"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "indexByName": {
+                  "project_id": 0,
+                  "dispatch_id": 1,
+                  "Value #A": 2,
+                  "Value #B": 3,
+                  "Value #C": 4,
+                  "Value #D": 5,
+                  "Value #E": 6
+                },
+                "renameByName": {
+                  "project_id": "Project",
+                  "dispatch_id": "Dispatch",
+                  "Value #A": "Response allowance",
+                  "Value #B": "Responses remaining",
+                  "Value #C": "Response overrun",
+                  "Value #D": "Tool-call ceiling",
+                  "Value #E": "Coverage state"
+                }
               }
             }
           ]
@@ -2946,9 +2899,9 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 87,
+            "y": 71,
             "w": 24,
-            "h": 6
+            "h": 8
           },
           "fieldConfig": {
             "defaults": {
@@ -2959,14 +2912,120 @@
                 "fixedColor": "#D8D9DA"
               },
               "custom": {
-                "minWidth": 60,
+                "align": "auto",
                 "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
-                }
+                  "type": "auto"
+                },
+                "inspect": true,
+                "minWidth": 90
               }
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Dispatch"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 335
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Project"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 335
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Elapsed"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "s"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time allowance"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "s"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time remaining"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "s"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time overrun"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "s"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Runtime ceiling"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "s"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              }
+            ]
           },
           "options": {
             "cellHeight": "sm",
@@ -3042,348 +3101,50 @@
           ],
           "transformations": [
             {
-              "id": "labelsToFields",
+              "id": "filterFieldsByName",
               "options": {
-                "mode": "columns"
-              }
-            }
-          ]
-        },
-        {
-          "id": 12,
-          "type": "table",
-          "title": "Dispatch state and field availability",
-          "description": "Latest lifecycle, coverage, and field-state codes make unavailable, partial, unqualified, clock-gap, and overflow values explicit. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "gridPos": {
-            "x": 0,
-            "y": 93,
-            "w": 24,
-            "h": 6
-          },
-          "fieldConfig": {
-            "defaults": {
-              "noValue": "—",
-              "color": {
-                "mode": "fixed",
-                "fixedColor": "#D8D9DA"
-              },
-              "custom": {
-                "minWidth": 60,
-                "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
+                "include": {
+                  "names": [
+                    "Time",
+                    "project_id",
+                    "dispatch_id",
+                    "Value #A",
+                    "Value #B",
+                    "Value #C",
+                    "Value #D",
+                    "Value #E"
+                  ]
                 }
               }
             },
-            "overrides": []
-          },
-          "options": {
-            "cellHeight": "sm",
-            "showHeader": true,
-            "enablePagination": true
-          },
-          "targets": [
             {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_dispatch_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Lifecycle state",
-              "range": false,
-              "refId": "A"
+              "id": "merge",
+              "options": {}
             },
             {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_dispatch_coverage_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Coverage state",
-              "range": false,
-              "refId": "B"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_dispatch_field_state{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Field state",
-              "range": false,
-              "refId": "C"
-            }
-          ],
-          "transformations": [
-            {
-              "id": "labelsToFields",
+              "id": "organize",
               "options": {
-                "mode": "columns"
-              }
-            }
-          ]
-        },
-        {
-          "id": 13,
-          "type": "table",
-          "title": "Observed outcomes and bounded tool activity",
-          "description": "Retry notices and turn outcomes are observations, not exact request attempts. Tool categories have no response association. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "gridPos": {
-            "x": 0,
-            "y": 99,
-            "w": 24,
-            "h": 6
-          },
-          "fieldConfig": {
-            "defaults": {
-              "noValue": "—",
-              "unit": "locale",
-              "decimals": 0,
-              "color": {
-                "mode": "fixed",
-                "fixedColor": "#D8D9DA"
-              },
-              "custom": {
-                "minWidth": 60,
-                "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
+                "excludeByName": {
+                  "Time": true
+                },
+                "indexByName": {
+                  "project_id": 0,
+                  "dispatch_id": 1,
+                  "Value #A": 2,
+                  "Value #B": 3,
+                  "Value #C": 4,
+                  "Value #D": 5,
+                  "Value #E": 6
+                },
+                "renameByName": {
+                  "project_id": "Project",
+                  "dispatch_id": "Dispatch",
+                  "Value #A": "Elapsed",
+                  "Value #B": "Time allowance",
+                  "Value #C": "Time remaining",
+                  "Value #D": "Time overrun",
+                  "Value #E": "Runtime ceiling"
                 }
-              }
-            },
-            "overrides": []
-          },
-          "options": {
-            "cellHeight": "sm",
-            "showHeader": true,
-            "enablePagination": true
-          },
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_dispatch_retry_notices_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Retry notices",
-              "range": false,
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_dispatch_turn_outcomes_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Turn outcome",
-              "range": false,
-              "refId": "B"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_dispatch_tool_events_total{project_id=~\"$project\",dispatch_id=~\"$dispatch\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Tool events",
-              "range": false,
-              "refId": "C"
-            }
-          ],
-          "transformations": [
-            {
-              "id": "labelsToFields",
-              "options": {
-                "mode": "columns"
-              }
-            }
-          ]
-        },
-        {
-          "id": 14,
-          "type": "table",
-          "title": "Telemetry components and publication state",
-          "description": "Each component exposes one active bounded state. Publication health is independent of collection and dispatch coverage. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "gridPos": {
-            "x": 0,
-            "y": 105,
-            "w": 24,
-            "h": 6
-          },
-          "fieldConfig": {
-            "defaults": {
-              "noValue": "—",
-              "color": {
-                "mode": "fixed",
-                "fixedColor": "#D8D9DA"
-              },
-              "custom": {
-                "minWidth": 60,
-                "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
-                }
-              }
-            },
-            "overrides": []
-          },
-          "options": {
-            "cellHeight": "sm",
-            "showHeader": true,
-            "enablePagination": true
-          },
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_telemetry_component_state{project_id=~\"$project\"}[$__range]) == 1",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Active component state",
-              "range": false,
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_telemetry_publication_state{project_id=~\"$project\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Publication state",
-              "range": false,
-              "refId": "B"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_telemetry_queue_depth{project_id=~\"$project\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Queue depth",
-              "range": false,
-              "refId": "C"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_telemetry_ledger_bytes{project_id=~\"$project\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "Ledger bytes",
-              "range": false,
-              "refId": "D"
-            }
-          ],
-          "transformations": [
-            {
-              "id": "labelsToFields",
-              "options": {
-                "mode": "columns"
-              }
-            }
-          ]
-        },
-        {
-          "id": 15,
-          "type": "table",
-          "title": "Telemetry event dispositions",
-          "description": "Collector event dispositions. These counters are not provider request counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "gridPos": {
-            "x": 0,
-            "y": 111,
-            "w": 24,
-            "h": 6
-          },
-          "fieldConfig": {
-            "defaults": {
-              "noValue": "—",
-              "unit": "locale",
-              "decimals": 0,
-              "color": {
-                "mode": "fixed",
-                "fixedColor": "#D8D9DA"
-              },
-              "custom": {
-                "minWidth": 60,
-                "cellOptions": {
-                  "type": "auto",
-                  "wrapText": false
-                }
-              }
-            },
-            "overrides": []
-          },
-          "options": {
-            "cellHeight": "sm",
-            "showHeader": true,
-            "enablePagination": true
-          },
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "last_over_time(cwo_telemetry_events_total{project_id=~\"$project\"}[$__range])",
-              "format": "table",
-              "instant": true,
-              "legendFormat": "{{disposition}}",
-              "range": false,
-              "refId": "A"
-            }
-          ],
-          "transformations": [
-            {
-              "id": "labelsToFields",
-              "options": {
-                "mode": "columns"
               }
             }
           ]
@@ -3399,7 +3160,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 117,
+            "y": 79,
             "w": 6,
             "h": 3
           },
@@ -3470,7 +3231,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 117,
+            "y": 79,
             "w": 6,
             "h": 3
           },
@@ -3541,7 +3302,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 117,
+            "y": 79,
             "w": 6,
             "h": 3
           },
@@ -3612,7 +3373,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 117,
+            "y": 79,
             "w": 6,
             "h": 3
           },
@@ -3675,7 +3436,7 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 50,
+        "y": 46,
         "w": 24,
         "h": 1
       }

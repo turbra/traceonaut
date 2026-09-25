@@ -142,7 +142,7 @@ def presentation_names(snapshot: dict, labels: dict) -> dict:
         sessions[identity] = candidate
         used.add(candidate.casefold())
 
-    parents = {**sessions, "none": "Primary session", "": "Parent not recorded"}
+    parents = {**sessions, "none": "", "": "Parent not recorded"}
     work_context = {}
     for row in snapshot["sessions"]:
         identity = row["session_id"]

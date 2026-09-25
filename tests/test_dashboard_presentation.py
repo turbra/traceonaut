@@ -115,6 +115,7 @@ class DashboardPresentationTests(unittest.TestCase):
                 self.assertEqual(p["gridPos"]["x"], cursor)
                 cursor += p["gridPos"]["w"]
                 self.assertEqual(p["type"], "stat")
+                self.assertFalse(p.get("transparent", False))
             for p in objects(data):
                 if "gridPos" not in p or p["type"] == "row":
                     continue
@@ -124,11 +125,56 @@ class DashboardPresentationTests(unittest.TestCase):
                     self.assertEqual(p["options"]["colorMode"], "none")
                 if p["type"] == "bargauge":
                     self.assertEqual(p["options"]["namePlacement"], "left")
+                    self.assertEqual(p["gridPos"]["h"], 7)
                     self.assertTrue(p["fieldConfig"]["defaults"].get("displayName"),
                                     "Grafana must retain labels for single-result bar charts")
                     self.assertEqual(p["options"]["minVizHeight"], p["options"]["maxVizHeight"])
                     self.assertTrue(all(t["expr"].startswith("topk(10, ") for t in p["targets"]))
             self.assertEqual(data["refresh"], "1m" if name == "cwo-overview" else "30s")
+
+    def test_cwo_details_merge_projected_fields_into_four_readable_tables(self):
+        data = json.loads((ROOT / "examples/observability/cwo-overview.json").read_text())
+        details = next(p for p in data["panels"] if p["id"] == 90)
+        tables = [p for p in details["panels"] if p["type"] == "table"]
+        self.assertEqual([p["id"] for p in tables], [5, 8, 10, 11])
+        for p in tables:
+            transforms = p["transformations"]
+            self.assertEqual([t["id"] for t in transforms], ["filterFieldsByName", "merge", "organize"])
+            included = transforms[0]["options"]["include"]["names"]
+            self.assertTrue({"project_id", "dispatch_id"} <= set(included))
+            self.assertFalse({"__name__", "instance", "job"} & set(included))
+            # Grafana empty Prometheus frames retain Time and Value, but no
+            # labels. Keep their shared evaluation time until after merge,
+            # otherwise one empty query prevents merging the populated ones.
+            self.assertIn("Time", included)
+            self.assertEqual(transforms[-1]["options"]["excludeByName"], {"Time": True})
+            renamed = transforms[-1]["options"]["renameByName"]
+            self.assertEqual(set(included) - {"Time"}, set(renamed))
+            self.assertFalse(any(name.startswith("Value") for name in renamed.values()))
+            self.assertGreaterEqual(p["gridPos"]["h"], 8)
+        # Coverage is dispatch-wide. Its readable home is the allowance table,
+        # while token rows use project + dispatch + token kind as their key.
+        token_fields = tables[1]["transformations"][0]["options"]["include"]["names"]
+        self.assertIn("token_kind", token_fields)
+        self.assertNotIn("Value #C", token_fields)
+
+    def test_names_get_room_without_making_the_inventory_wider(self):
+        for name, panel_id, field in (("codex-work-overview-beta", 11, "Work"),
+                                      ("codex-all-sessions", 110, "Session"),
+                                      ("cwo-overview", 305, "Session")):
+            data = json.loads((ROOT / f"examples/observability/{name}.json").read_text())
+            p = next(p for p in data["panels"] if p["id"] == panel_id)
+            overrides = {o["matcher"]["options"]: {v["id"]: v["value"] for v in o["properties"]}
+                         for o in p["fieldConfig"]["overrides"]}
+            self.assertFalse(overrides[field]["custom.cellOptions"]["wrapText"],
+                             "Name width must not increase every row height")
+            self.assertLessEqual(overrides[field]["custom.width"], 480)
+            expr = next(t["expr"] for t in p["targets"] if "model_effort" in t["expr"])
+            self.assertIn('" · "', expr)
+        work = json.loads((ROOT / "examples/observability/codex-work-overview-beta.json").read_text())
+        self.assertNotIn("Work count", [p.get("title") for p in objects(work)])
+        subagents = next(p for p in work["panels"] if p["id"] == 7)
+        self.assertFalse(subagents.get("transparent", False))
 
     def test_session_state_colors_are_identical_everywhere(self):
         states = []

@@ -114,6 +114,8 @@ class CodexBetaRendererTests(unittest.TestCase):
         self.assertEqual(mappings["Session"]["child"]["text"], "Review metrics")
         self.assertEqual(mappings["Agent"]["child"]["text"], "Reviewer")
         self.assertEqual(mappings["Parent"]["parent"]["text"], "Observability dashboard")
+        self.assertEqual(mappings["Parent"]["none"]["text"], "")
+        self.assertEqual(mappings["Parent"][""]["text"], "Parent not recorded")
         detail_fields = result["panels"][0]["panels"][1]["fieldConfig"]["overrides"]
         detail_mappings = {
             field["matcher"]["options"]: field["properties"][0]["value"][0]["options"]

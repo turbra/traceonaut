@@ -34,7 +34,7 @@ Import the generated file. Names remain presentation metadata; missing names hav
 
 ## Use the Dashboard
 
-The top strip shows session scan coverage, audit scan coverage, dispatch telemetry health and publication backlog. **Partial** marks incomplete source coverage. Details are in the collapsed **Technical details** row. The default refresh is one minute.
+The top strip shows session scan coverage, audit scan coverage, dispatch telemetry health and publication backlog. **Partial** marks incomplete source coverage. The collapsed **Technical details** row contains four tables: requested and configured models, token provenance, response/tool limits, and time/runtime limits. The default refresh is one minute.
 
 ### Observed Dispatches
 

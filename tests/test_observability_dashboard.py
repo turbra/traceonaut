@@ -182,8 +182,8 @@ class ObservabilityDashboardTests(unittest.TestCase):
     def test_requested_and_configured_views_are_separate_and_claim_no_attribution(
         self,
     ) -> None:
-        requested = self.panel("Requested dispatch configuration")
-        configured = self.panel("Acknowledged configured model and effort")
+        requested = self.panel("Requested and configured models")
+        configured = {"targets": requested["targets"][1:]}
 
         self.assertEqual(
             {"cwo_dispatch_info"},
@@ -224,7 +224,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
         overview = self.dashboard["panels"]
         details = next(panel for panel in overview if panel["id"] == 90)
         self.assertTrue(details["collapsed"])
-        self.assertGreaterEqual(len(details["panels"]), 15)
+        self.assertEqual(len([p for p in details["panels"] if p["type"] == "table"]), 4)
         self.assertTrue(all(panel["id"] >= 100 or panel["id"] == 3 for panel in overview if panel["type"] != "row"))
         work = self.panel("Work and results")
         # Each query returns at most one row per dispatch. Grafana 11.5's

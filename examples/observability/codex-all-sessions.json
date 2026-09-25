@@ -136,7 +136,7 @@
           "legendFormat": "Collection"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 181,
@@ -209,7 +209,7 @@
           "legendFormat": "Collector scan age"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 182,
@@ -282,7 +282,7 @@
           "legendFormat": "Collector errors / second · 1h"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 183,
@@ -354,7 +354,7 @@
           "legendFormat": "Pending files"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 184,
@@ -439,7 +439,7 @@
           "legendFormat": "Command range"
         }
       ],
-      "transparent": true
+      "transparent": false
     },
     {
       "id": 92,
@@ -524,7 +524,8 @@
           "range": false,
           "legendFormat": "Shared weekly allowance"
         }
-      ]
+      ],
+      "transparent": false
     },
     {
       "id": 91,
@@ -607,7 +608,8 @@
           "range": false,
           "legendFormat": "Earned resets"
         }
-      ]
+      ],
+      "transparent": false
     },
     {
       "id": 93,
@@ -743,7 +745,8 @@
           "range": false,
           "legendFormat": "In"
         }
-      ]
+      ],
+      "transparent": false
     },
     {
       "id": 110,
@@ -774,7 +777,7 @@
               "wrapText": false
             },
             "inspect": false,
-            "minWidth": 60
+            "minWidth": 70
           },
           "decimals": 0,
           "unit": "locale"
@@ -786,13 +789,6 @@
               "options": "Session"
             },
             "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "auto",
-                  "wrapText": false
-                }
-              },
               {
                 "id": "mappings",
                 "value": [
@@ -825,8 +821,19 @@
                 "value": true
               },
               {
+                "id": "custom.width",
+                "value": 480
+              },
+              {
                 "id": "custom.minWidth",
                 "value": 300
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": false
+                }
               }
             ]
           },
@@ -942,6 +949,10 @@
               {
                 "id": "custom.inspect",
                 "value": true
+              },
+              {
+                "id": "custom.width",
+                "value": 180
               }
             ]
           },
@@ -1508,7 +1519,7 @@
             "x": 0,
             "y": 23,
             "w": 12,
-            "h": 9
+            "h": 7
           },
           "fieldConfig": {
             "defaults": {
@@ -1612,8 +1623,8 @@
             "valueMode": "text",
             "showUnfilled": false,
             "sizing": "manual",
-            "minVizHeight": 18,
-            "maxVizHeight": 18,
+            "minVizHeight": 14,
+            "maxVizHeight": 14,
             "minVizWidth": 8,
             "reduceOptions": {
               "calcs": [
@@ -1644,7 +1655,7 @@
             "x": 12,
             "y": 23,
             "w": 12,
-            "h": 9
+            "h": 7
           },
           "fieldConfig": {
             "defaults": {
@@ -1748,8 +1759,8 @@
             "valueMode": "text",
             "showUnfilled": false,
             "sizing": "manual",
-            "minVizHeight": 18,
-            "maxVizHeight": 18,
+            "minVizHeight": 14,
+            "maxVizHeight": 14,
             "minVizWidth": 8,
             "reduceOptions": {
               "calcs": [
@@ -1822,13 +1833,6 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.cellOptions",
-                    "value": {
-                      "type": "auto",
-                      "wrapText": false
-                    }
-                  },
-                  {
                     "id": "mappings",
                     "value": [
                       {
@@ -1856,8 +1860,19 @@
                     ]
                   },
                   {
+                    "id": "custom.width",
+                    "value": 480
+                  },
+                  {
                     "id": "custom.minWidth",
-                    "value": 220
+                    "value": 300
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "auto",
+                      "wrapText": false
+                    }
                   }
                 ]
               },

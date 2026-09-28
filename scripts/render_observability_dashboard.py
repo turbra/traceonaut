@@ -105,7 +105,7 @@ def render_dashboard(
     if session_snapshot is not None:
         # Reuse protected session-name validation/mapping without changing the
         # observed-dispatch variables or importing host names into metric labels.
-        native = [p for p in dashboard["panels"] if p.get("id") == 305]
+        native = [p for p in dashboard["panels"] if p.get("id") in {305, 401}]
         named = render_session_names({"panels": native}, session_snapshot)["panels"]
         by_id = {p["id"]: p for p in named}
         dashboard["panels"] = [by_id.get(p["id"], p) for p in dashboard["panels"]]

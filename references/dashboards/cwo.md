@@ -10,7 +10,7 @@ description: View CWO sessions, agents, usage and workflow activity.
 
 *Synthetic data in the current dashboard layout. Counts depend on enabled sources and the selected time range.*
 
-CWO Overview combines observed jobs, workflow audit events, optional CLI review results and CWO-associated Codex sessions. Enable the sources you use through [CWO Integration](../integrations/cwo.md).
+CWO Overview combines observed jobs, workflow audit events, optional external contractor reviews and CWO-associated Codex sessions. Enable the sources you use through [CWO Integration](../integrations/cwo.md).
 
 ## Import
 
@@ -50,7 +50,7 @@ This section covers the whole configured Codex profile. Association comes from a
 
 **Workflow events by type** counts events whose original timestamps fall inside the selected range, across configured audit logs. It can be empty while session and helper activity is present: only operations that write audit events appear in that chart.
 
-**CLI review results · by launch time** shows collected Claude CLI reviews launched in the selected range. It includes failed attempts, requested and reported models, input/output tokens and reported duration. Enable the [paired-artifact reader](../integrations/cwo.md#collect-cli-review-results) for this table.
+**External contractor reviews** shows who reviewed work for a Codex session: the requested and reported model, requested effort, outcome, token usage and duration. Completed and failed attempts appear when their launch dates fall within the selected range. Enable [contractor review collection](../integrations/cwo.md#collect-external-contractor-reviews) for this table. With [session attribution](../integrations/cwo.md#link-reviews-to-sessions) enabled, **Source session** links to the launching session. Reviews with missing or ambiguous attribution stay in the table.
 
 ### Optional Observed Jobs
 

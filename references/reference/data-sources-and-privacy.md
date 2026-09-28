@@ -41,7 +41,7 @@ Only opaque session/command IDs, fixed source/tool/outcome categories and numeri
 
 ## CWO CLI Review Artifacts
 
-The [optional review reader](../integrations/cwo.md#collect-cli-review-results) reads paired launch receipts, Claude CLI results and their local audit file. Metrics contain hashed result identities, requested/reported model names, effort, outcome, source launch time and numeric usage. Prompts, response text, account names, paths and raw UUIDs stay out of metrics.
+The [optional review reader](../integrations/cwo.md#collect-external-contractor-reviews) reads paired launch receipts, Claude CLI results and their local audit file. Metrics contain hashed result identities, requested/reported model names, requested effort, outcome, source launch time and numeric usage. Proven source links use the existing Codex project and session IDs. Prompts, response text, account names, paths and contractor session/result UUIDs stay out of metrics.
 
 ## Compound CWO Helper Commands
 

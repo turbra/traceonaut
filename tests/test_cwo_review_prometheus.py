@@ -26,6 +26,11 @@ class ReviewQueryTests(unittest.TestCase):
                 sources.append(series('cwo_review_tokens',identity,val,',kind="'+kind+'"'))
             sources.append(series('cwo_review_duration_seconds',identity,1.25))
         sources.append(series('cwo_review_tokens','start',2,',kind="input",instance="copy"'))
+        for identity,state in [('start','linked'),('middle','ambiguous'),('end','pending'),('partial','unlinked')]:
+            sources.append({'series':f'cwo_review_attribution_state{{review_id="{identity}",state="{state}"}}','values':'1x120'})
+        for instance in ('one','copy'):
+            sources.append({'series':f'cwo_review_session_info{{review_id="start",project_id="example",session_id="session-one",instance="{instance}"}}','values':'1x120'})
+        sources.append({'series':'cwo_review_session_info{review_id="old",project_id="example",session_id="session-one"}','values':'1x120'})
         def expected(values):return [{'labels':'{'+labels(identity)+'}', 'value':value} for identity,value in values.items()]
         checks=[{'expr':queries[key],'eval_time':'2h','exp_samples':expected(vals)} for key,vals in {
             'A':{'start':3600000,'middle':5400000,'end':7200000,'partial':5500000},
@@ -33,6 +38,12 @@ class ReviewQueryTests(unittest.TestCase):
             'C':{k:40 for k in ('start','middle','end','partial')},
             'D':{k:1.25 for k in ('start','middle','end','partial')},
         }.items()]
+        checks += [
+            {'expr':queries['E'],'eval_time':'2h','exp_samples':[
+                {'labels':f'{{review_id="{identity}",state="{state}"}}','value':1}
+                for identity,state in [('start','linked'),('middle','ambiguous'),('end','pending'),('partial','unlinked')]]},
+            {'expr':queries['F'],'eval_time':'2h','exp_samples':[{'labels':'{review_id="start",session_id="session-one"}','value':1}]},
+        ]
         # Removed/conflicting source metrics must not be resurrected from old
         # samples anywhere in the selected range.
         stale=[{**s,'values':s['values'].replace('x120','x118')+' stale'} for s in sources]

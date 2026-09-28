@@ -15,6 +15,7 @@ import time
 
 from .codex_session_telemetry import _open_source, _timestamp, _uuid
 from .cwo_audit_telemetry import AuditCollector, _object, _parse, RETENTION_SECONDS
+from .cwo_review_provenance import receipt_keys
 
 MAX_FILE_BYTES = 2 * 1024 * 1024
 MAX_SCAN_BYTES = 32 * 1024 * 1024
@@ -34,6 +35,8 @@ METRICS = {
     "cwo_review_started_timestamp_seconds": (LABELS, "Recorded launch time of a CLI review with a collected result; not its finish time."),
     "cwo_review_tokens": ((*LABELS, "kind"), "CLI top-level usage by kind; thinking is a subset of output. Input excludes cache creation and reads."),
     "cwo_review_duration_seconds": (LABELS, "CLI-reported result duration; not time inferred from file timestamps."),
+    "cwo_review_session_info": (("review_id", "project_id", "session_id"), "Proven immediate launching Codex session for a collected CLI review."),
+    "cwo_review_attribution_state": (("review_id", "state"), "Review attribution: linked, unlinked, ambiguous or pending source scanning; one state per review."),
 }
 
 
@@ -100,7 +103,8 @@ def project(launch, result, prepared, now):
             "effort": _label(launch.get("effort", "unknown")), "tokens": tokens,
             "duration": duration / 1000 if duration is not None else None,
             # Retained in the private numeric projection for conflict checks only.
-            "binding": hashlib.sha256((dispatch + ":" + packet).encode()).hexdigest()}
+            "binding": hashlib.sha256((dispatch + ":" + packet).encode()).hexdigest(),
+            "provenance_keys": receipt_keys(launch, result)}
 
 
 class ReviewCollector(AuditCollector):
@@ -161,8 +165,13 @@ class ReviewCollector(AuditCollector):
                 row = project(launch, result, audits[audit_path], now)
                 if row["timestamp"] < now - RETENTION_SECONDS:continue
                 identity = row["review_id"]
-                if identity in reviews and reviews[identity] != row:
-                    conflicts.add(identity)
+                if identity in reviews:
+                    prior = reviews[identity]
+                    core = lambda value: {k:v for k,v in value.items() if k not in {"provenance_keys", "provenance_conflict"}}
+                    if core(prior) != core(row):
+                        conflicts.add(identity)
+                    elif prior["provenance_keys"] != row["provenance_keys"]:
+                        prior["provenance_conflict"] = True
                 else:
                     reviews[identity] = row
             except OverflowError:
@@ -189,6 +198,14 @@ def render_review_metrics(snapshot):
         key = name.removeprefix("cwo_review_")
         if key == "skipped_records":
             lines.extend(f'{name}{{reason="{reason}"}} {snapshot[key].get(reason, 0)}' for reason in SKIP_REASONS)
+        elif key in {"session_info", "attribution_state"}:
+            for row in snapshot["reviews"]:
+                if key == "session_info":
+                    if not row.get("source_session"):continue
+                    dimensions = {"review_id": row["review_id"], **row["source_session"]}
+                else:
+                    dimensions = {"review_id": row["review_id"], "state": row.get("attribution", "unlinked")}
+                lines.append(name + "{" + ",".join(k + "=" + json.dumps(v) for k,v in dimensions.items()) + "} 1")
         elif labels:
             for row in snapshot["reviews"]:
                 values = row["tokens"].items() if key == "tokens" else [(None, row["timestamp"] if key == "started_timestamp_seconds" else row["duration"])]

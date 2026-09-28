@@ -17,6 +17,7 @@ from traceonaut.codex_session_telemetry import (
 from traceonaut.codex_account_telemetry import AccountSnapshotMetrics
 from traceonaut.cwo_audit_telemetry import AuditCollector, render_audit_metrics
 from traceonaut.cwo_review_telemetry import ReviewCollector, render_review_metrics
+from traceonaut.cwo_review_provenance import ProvenanceIndex
 from traceonaut.cwo_session_telemetry import CwoSessionCollector, render_cwo_session_metrics
 from traceonaut.observability_exporter import (
     MetricsEndpoint, build_samples, metrics_bind_address, read_credential, render_prometheus,
@@ -116,7 +117,7 @@ def main(argv=None):
     stopping = threading.Event()
     for sig in (signal.SIGINT, signal.SIGTERM):
         signal.signal(sig, lambda *_: stopping.set())
-    collector = endpoint = ledger = account = cwo = None
+    collector = endpoint = ledger = account = cwo = provenance = None
     try:
         collector = SessionCollector(
             args.codex_home, args.session_state_dir,
@@ -125,6 +126,8 @@ def main(argv=None):
         )
         if args.cwo_sessions:
             cwo = CwoSessionCollector(args.codex_home, args.session_state_dir)
+            if review_collector:
+                provenance = ProvenanceIndex(cwo)
         if args.state_dir:
             ledger = ObservabilityLedger(args.state_dir, readonly=True)
         if not args.once:
@@ -145,6 +148,9 @@ def main(argv=None):
             write_snapshot(args.snapshot_file, snapshot)
             audit = audit_collector.scan() if audit_collector else None
             reviews = review_collector.scan() if review_collector else None
+            if provenance:
+                reviews["provenance"] = provenance.scan(collector.db, snapshot, reviews,
+                                                       now=reviews["scan_timestamp_seconds"])
             if endpoint:
                 endpoint.update_sessions(snapshot, ledger.snapshot() if ledger else None, account, audit, reviews)
             if args.once:
@@ -158,6 +164,10 @@ def main(argv=None):
                 if reviews is not None:
                     status["cwo_reviews"] = {key: reviews[key] for key in ("source_available", "collection_complete", "source_files", "source_errors", "pending_results", "limit_reached", "skipped_records")}
                     status["cwo_reviews"]["exported_reviews"] = len(reviews["reviews"])
+                    if provenance:
+                        status["cwo_reviews"]["provenance"] = reviews["provenance"]
+                        status["cwo_reviews"]["attribution"] = {state: sum(r["attribution"] == state for r in reviews["reviews"])
+                            for state in ("linked", "unlinked", "ambiguous", "pending")}
                 print(json.dumps(status))
                 break
             stopping.wait(args.poll_seconds)

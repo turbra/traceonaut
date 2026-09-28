@@ -79,6 +79,14 @@ class ReviewTests(unittest.TestCase):
         self.result['usage'] = {'output_tokens': 1, 'output_tokens_details': {'thinking_tokens': 2}};self.write()
         self.assertEqual(self.scan()['skipped_records']['invalid_record'], 1)
 
+    def test_optional_provenance_conflict_does_not_change_review_accounting(self):
+        self.launch['prompt_sha256'] = 'c'*64
+        self.write(prefix='copy')
+        rows=self.scan()['reviews']
+        self.assertEqual(len(rows),1)
+        self.assertTrue(rows[0]['provenance_conflict'])
+        self.assertEqual(rows[0]['tokens']['output'],50)
+
     def test_pending_result_missing_audit_unmatched_and_future(self):
         (self.root/'lane-response.raw.json').unlink()
         self.assertEqual(self.scan()['pending_results'], 1)

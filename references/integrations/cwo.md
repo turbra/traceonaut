@@ -55,7 +55,9 @@ Traceonaut verifies each record's content hash and deduplicates copies. It expor
 
 Use `--once` with the same options for a first-run check. Its `cwo_audit` summary reports source availability, coverage and exported event count. A **complete** status means every selected audit file was read successfully within the limits. This measures those files, not all CWO usage. Incomplete reads make displayed counts lower bounds.
 
-## Collect CLI Review Results
+<a id="collect-cli-review-results"></a>
+
+## Collect External Contractor Reviews
 
 For workflows that retain paired launch receipts and Claude CLI JSON results, append:
 
@@ -74,9 +76,26 @@ sprint/
 
 The prefix can vary. A launch receipt must contain `dispatch_id`, `packet_sha256`, a timezone-qualified `started_at`, and `requested_model`; `effort` is optional. The same directory's hash-valid audit must contain a matching `dispatch_prepared` event before the launch. The paired result must be a Claude CLI `type: result` object with `uuid`, `session_id`, and boolean `is_error`.
 
-**CLI review results** shows collected results whose **launch times** fall inside the selected range. It displays requested and reported models separately, the CLI-reported duration, and top-level token usage. Input includes uncached input, cache creation and cache reads. Thinking tokens are already included in output. Missing usage remains missing; a failed attempt with reported zero usage remains zero.
+**External contractor reviews** shows each collected review attempt's outcome, requested and reported models, requested effort, token usage and duration. Attempts appear when their launch dates fall inside the selected range. Input includes uncached input, cache creation and cache reads. Thinking tokens are already included in output. Missing usage remains missing; a failed attempt with reported zero usage remains zero.
 
 Copies of the same result count once. Conflicting copies are omitted and reported as skipped records. Repeated audit evaluations do not add token usage. These results stay separate from observed Codex jobs and whole-session token totals.
+
+### Link Reviews to Sessions
+
+Enable both `--cwo-sessions` and `--cwo-review-dir` to add **Source session** and **Attribution** to the review table. No additional launch step is required. Traceonaut reads existing session history and links a review to the session that ran its launch, including a subagent when that subagent was the launcher. Click the source name to open All Sessions for that session.
+
+| Attribution | Meaning |
+| --- | --- |
+| Linked | Recorded launch and result evidence identifies one source session. |
+| Unlinked | No supported matching launch was found, or session association is disabled. |
+| Pending | Source scanning is incomplete or a relevant source could not be read. |
+| Ambiguous | Evidence points to multiple sessions or cannot separate repeated results. |
+
+All collected reviews remain visible, including failed attempts and retries. **Requested effort** comes from the launch receipt; the result reports the model, not an attestation of effort. Review usage stays separate from Codex session usage.
+
+Supported evidence includes completed direct Claude commands with matching result identities, and paired-result `runner.py` launches whose recorded output matches the receipt's prompt hash, model, effort and result metadata. Interactive account-switched launches also require a recorded stdin command tied to the same process. Preparing a dispatch, reading a receipt, or mentioning a review does not establish a link. Other wrappers remain Unlinked until a reader supports their evidence.
+
+The first scan backfills exported session histories in bounded passes. Subsequent scans resume from private cursors. `--once` reports `cwo_reviews.provenance` readiness and attribution counts. Source commands are inspected without execution; names and command text stay out of metric labels.
 
 Choose roots that contain this layout. Other result formats need a supported reader; the collector does not infer review usage from prose or filenames alone. `--once` reports `cwo_reviews` source health, pending results and exported reviews. See [Retention and Limits](../reference/retention-and-limits.md#cwo-cli-review-results).
 

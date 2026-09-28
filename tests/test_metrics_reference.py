@@ -60,7 +60,8 @@ class MetricsReferenceTests(unittest.TestCase):
         payload += render_review_metrics({"source_available": 1, "collection_complete": 1, "scan_timestamp_seconds": now,
             "source_files": 1, "source_errors": 0, "pending_results": 0, "limit_reached": 0, "skipped_records": {},
             "reviews": [{"review_id": "b"*64, "timestamp": now, "outcome": "completed", "requested_model": "example",
-                         "reported_model": "example", "effort": "high", "tokens": {"input": 2}, "duration": 1}]})
+                         "reported_model": "example", "effort": "high", "tokens": {"input": 2}, "duration": 1,
+                         "source_session": ids, "attribution": "linked"}]})
         types = dict(re.findall(r"^# TYPE (\w+) (\w+)$", payload.decode(), re.M))
         actual = {}
         for line in payload.decode().splitlines():

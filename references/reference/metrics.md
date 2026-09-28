@@ -190,3 +190,5 @@ Optional paired-artifact collection uses gauges. Review usage is separate from C
 | `cwo_review_started_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | Recorded launch time of a CLI review with a collected result; not its finish time. |
 | `cwo_review_tokens` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `kind` | CLI top-level usage by kind; thinking is a subset of output. Input excludes cache creation and reads. |
 | `cwo_review_duration_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | CLI-reported result duration; not time inferred from file timestamps. |
+| `cwo_review_session_info` | gauge | `review_id`, `project_id`, `session_id` | Value 1 links a review to its proven immediate launching Codex session. |
+| `cwo_review_attribution_state` | gauge | `review_id`, `state` | Value 1 for the review's current state: `linked`, `unlinked`, `pending` or `ambiguous`. |

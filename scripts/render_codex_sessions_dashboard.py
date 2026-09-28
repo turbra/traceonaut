@@ -269,6 +269,7 @@ def render_dashboard(
 
     mappings = {
         "Session": _mapping(sessions, "Session name unavailable"),
+        "Source session": _mapping(sessions, "Session name unavailable"),
         "Project": _mapping(projects, "Project name unavailable"),
         "Agent": _mapping(agents, "Agent name unavailable"),
     }

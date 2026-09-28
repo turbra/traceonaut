@@ -84,6 +84,13 @@ class WorkDashboardRendererTests(unittest.TestCase):
         native=next(p for p in result['panels'] if p['id']==305)
         self.assertIn('Improve the search page',json.dumps(native['fieldConfig']))
         self.assertIn('Example app',json.dumps(native['fieldConfig']))
+        review = next(p for p in result['panels'] if p['id'] == 401)
+        source = next(o for o in review['fieldConfig']['overrides'] if o['matcher']['options'] == 'Source session')
+        mapping = next(p['value'] for p in source['properties'] if p['id'] == 'mappings')
+        self.assertEqual(mapping[0]['options'][self.dispatch]['text'], 'Improve the search page')
+        link = next(p['value'][0]['url'] for p in source['properties'] if p['id'] == 'links')
+        self.assertIn('var-session=${__value.raw}', link)
+        self.assertIn('Requested effort', json.dumps(review['transformations']))
         with tempfile.TemporaryDirectory() as name:
             root=Path(name);root.chmod(0o700)
             source=root/'snapshot.json';source.write_text(json.dumps(snapshot));source.chmod(0o600)

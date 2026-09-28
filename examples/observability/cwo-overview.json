@@ -1220,8 +1220,8 @@
     {
       "id": 401,
       "type": "table",
-      "title": "CLI review results \u00b7 by launch time",
-      "description": "Collected Claude CLI results for reviews launched in the selected interval, across configured review directories. Input includes uncached, cache-write and cache-read tokens. Output includes thinking tokens. Top-level CLI usage is kept separate from modelUsage and Codex session totals. Requested and reported models may differ. Missing fields stay blank. Project/Task filters apply only to observed dispatches. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "title": "External contractor reviews",
+      "description": "External contractor review attempts collected from CWO records. Shows the launching Codex session, whether each attempt completed or failed, requested and reported models, requested effort, token usage and duration. Includes attempts launched during the selected time range. Reviews without a proven source session remain visible. Currently supports retained Claude review records. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -1280,6 +1280,30 @@
           "instant": true,
           "range": false,
           "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (review_id, state) (cwo_review_attribution_state) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (review_id, session_id) (cwo_review_session_info) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))",
+          "instant": true,
+          "range": false,
+          "format": "table"
         }
       ],
       "fieldConfig": {
@@ -1309,11 +1333,11 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "dateTimeAsLocal"
+                "value": "time:YYYY-MM-DD HH:mm:ss"
               },
               {
                 "id": "custom.width",
-                "value": 185
+                "value": 174
               }
             ]
           },
@@ -1330,6 +1354,10 @@
               {
                 "id": "decimals",
                 "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 95
               }
             ]
           },
@@ -1341,7 +1369,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 210
+                "value": 160
               }
             ]
           },
@@ -1353,7 +1381,135 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 210
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source session"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {}
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^.+$",
+                      "result": {
+                        "text": "Name unavailable"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Focus on this session",
+                    "url": "/d/cwo-supervisor-observability-v1?var-project=$__all&var-session=${__value.raw}&from=${__from}&to=${__to}"
+                  }
+                ]
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": true
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Attribution"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "linked": {
+                        "text": "Linked"
+                      },
+                      "unlinked": {
+                        "text": "Unlinked"
+                      },
+                      "pending": {
+                        "text": "Pending"
+                      },
+                      "ambiguous": {
+                        "text": "Ambiguous"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Result"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 85
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requested effort"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 145
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Input tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Output tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 115
               }
             ]
           }
@@ -1378,7 +1534,7 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "pattern": "^(Time|review_id|outcome|requested_model|reported_model|effort|Value.*)$"
+              "pattern": "^(Time|review_id|outcome|requested_model|reported_model|effort|state|session_id|Value.*)$"
             }
           }
         },
@@ -1391,27 +1547,33 @@
           "options": {
             "excludeByName": {
               "Time": true,
-              "review_id": true
+              "review_id": true,
+              "Value #E": true,
+              "Value #F": true
             },
             "indexByName": {
               "Value #A": 0,
-              "outcome": 1,
-              "requested_model": 2,
-              "reported_model": 3,
-              "effort": 4,
-              "Value #B": 5,
-              "Value #C": 6,
-              "Value #D": 7
+              "session_id": 1,
+              "state": 2,
+              "outcome": 3,
+              "requested_model": 4,
+              "reported_model": 5,
+              "effort": 6,
+              "Value #B": 7,
+              "Value #C": 8,
+              "Value #D": 9
             },
             "renameByName": {
               "Value #A": "Launched",
               "outcome": "Result",
               "requested_model": "Requested model",
               "reported_model": "Reported model",
-              "effort": "Effort",
+              "effort": "Requested effort",
               "Value #B": "Input tokens",
               "Value #C": "Output tokens",
-              "Value #D": "Duration"
+              "Value #D": "Duration",
+              "session_id": "Source session",
+              "state": "Attribution"
             }
           }
         }

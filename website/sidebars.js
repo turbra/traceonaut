@@ -44,6 +44,11 @@ module.exports = {
         },
         {
           "type": "doc",
+          "id": "references/dashboards/tui-beta",
+          "label": "Codex TUI · Beta"
+        },
+        {
+          "type": "doc",
           "id": "references/dashboards/reading-values",
           "label": "Reading the Values"
         }

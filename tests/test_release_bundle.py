@@ -23,6 +23,7 @@ class ReleaseBundleTests(unittest.TestCase):
             "stable": ("codex-all-sessions.json", "All Sessions"),
             "beta": ("codex-work-overview-beta.json", "Work Overview"),
             "dispatch": ("cwo-overview.json", "CWO Overview"),
+            "tui-beta": ("codex-tui-beta.json", "Codex TUI · Beta"),
         }
         self.assertEqual(set(COMPONENTS), {"sessions", "account", *templates})
         self.assertEqual(
@@ -106,6 +107,7 @@ class ReleaseBundleTests(unittest.TestCase):
             "account": ["collect_codex_sessions.py", "collect_codex_account.py"],
             "stable": ["render_codex_sessions_dashboard.py"],
             "beta": ["render_codex_beta_dashboard.py"],
+            "tui-beta": ["render_codex_sessions_dashboard.py"],
             "dispatch": ["run_observed_codex.py", "export_dispatch_observability.py",
                          "export_terminal_observations.py", "render_observability_dashboard.py"],
         }

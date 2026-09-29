@@ -80,6 +80,7 @@ PUBLIC_ASSETS = {
     "traceonaut-favicon.png", "traceonaut.png",
     "screenshots/work-overview.png",
     "screenshots/all-sessions.png", "screenshots/cwo-dispatches.png",
+    "screenshots/codex-tui-beta.png",
 }
 
 

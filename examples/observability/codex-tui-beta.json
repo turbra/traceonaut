@@ -1,0 +1,1299 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Prometheus datasource for Codex session telemetry",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "Work Overview",
+      "type": "link",
+      "url": "/d/cwo-codex-beta/work-overview?${__url_time_range}&${project:queryparam}&${session:queryparam}",
+      "targetBlank": false,
+      "includeVars": false,
+      "keepTime": true
+    },
+    {
+      "title": "All Sessions",
+      "type": "link",
+      "url": "/d/cwo-supervisor-observability-v1/all-sessions?${__url_time_range}&${project:queryparam}&${session:queryparam}",
+      "targetBlank": false,
+      "includeVars": false,
+      "keepTime": true
+    },
+    {
+      "title": "CWO Overview",
+      "type": "link",
+      "url": "/d/cwo-dispatch-observability-v1/cwo-overview?${__url_time_range}",
+      "targetBlank": false,
+      "includeVars": false,
+      "keepTime": true
+    },
+    {
+      "title": "K: thousand · Mil: million · Bil: billion",
+      "type": "link",
+      "url": "https://turbra.github.io/traceonaut/dashboards/reading-values/",
+      "targetBlank": true
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "1 · Overview",
+      "description": "Collection health and recorded usage for sessions active in the selected range. Tokens are recorded session totals at range end. K = thousand, Mil = million, Bil = billion. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "unit": "locale",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Collection"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "—",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "—",
+                        "color": "red"
+                      },
+                      "2": {
+                        "text": "Stale",
+                        "color": "yellow"
+                      },
+                      "3": {
+                        "text": "Current",
+                        "color": "#D8D9DA"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Scan age"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "mappings",
+                "value": []
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Working"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "0",
+                        "color": "#D8D9DA"
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "—",
+                        "color": "gray"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Waiting"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "mappings",
+                "value": []
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Subagents"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Recorded tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 22,
+          "titleSize": 14
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max(cwo_codex_collector_source_available) * 2) + on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < bool 20)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Collection"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "time() - (max(cwo_codex_collector_scan_timestamp_seconds) > 0)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Scan age"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Working"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 2)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Waiting"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count((max by (project_id, session_id) (cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\",kind=\"subagent\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Subagents"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Recorded tokens"
+        }
+      ],
+      "transparent": false
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "2 · Token usage",
+      "description": "Recorded input and output token totals over time for selected sessions. These are snapshots of recorded history, not tokens spent in each time bucket; totals can decrease when the exported population changes. K = thousand, Mil = million, Bil = billion. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Input tokens",
+            "axisPlacement": "left",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 1,
+          "min": 0,
+          "noValue": "—",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Input"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Output"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Output tokens"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "maxDataPoints": 10000,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(sum((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"input\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "Input"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(sum((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"output\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "Output"
+        }
+      ],
+      "transparent": false
+    },
+    {
+      "id": 3,
+      "type": "bargauge",
+      "title": "3 · Responses by chat",
+      "description": "Top eight selected sessions by recorded model responses at range end. These counts cover recorded session history and are distinct from user messages. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "locale",
+          "decimals": 0,
+          "min": 0,
+          "fieldMinMax": false
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*/"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Work name unavailable"
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(topk(8, (max by (project_id, session_id) (cwo_codex_session_response_count{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "session_id",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "session_id": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "session_id": "Session",
+              "Value": "Responses"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Responses",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Session",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Responses",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "namePlacement": "left",
+        "valueMode": "text",
+        "showUnfilled": false,
+        "sizing": "manual",
+        "minVizHeight": 16,
+        "maxVizHeight": 16,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 14
+        },
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "transparent": false
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "4 · Commands",
+      "description": "Commands recorded in the selected interval. Partial counts are lower bounds, marked ≥. Failed means a recorded failed outcome. Missing data displays —. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#D8D9DA",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Commands · Partial"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "prefix:≥ "
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failures · Partial"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "prefix:≥ "
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Coverage"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Partial",
+                        "color": "yellow"
+                      },
+                      "1": {
+                        "text": "Covered",
+                        "color": "#D8D9DA"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "text": {
+          "valueSize": 22,
+          "titleSize": 14
+        },
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((count(((max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () ((time() - max(cwo_codex_command_telemetry_snapshot_timestamp_seconds)) < 20) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)) and on () ((max(cwo_codex_command_telemetry_ready) == 1) and on () (max(cwo_codex_command_telemetry_complete_after_timestamp_seconds) < $__from / 1000))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Commands"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((count(((max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () ((time() - max(cwo_codex_command_telemetry_snapshot_timestamp_seconds)) < 20) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)) unless on () ((max(cwo_codex_command_telemetry_ready) == 1) and on () (max(cwo_codex_command_telemetry_complete_after_timestamp_seconds) < $__from / 1000))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Commands · Partial"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((count((max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\",outcome=\"failed\"}) and on (project_id, session_id, observation_id) ((max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) or vector(0)) and on () ((time() - max(cwo_codex_command_telemetry_snapshot_timestamp_seconds)) < 20) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)) and on () ((max(cwo_codex_command_telemetry_ready) == 1) and on () (max(cwo_codex_command_telemetry_complete_after_timestamp_seconds) < $__from / 1000))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Failures"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((count((max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\",outcome=\"failed\"}) and on (project_id, session_id, observation_id) ((max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id, observation_id) (cwo_codex_command_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) or vector(0)) and on () ((time() - max(cwo_codex_command_telemetry_snapshot_timestamp_seconds)) < 20) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)) unless on () ((max(cwo_codex_command_telemetry_ready) == 1) and on () (max(cwo_codex_command_telemetry_complete_after_timestamp_seconds) < $__from / 1000))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Failures · Partial"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(((max(cwo_codex_command_telemetry_ready) == 1) and on () (max(cwo_codex_command_telemetry_complete_after_timestamp_seconds) < $__from / 1000)) or (0 * max(cwo_codex_command_telemetry_ready))) and on () ((time() - max(cwo_codex_command_telemetry_snapshot_timestamp_seconds)) < 20) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Coverage"
+        }
+      ],
+      "transparent": false
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "5 · Session activity",
+      "description": "Observed working and waiting sessions over the selected time range. Working means a recent open turn. Waiting means the last turn finished and no new turn has started. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Sessions",
+            "axisPlacement": "left",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMax": 2
+          },
+          "decimals": 0,
+          "min": 0,
+          "noValue": "—"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Working"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Waiting"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D8D9DA"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "maxDataPoints": 10000,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(sum(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "Working"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(count(((max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"}) == 2)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "Waiting"
+        }
+      ],
+      "transparent": false
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "6 · Chats",
+      "description": "Sessions active in the selected range, sorted by recorded tokens. Model includes the latest selected effort. Tokens cover recorded session history, not account allowance. K = thousand, Mil = million, Bil = billion. Click a chat to open Work Overview. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto",
+              "wrapText": false
+            },
+            "inspect": false,
+            "minWidth": 65
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Session"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {}
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^.+$",
+                      "result": {
+                        "text": "Work name unavailable"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": false
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open in Work Overview",
+                    "url": "/d/cwo-codex-beta/work-overview?${project:queryparam}&var-session=${__data.fields.session_id:percentencode}&${__url_time_range}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model / effort"
+            },
+            "properties": [
+              {
+                "id": "custom.inspect",
+                "value": true
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text",
+                  "wrapText": false
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D8D9DA"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text",
+                  "wrapText": false
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unknown",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "Working",
+                        "color": "blue"
+                      },
+                      "2": {
+                        "text": "Waiting",
+                        "color": "#D8D9DA"
+                      },
+                      "3": {
+                        "text": "Stopped / failed",
+                        "color": "orange"
+                      },
+                      "4": {
+                        "text": "No recent signal",
+                        "color": "yellow"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "session_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Tokens",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false,
+          "reducer": [],
+          "countRows": false,
+          "enablePagination": false
+        },
+        "enablePagination": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id, work, kind, parent_id, model_effort) (label_join(label_replace(cwo_codex_session_info{project_id=~\"$project\",session_id=~\"$session\"}, \"work\", \"$1\", \"session_id\", \"(.+)\"), \"model_effort\", \" · \", \"model\", \"effort\"))) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (project_id, session_id) (cwo_codex_session_state{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "((max by (project_id, session_id) (cwo_codex_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 1) or (max by (project_id, session_id) (cwo_codex_session_usage_state{project_id=~\"$project\",session_id=~\"$session\"}) == 4)) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) and on () (max(cwo_codex_collector_source_available) == 1) and on () ((time() - max(cwo_codex_collector_scan_timestamp_seconds)) < 20)",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "session_id",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "work",
+                "Value #B",
+                "model_effort",
+                "Value #H",
+                "session_id"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "work": 0,
+              "Value #B": 1,
+              "model_effort": 2,
+              "Value #H": 3,
+              "session_id": 4
+            },
+            "renameByName": {
+              "work": "Session",
+              "Value #B": "State",
+              "model_effort": "Model / effort",
+              "Value #H": "Tokens"
+            }
+          }
+        }
+      ],
+      "transparent": false
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "traceonaut",
+    "codex",
+    "experimental"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Project",
+        "multi": true,
+        "name": "project",
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        ],
+        "query": "All projects : .+",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "name": "session",
+        "label": "Session",
+        "type": "custom",
+        "hide": 0,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        ],
+        "query": "All work : .+",
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Codex TUI · Beta",
+  "uid": "traceonaut-codex-tui-beta",
+  "version": 1,
+  "weekStart": "",
+  "description": "Experimental six-section view of existing Traceonaut session metrics, inspired by the Codex TUI. No additional collector or account API is used."
+}

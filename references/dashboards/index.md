@@ -1,7 +1,7 @@
 ---
 slug: /dashboards
 title: Choosing a Dashboard
-description: Compare the three active views and find their import guides.
+description: Compare three standard dashboards and the experimental TUI-style beta.
 ---
 
 # Choosing a Dashboard
@@ -11,6 +11,7 @@ description: Compare the three active views and find their import guides.
 | [Work Overview](work-overview.md) | Daily session and subagent activity, usage and commands. Start here. | Codex session files |
 | [All Sessions](all-sessions.md) | A compact, session-centered alternative. | Codex session files |
 | [CWO Overview](cwo.md) | CWO sessions, agents, usage and workflow activity. | Codex records, optional CWO audit logs and dispatch ledger |
+| [Codex TUI · Beta](tui-beta.md) | An experimental six-section layout inspired by the Codex terminal dashboard. | Existing Codex session metrics |
 
 Each view has a separate UID, so they can coexist. The [Dashboard Reference](../reference/dashboards.md) lists template and renderer paths.
 

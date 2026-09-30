@@ -74,8 +74,10 @@ def render_dashboard(
     workers = {key: value["agent_name"] for key, value in registry["dispatches"].items()}
     task_mapping = _mapping(tasks, "Task name not provided")
     worker_mapping = _mapping(workers, "Worker name not provided")
-    for variable in dashboard.get("templating", {}).get("list", []):
-        if variable["name"] == "project":
+    variables = dashboard.get("templating", {}).get("list", [])
+    session_selectors = any(variable.get("name") == "session" for variable in variables)
+    for variable in variables:
+        if variable["name"] == "project" and not session_selectors:
             _named_variable(variable, projects)
             variable["label"] = "Observed project"
         elif variable["name"] == "dispatch":
@@ -104,11 +106,26 @@ def render_dashboard(
                         prop["value"] = copy.deepcopy(worker_mapping)
     if session_snapshot is not None:
         # Reuse protected session-name validation/mapping without changing the
-        # observed-dispatch variables or importing host names into metric labels.
+        # legacy dispatch variables or importing names into metric labels.
         native = [p for p in dashboard["panels"] if p.get("id") in {305, 401}]
-        named = render_session_names({"panels": native}, session_snapshot)["panels"]
-        by_id = {p["id"]: p for p in named}
+        session_template = {"panels": native}
+        if session_selectors:
+            session_template["templating"] = dashboard["templating"]
+        named = render_session_names(session_template, session_snapshot)
+        by_id = {p["id"]: p for p in named["panels"]}
         dashboard["panels"] = [by_id.get(p["id"], p) for p in dashboard["panels"]]
+        if session_selectors:
+            # An empty local snapshot must not disable selectors that can still
+            # discover historical identities from Prometheus.
+            original = {variable["name"]: variable for variable in variables}
+            dashboard["templating"] = named["templating"]
+            dashboard["templating"]["list"] = [
+                copy.deepcopy(original[variable["name"]])
+                if variable.get("name") in {"project", "session"}
+                and len(variable.get("options", [])) == 1
+                else variable
+                for variable in named["templating"]["list"]
+            ]
     if datasource_uid is not None:
         if re.fullmatch(r"[A-Za-z0-9_-]{1,128}", datasource_uid) is None:
             raise ValueError("invalid datasource UID")

@@ -17,7 +17,7 @@ BINARY = os.environ.get("CWO_TEST_PROMETHEUS_BINARY")
 @unittest.skipUnless(BINARY, "separately verified Prometheus binary not supplied")
 class LastResponseTests(unittest.TestCase):
     def test_latest_response_and_response_less_jobs(self):
-        data = json.loads((ROOT / "examples/observability/cwo-overview.json").read_text())
+        data = json.loads((ROOT / "tests/fixtures/cwo-controller-queries.json").read_text())
         panels = {p["id"]: p for p in walk_panels(data["panels"])}
         work = panels[110]
         self.assertEqual(work["transformations"][0]["options"], {"byField": "dispatch_id", "mode": "outer"})

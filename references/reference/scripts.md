@@ -27,7 +27,7 @@ Session collection also accepts `--session-retention-seconds 2592000` and `--ses
 
 ## Dashboard Renderers
 
-All three require `--template` and `--output`. Session renderers also require `--snapshot-file`; the CWO renderer requires `--presentation-file`, `--session-snapshot-file`, or both. The session snapshot supplies session/project names; the presentation registry supplies observed-job names.
+All three require `--template` and `--output`. Session renderers also require `--snapshot-file`. For CWO Overview, pass `--session-snapshot-file` to supply session/project names. The CWO renderer also retains `--presentation-file` for custom templates that use controller task names.
 
 | Script | Output / additional option |
 | --- | --- |
@@ -48,4 +48,4 @@ All accept `--datasource-uid` for provisioning and `--watch-seconds` (1–60). O
 
 ## Legacy Compatibility
 
-`run_observed_codex.py` is a deprecated source-only job launcher, excluded from release bundles. It is separate from collection. See [Observed Job Metrics](../integrations/cwo.md#observed-job-metrics) for current source requirements.
+`run_observed_codex.py` is a deprecated source-only job launcher, excluded from release bundles. It is separate from collection. See [Existing Controller Metrics](../integrations/cwo.md#existing-controller-metrics) for the retained export interface.

@@ -1,21 +1,22 @@
 ---
 slug: /integrations/cwo
 title: CWO Integration
-description: Show CWO-associated sessions, existing workflow audit logs and optional observed-job metrics.
+description: Collect CWO session usage, agent outcomes, workflow activity and contractor reviews.
 ---
 
 # CWO Integration
 
-[Complex Work Orchestration](https://github.com/gprocunier/complex-work-orchestration) is a Codex skill for coordinating agents and tracking work across sessions. Traceonaut can identify associated Codex sessions, read optional workflow audit logs, and expose separately observed jobs.
+[Complex Work Orchestration](https://github.com/gprocunier/complex-work-orchestration) is a Codex skill for coordinating agents and tracking work across sessions. Traceonaut reads the session files and reports that this work produces. It does not launch agents.
 
 Start with **Collect CWO Sessions** for work performed using the CWO skill. The other sources add detail when their files exist.
 
 | Data | Collector option | Source |
 | --- | --- | --- |
-| CWO sessions, agents, models, session tokens and helper commands | `--cwo-sessions` | Existing Codex session files. |
+| CWO sessions and subagents: tokens, latest model/effort, completed/failed turns, recorded turn time and helper commands | `--cwo-sessions` | Existing Codex session files. |
 | Workflow events | `--cwo-audit-dir` | Existing CWO audit logs. |
 | External contractor reviews | `--cwo-review-dir` | Paired launch receipts and result files. |
-| Separately observed jobs | `--state-dir` | An existing `observability.sqlite3` ledger from an integrated controller. |
+
+Each subagent has its own session measurements. A session that handles several assignments has combined totals: splitting them by assignment requires records that identify those boundaries. Recorded turn time measures reported turns, while review duration measures a contractor review. Neither proves the elapsed time or success of a larger assignment.
 
 ## Collect CWO Sessions
 
@@ -35,7 +36,7 @@ Import [CWO Overview](../dashboards/cwo.md). Its main overview shows sessions an
 
 **Association is session context.** Token totals cover whole sessions, including earlier history, rather than CWO-only cost. Plain mentions of CWO in conversation, reading a guide, or generic agent activity do not establish association. [Data Sources and Privacy](../reference/data-sources-and-privacy.md#cwo-session-association) describes the supported signals.
 
-This section needs no controller hook, observed-job ledger or separate job launcher. Keep your installed Codex version; collection uses the [supported session record formats](../reference/data-sources-and-privacy.md).
+Collection uses the [supported session record formats](../reference/data-sources-and-privacy.md) with your existing Codex installation.
 
 ## Collect Workflow Activity
 
@@ -108,9 +109,9 @@ The first scan backfills exported session histories in bounded passes. Subsequen
 
 Choose roots that contain this layout. Other result formats need a supported reader; the collector does not infer review usage from prose or filenames alone. `--once` reports `cwo_reviews` source health, pending results and exported reviews. See [Retention and Limits](../reference/retention-and-limits.md#cwo-cli-review-results).
 
-## Observed Job Metrics
+## Existing Controller Metrics
 
-This section is for installations that already have a controller writing Traceonaut's `observability.sqlite3` ledger. That source supplies the collapsed **Observed jobs · existing ledger required** row. If you have no ledger, leave that row collapsed and use the CWO session and workflow sections above.
+This advanced interface serves integrations that already write task records to Traceonaut's `observability.sqlite3` database. Those records remain available as `cwo_dispatch_*` and `cwo_cycle_*` metrics and through completed-dispatch export. CWO Overview uses the file sources above; it has no dependency on this interface.
 
 The source-checkout launcher `run_observed_codex.py` is **deprecated** and excluded from release bundles. Its fixed legacy protocol is not maintained for current Codex versions. Do not downgrade Codex or launch extra model jobs to populate a dashboard. Existing ledgers remain readable.
 

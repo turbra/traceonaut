@@ -89,6 +89,8 @@ Labels use opaque identities and bounded categories. Display names stay in rende
 
 ## CWO Dispatches
 
+These metrics come from an existing controller database supplied through `--state-dir`. They remain available for custom integrations and queries; CWO Overview uses session, audit and review metrics instead.
+
 | Name | Type | Labels | Meaning |
 | --- | --- | --- | --- |
 | `cwo_dispatch_info` | gauge | `project_id`, `dispatch_id`, `agent_id`, `packet_ref`, `requested_model`, `requested_effort` | Dispatch/agent identity and requested settings; value 1. |

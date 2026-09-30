@@ -150,7 +150,11 @@ class DocumentationTests(unittest.TestCase):
         guide = (ROOT / "references/integrations/cwo.md").read_text()
         sessions = guide.split("## Collect CWO Sessions\n", 1)[1].split("\n## ", 1)[0]
         self.assertIn("--cwo-sessions", sessions)
-        self.assertIn("no controller hook, observed-job ledger or separate job launcher", sessions)
+        self.assertIn("with your existing Codex installation", sessions)
+        self.assertIn("It does not launch agents", guide)
+        self.assertNotIn("--state-dir", sessions)
+        self.assertNotIn("run_observed_codex", sessions)
+        self.assertNotIn("--cwo-pool-report", guide)
         self.assertIn("Existing ledgers remain readable", guide)
         self.assertIn("**deprecated**", guide)
         for doc in DOCS:

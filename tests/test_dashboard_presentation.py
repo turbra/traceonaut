@@ -13,7 +13,7 @@ DASHBOARDS = {
 TOKEN_PANELS = {
     "codex-work-overview-beta": {32, 33, 35, 80},
     "codex-all-sessions": {104, 111},
-    "cwo-overview": {104, 111, 303},
+    "cwo-overview": {303},
 }
 
 
@@ -133,7 +133,7 @@ class DashboardPresentationTests(unittest.TestCase):
             self.assertEqual(data["refresh"], "1m" if name == "cwo-overview" else "30s")
 
     def test_cwo_details_merge_projected_fields_into_four_readable_tables(self):
-        data = json.loads((ROOT / "examples/observability/cwo-overview.json").read_text())
+        data = json.loads((ROOT / "tests/fixtures/cwo-controller-queries.json").read_text())
         details = next(p for p in data["panels"] if p["id"] == 90)
         tables = [p for p in details["panels"] if p["type"] == "table"]
         self.assertEqual([p["id"] for p in tables], [5, 8, 10, 11])

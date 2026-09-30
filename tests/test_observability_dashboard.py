@@ -17,11 +17,11 @@ from traceonaut.cwo_session_telemetry import METRICS as CWO_SESSION_METRICS
 from render_observability_dashboard import walk_panels  # noqa: E402
 
 
-DASHBOARD_PATH = ROOT / "examples" / "observability" / "cwo-overview.json"
+DASHBOARD_PATH = ROOT / "tests" / "fixtures" / "cwo-controller-queries.json"
 SCRAPE_PATH = ROOT / "examples" / "observability" / "prometheus-scrape.yaml"
 
 
-class ObservabilityDashboardTests(unittest.TestCase):
+class ControllerQueryCompatibilityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.dashboard = json.loads(DASHBOARD_PATH.read_text(encoding="utf-8"))
@@ -36,82 +36,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
     def expressions(panel: dict) -> list[str]:
         return [target["expr"] for target in panel.get("targets", [])]
 
-    def test_dashboard_is_portable_classic_json_with_one_minute_refresh(self) -> None:
-        self.assertEqual(self.dashboard["uid"], "cwo-dispatch-observability-v1")
-        self.assertEqual(self.dashboard["title"], "CWO Overview")
-        self.assertIn("CWO-associated Codex sessions", self.dashboard["description"])
-        self.assertEqual(self.dashboard["time"], {"from": "now-30d", "to": "now"})
-        for other in (
-            "codex-all-sessions.json",
-            "codex-work-overview-beta.json",
-        ):
-            session = json.loads((DASHBOARD_PATH.parent / other).read_text())
-            self.assertNotEqual(self.dashboard["uid"], session["uid"])
-        self.assertEqual(self.dashboard["refresh"], "1m")
-        self.assertEqual(self.dashboard["schemaVersion"], 39)
-        self.assertIn("1y", self.dashboard["timepicker"]["time_options"])
-        self.assertNotIn("scenes", self.dashboard)
-        self.assertEqual(self.dashboard["__inputs"][0]["name"], "DS_PROMETHEUS")
-        self.assertEqual(self.dashboard["__inputs"][0]["pluginId"], "prometheus")
-        project = self.dashboard["templating"]["list"][0]
-        self.assertEqual(
-            project["query"]["query"],
-            "label_values(cwo_telemetry_component_state, project_id)",
-        )
-        for panel in walk_panels(self.dashboard["panels"]):
-            if panel["type"] in {"row", "text"}:
-                continue
-            self.assertEqual(panel["datasource"]["uid"], "${DS_PROMETHEUS}")
-            self.assertIn(panel["fieldConfig"]["defaults"]["noValue"], {"—"})
-            for target in panel.get("targets", []):
-                self.assertEqual(target["datasource"]["uid"], "${DS_PROMETHEUS}")
 
-    def test_all_panel_queries_use_the_frozen_metric_inventory(self) -> None:
-        metric_pattern = re.compile(r"\b(cwo_[a-z0-9_]+)\b")
-        observed = set()
-        for panel in walk_panels(self.dashboard["panels"]):
-            for expression in self.expressions(panel):
-                metrics = set(metric_pattern.findall(expression))
-                self.assertTrue(metrics, expression)
-                observed.update(metrics)
-                if panel["id"] == 401:
-                    self.assertLessEqual(metrics, set(REVIEW_METRICS), expression)
-                    self.assertIn("$__from / 1000", expression)
-                    self.assertIn("$__to / 1000", expression)
-                    self.assertNotIn("$project", expression)
-                    self.assertNotIn("$dispatch", expression)
-                    continue
-                if panel["id"] >= 300:
-                    native = {"cwo_codex_session_info", "cwo_codex_session_last_event_timestamp_seconds", "cwo_codex_session_usage_tokens", "cwo_codex_session_usage_state", "cwo_codex_session_state"}
-                    self.assertLessEqual(metrics, set(CWO_SESSION_METRICS) | native, expression)
-                    self.assertNotIn("$project", expression)
-                    self.assertNotIn("$dispatch", expression)
-                    if "cwo_codex_session_info" in metrics or "cwo_codex_session_usage_tokens" in metrics:
-                        self.assertIn("cwo_codex_session_cwo_association_timestamp_seconds", expression)
-                        self.assertIn("$__from / 1000", expression)
-                        self.assertIn("$__to / 1000", expression)
-                    continue
-                if panel["id"] >= 200:
-                    self.assertLessEqual(metrics, set(AUDIT_METRICS) | (set(REVIEW_METRICS) if panel["id"] == 207 else set()), expression)
-                    self.assertIn("last_over_time(", expression)
-                    self.assertNotIn("$project", expression)
-                    self.assertNotIn("$dispatch", expression)
-                    if "cwo_audit_event_timestamp_seconds" in metrics:
-                        self.assertIn("max by (event_id, event_type)", expression)
-                        self.assertIn("$__from / 1000", expression)
-                        self.assertIn("$__to / 1000", expression)
-                    continue
-                self.assertLessEqual(metrics, set(METRIC_FAMILIES), expression)
-                self.assertIn("last_over_time(", expression)
-                if panel["id"] == 130:
-                    self.assertIn("[20s]", expression)
-                    self.assertNotIn("[$__range]", expression)
-                else:
-                    self.assertIn("[$__range]", expression)
-        self.assertIn("cwo_dispatch_state", observed)
-        self.assertIn("cwo_dispatch_field_state", observed)
-        self.assertIn("cwo_dispatch_coverage_state", observed)
-        self.assertIn("cwo_telemetry_component_state", observed)
 
     def test_stale_elapsed_value_is_suppressed_by_latest_field_state(self) -> None:
         panel = self.panel("Elapsed allowance and enforced runtime ceiling")
@@ -228,63 +153,7 @@ class ObservabilityDashboardTests(unittest.TestCase):
             self.assertNotIn(unsupported, serialized)
         self.assertNotIn("estimated_completion", serialized)
 
-    def test_default_view_joins_work_and_hides_technical_diagnostics(self) -> None:
-        overview = self.dashboard["panels"]
-        details = next(panel for panel in overview if panel["id"] == 90)
-        self.assertTrue(details["collapsed"])
-        self.assertEqual(len([p for p in details["panels"] if p["type"] == "table"]), 4)
-        self.assertTrue(all(panel["id"] >= 100 or panel["id"] == 3 for panel in overview if panel["type"] != "row"))
-        work = self.panel("Work and results")
-        # Each query returns at most one row per dispatch. Grafana 11.5's
-        # outerTabular mode combines pairs of frames into duplicate rows.
-        self.assertEqual(work["transformations"][0]["options"]["mode"], "outer")
-        shown = work["transformations"][1]["options"]["include"]["names"]
-        for technical_field in ("Time", "job", "instance", "agent_id", "project_id", "__name__"):
-            self.assertNotIn(technical_field, shown)
-        fields = work["transformations"][2]["options"]["renameByName"].values()
-        self.assertEqual(set(fields), {"Task", "Worker", "Status", "Model", "Effort", "Elapsed", "Responses", "Tokens", "Last response"})
-        task_field = next(o for o in work["fieldConfig"]["overrides"] if o["matcher"]["options"] == "Task")
-        links = next(p["value"] for p in task_field["properties"] if p["id"] == "links")
-        self.assertTrue(links[0]["url"].startswith("/d/" + self.dashboard["uid"] + "?"))
-        self.assertIn("var-dispatch=${__value.raw}", links[0]["url"])
-        self.assertIn("from=${__from}&to=${__to}", links[0]["url"])
-        # Coverage has no token_kind label. Filtering it would silently disable
-        # conflict suppression in the summary and comparison views.
-        for panel in walk_panels(overview):
-            for expression in self.expressions(panel):
-                for selector in re.findall(r"cwo_dispatch_coverage_state\{([^}]+)\}", expression):
-                    self.assertNotIn("token_kind", selector)
 
-    def test_overview_uses_current_cwo_sources_before_optional_jobs(self):
-        sections = [p["title"] for p in self.dashboard["panels"] if p["type"] == "row" and not p["collapsed"]]
-        self.assertEqual(sections, ["CWO activity · whole Codex profile",
-                                   "Helper commands and workflow activity"])
-        root = self.dashboard["panels"]
-        visible = [p for p in root if p["type"] != "row"]
-        # A healthy legacy ledger with no recent jobs cannot blank the main view.
-        for panel in visible:
-            self.assertNotIn("cwo_dispatch_", " ".join(self.expressions(panel)))
-        headlines = [p for p in visible if p["gridPos"]["y"] == 3]
-        self.assertEqual({p["id"] for p in headlines}, {301, 302, 303, 304})
-        for panel in headlines:
-            self.assertTrue(any("cwo_codex_" in q for q in self.expressions(panel)))
-        table = next(p for p in root if p["id"] == 305)
-        self.assertLessEqual(table["gridPos"]["y"], 6)
-        self.assertIn("whole-session", next(p for p in root if p["id"] == 303)["description"].lower())
-        optional = next(p for p in root if p["id"] == 150)
-        self.assertTrue(optional["collapsed"])
-        self.assertEqual(optional["title"], "Observed jobs · existing ledger required")
-        self.assertIn("--cwo-sessions", self.dashboard["description"])
-        self.assertIn("--state-dir", self.panel("Dispatch telemetry")["description"])
-        self.assertEqual({p["id"] for p in optional["panels"]}, {3, 101, 102, 103, 104, 110, 111, 112, 121})
-        variables = {v["name"]: v for v in self.dashboard["templating"]["list"]}
-        self.assertEqual(variables["project"]["label"], "Observed project")
-        self.assertEqual(variables["dispatch"]["label"], "Observed task")
-        self.assertFalse(any(p["type"] in ("text", "piechart", "timeseries") for p in walk_panels(self.dashboard["panels"])))
-        for title in ("Completed tasks", "Stopped or failed"):
-            query = self.panel(title)["targets"][0]["expr"]
-            self.assertIn("cwo_dispatch_state", query)
-            self.assertIn("max by (project_id, dispatch_id)", query)
 
 
     def test_tokens_and_responses_keep_provenance_after_deduplication(self):

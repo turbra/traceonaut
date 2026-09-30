@@ -40,6 +40,14 @@
       "targetBlank": false,
       "includeVars": false,
       "keepTime": true
+    },
+    {
+      "title": "Codex TUI · Beta",
+      "type": "link",
+      "url": "/d/traceonaut-codex-tui-beta/codex-tui-beta?${__url_time_range}&${project:queryparam}&${session:queryparam}",
+      "targetBlank": false,
+      "includeVars": false,
+      "keepTime": true
     }
   ],
   "panels": [
@@ -358,7 +366,7 @@
       "id": 58,
       "type": "stat",
       "title": "Commands coverage",
-      "description": "Covered: fresh available source, replay complete, and the selected start is within retained command history. Partial: the values shown are lower bounds because history, parsing or export coverage is incomplete. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Covered means collection is current, available files have been read, and command history covers the selected range. Partial counts include only the records collected so far. Check pending files and skipped records in Diagnostics when coverage is Partial. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -842,7 +850,7 @@
       "id": 6,
       "type": "stat",
       "title": "Waiting",
-      "description": "Observed at range end. The latest turn ended; Waiting does not establish that work is blocked, unhealthy, or complete. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Sessions whose last turn finished and no new turn had started at the selected range end. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -1186,7 +1194,7 @@
       "id": 32,
       "type": "stat",
       "title": "Total tokens",
-      "description": "Available response-record history for selected work. Conflicted and runtime-only records are excluded; missing data remains Not recorded. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Input plus output tokens recorded for the selected sessions across their saved history. Missing or conflicting records can leave this total incomplete; check History coverage in Usage. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -1330,7 +1338,7 @@
       "id": 21,
       "type": "timeseries",
       "title": "Working sessions over time",
-      "description": "Observed working-state samples for selected work. History starts with collector retention; source or scan freshness failures remain gaps. This is not provider compute time. Horizontal axis: observation time in the dashboard timezone. No interpolation across missing collection. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Working sessions recorded over time, in the dashboard timezone. Chart history starts when Prometheus first collects samples. Gaps mean collection was unavailable or stale; check the status strip and Diagnostics. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -2352,7 +2360,7 @@
           "id": 39,
           "type": "stat",
           "title": "History coverage",
-          "description": "Recorded sources means all selected sessions report complete available response records, not all lifetime history. Partial / missing includes partial, unknown, runtime-only, conflicted or absent usage. Expand diagnostics for counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "description": "Availability of token records for the selected sessions. Recorded sources means the available records were read successfully. Partial / missing means some sessions have missing or unusable records. Expand Diagnostics to identify those sessions. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -2441,7 +2449,7 @@
           "id": 80,
           "type": "bargauge",
           "title": "Recorded tokens by work",
-          "description": "Available observed session history for the selected work, including before the selected interval; older records may be absent. Deduplicated response-record tokens from recorded or partial sources only. Missing values stay missing; measured zero stays zero. Values are ranked descending on one zero-based scale. Select a bar to focus its work. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "description": "The ten selected sessions with the most recorded tokens, including records before the selected range. Select a bar to focus that session. Older missing records can leave totals incomplete. Token scale: K = thousand; Mil = million; Bil = billion; Tri = trillion. Tables show exact counts. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -2578,7 +2586,7 @@
           "id": 81,
           "type": "bargauge",
           "title": "Observed turn time by work",
-          "description": "Available observed session history for the selected work, including before the selected interval; older records may be absent. Sum of supplied completed-turn durations. This is not elapsed session duration, active compute, ongoing elapsed time or ETA. Missing values stay missing; measured zero stays zero. Values are ranked descending on one zero-based scale. Select a bar to focus its work. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "description": "The ten selected sessions with the most recorded turn time. Sums reported turn durations across saved session history; time between turns is excluded. Select a bar to focus that session. A dash means duration records are missing. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -2715,7 +2723,7 @@
           "id": 42,
           "type": "table",
           "title": "Recorded usage by work",
-          "description": "Available recorded history by selected work. Blank numeric cells mean Not recorded; a measured zero remains 0. Cached input and reasoning output are non-additive subsets. Recorded turn time is available observed completed-turn wall time, not active compute, ongoing elapsed time, or ETA. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "description": "Recorded usage for each selected session. Cached input is included in input tokens, and reasoning output is included in output tokens. Turn time sums reported turn durations. Missing records leave blank cells; measured zero stays zero. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -3075,7 +3083,7 @@
                   "Value #H": "Coverage",
                   "Value #I": "Recorded turn time",
                   "Value #J": "Completed turns",
-                  "Value #K": "Failed turns"
+                  "Value #K": "Stopped / failed turns"
                 }
               }
             }
@@ -3358,7 +3366,7 @@
           "id": 104,
           "type": "stat",
           "title": "Session export retention · all projects",
-          "description": "Per-session export policy at the selected range end. Indexed history and display names are not deleted. Inactivity uses last observed session event, falling back to creation; unknown activity is not age-expired. Most recent sessions win the cap, with session ID breaking ties. Zero retention disables age expiry. Command and compaction observations have their own independent limits. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "description": "Sessions exported at the selected range end and the configured inactivity window and session limit. Older stored samples remain available in Prometheus. To include more sessions, check --session-retention-seconds and --session-export-cap. [Retention and Limits](https://turbra.github.io/traceonaut/reference/retention-and-limits/). [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"

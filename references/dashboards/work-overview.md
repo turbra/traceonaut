@@ -14,7 +14,7 @@ Work Overview is the recommended starting view. Follow [Quick Start](../getting-
 
 ## Use the Dashboard
 
-Choose a **Project**, **Work**, and time range. Selecting a work title focuses that session. Choose **All** in the Work selector to clear it. Project and Work are independent filters.
+Choose a **Project**, **Work**, and time range. The default range is 30 minutes and refresh is 30 seconds. Selecting a work title focuses that session. Choose **All** in the Work selector to clear it. Project and Work are independent filters.
 
 - The top strip shows collection health, command coverage and optional account allowance.
 - Headlines and the working-sessions chart summarize activity.

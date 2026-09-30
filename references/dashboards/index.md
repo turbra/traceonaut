@@ -1,7 +1,7 @@
 ---
 slug: /dashboards
 title: Choosing a Dashboard
-description: Compare three standard dashboards and the experimental TUI-style beta.
+description: Choose a dashboard for Codex sessions or CWO activity.
 ---
 
 # Choosing a Dashboard
@@ -10,8 +10,8 @@ description: Compare three standard dashboards and the experimental TUI-style be
 | --- | --- | --- |
 | [Work Overview](work-overview.md) | Daily session and subagent activity, usage and commands. Start here. | Codex session files |
 | [All Sessions](all-sessions.md) | A compact, session-centered alternative. | Codex session files |
-| [CWO Overview](cwo.md) | CWO sessions, agents, usage, turn outcomes and workflow activity. | Codex records; optional workflow logs and contractor results |
-| [Codex TUI · Beta](tui-beta.md) | An experimental six-section layout inspired by the Codex terminal dashboard. | Existing Codex session metrics |
+| [CWO Overview](cwo.md) | CWO sessions, agents, usage, turn outcomes and workflow activity. | Codex records; optional workflow logs and custom review-adapter results |
+| [Codex TUI · Beta](tui-beta.md) | A minimal Grafana version of the Codex CLI Usage screen in its Dashboard view. | Existing Codex session metrics |
 
 Each view has a separate UID, so they can coexist. The [Dashboard Reference](../reference/dashboards.md) lists template and renderer paths.
 

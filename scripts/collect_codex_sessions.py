@@ -47,7 +47,7 @@ def main(argv=None):
     parser.add_argument("--codex-home", type=Path, required=True)
     parser.add_argument("--session-state-dir", type=Path, required=True)
     parser.add_argument("--snapshot-file", type=Path, required=True)
-    parser.add_argument("--state-dir", type=Path, help="optional existing owned-dispatch ledger, read-only")
+    parser.add_argument("--state-dir", type=Path, help="optional directory containing an existing controller task database; read-only")
     parser.add_argument("--cwo-sessions", action="store_true",
                         help="associate CWO skill blocks and direct helper commands across the selected Codex profile")
     parser.add_argument("--cwo-audit-file", type=Path, action="append", default=[],
@@ -55,19 +55,19 @@ def main(argv=None):
     parser.add_argument("--cwo-audit-dir", type=Path, action="append", default=[],
                         help="optional audit directory; recursively read audit.jsonl and *-audit.jsonl files")
     parser.add_argument("--cwo-review-dir", type=Path, action="append", default=[],
-                        help="optional directory of paired CWO CLI launch/result artifacts and audit.jsonl; read-only")
+                        help="optional custom-adapter directory of launch receipts, Claude results and audit.jsonl; standard CWO does not create these pairs")
     parser.add_argument("--credential-file", type=Path)
     parser.add_argument("--host", default="127.0.0.1",
                         help="numeric bind IP (default: 127.0.0.1); use a specific LAN/VPN IP for remote scraping; HTTP only")
     parser.add_argument("--port", type=int, default=9464)
     parser.add_argument("--poll-seconds", type=float, default=5)
     parser.add_argument("--session-retention-seconds", type=int, default=SESSION_RETENTION_SECONDS,
-                        help="per-session exposition inactivity window; 0 disables age expiry")
+                        help="stop exporting sessions after this many inactive seconds; 0 disables age expiry")
     parser.add_argument("--session-export-cap", type=int, default=DEFAULT_SESSION_EXPORT_CAP,
                         help="maximum exposed session groups; indexed history is not deleted")
     parser.add_argument("--account-snapshot-file", type=Path,
                         help="optional private numeric snapshot from collect_codex_account.py")
-    parser.add_argument("--once", action="store_true", help="collect one bounded pass without a listener")
+    parser.add_argument("--once", action="store_true", help="scan once without starting the metrics server")
     args = parser.parse_args(argv)
     if not 1 <= args.poll_seconds <= 60:
         parser.error("poll interval must be between 1 and 60 seconds")

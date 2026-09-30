@@ -120,7 +120,7 @@ your Prometheus datasource. The dashboard opens as **Work Overview**.
 | [Work Overview](https://turbra.github.io/traceonaut/dashboards/work-overview/) | Session activity, command outcomes, token totals and collector health. Start here. |
 | [All Sessions](https://turbra.github.io/traceonaut/dashboards/all-sessions/) | A compact session inventory and usage summary. |
 | [CWO Overview](https://turbra.github.io/traceonaut/dashboards/cwo/) | CWO sessions, agents, usage and workflow activity from [CWO](https://github.com/gprocunier/complex-work-orchestration), a Codex skill for coordinating agents. |
-| [Codex TUI · Beta](https://turbra.github.io/traceonaut/dashboards/tui-beta/) | Experimental six-section terminal-style layout using existing session metrics. |
+| [Codex TUI · Beta](https://turbra.github.io/traceonaut/dashboards/tui-beta/) | Minimal Grafana version of the Codex CLI Usage screen in Dashboard view. |
 
 ## Documentation
 

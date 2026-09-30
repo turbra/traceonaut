@@ -12,7 +12,7 @@
   "annotations": {
     "list": []
   },
-  "description": "CWO-associated Codex sessions and agents, recorded tokens, turn outcomes and turn time. External contractor reviews and workflow events use their existing CWO files.",
+  "description": "Codex sessions using CWO: agents, recorded tokens, turn outcomes and turn time. Optional CWO audit logs add workflow activity; custom review files add external contractor reviews.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -41,6 +41,14 @@
       "targetBlank": false,
       "includeVars": false,
       "keepTime": true
+    },
+    {
+      "title": "Codex TUI · Beta",
+      "type": "link",
+      "url": "/d/traceonaut-codex-tui-beta/codex-tui-beta?${__url_time_range}&${project:queryparam}&${session:queryparam}",
+      "targetBlank": false,
+      "includeVars": false,
+      "keepTime": true
     }
   ],
   "liveNow": false,
@@ -49,7 +57,7 @@
       "id": 309,
       "type": "stat",
       "title": "Session scan",
-      "description": "Profile-wide health; Project and Session filters do not apply. Whole-profile session source scan age and coverage. Partial means files are pending or gaps/errors are present. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Profile-wide collection: age of the last CWO session scan and whether available files were fully read. Partial means files are pending or records could not be read; check the collector's pending files and errors. Project and Session filters leave these values unchanged. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -101,7 +109,7 @@
                         "color": "yellow"
                       },
                       "1": {
-                        "text": "Scanned",
+                        "text": "Complete",
                         "color": "#D8D9DA"
                       }
                     }
@@ -165,7 +173,7 @@
       "id": 207,
       "type": "stat",
       "title": "Workflow scans",
-      "description": "Profile-wide health; Project and Session filters do not apply. Configured workflow audit scan age and coverage; CLI review coverage when enabled. Read means configured sources only. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Profile-wide collection: age and completeness of configured audit logs and custom review files. Complete means those files were fully read; use the age to check freshness. If Partial persists, check the source paths, permissions and collector errors. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -217,7 +225,7 @@
                         "color": "yellow"
                       },
                       "1": {
-                        "text": "Read",
+                        "text": "Complete",
                         "color": "#D8D9DA"
                       }
                     }
@@ -578,7 +586,7 @@
       "id": 305,
       "type": "table",
       "title": "CWO-associated session activity",
-      "description": "Sessions and subagents with CWO activity in the selected range. Tokens, completed/failed turns and turn time cover their recorded session history. Turn time is the sum of reported turn durations, not assignment wall time; a completed turn does not establish that an assignment succeeded. Model / effort shows the latest selected settings. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Sessions and subagents using CWO, active in the selected range. Tokens and turn counts cover their recorded session history. Stopped / failed turns includes aborted turns. Turn time sums reported turn durations, excluding time between turns. Last seen measures age at the selected range end. Model / effort shows the latest selected settings. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -712,7 +720,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "dateTimeFromNow"
+                "value": "s"
               }
             ]
           },
@@ -882,7 +890,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "1000 * (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"})))",
+          "expr": "(($__to / 1000 - max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"})) and on (project_id, session_id) (((max by (project_id, session_id) (cwo_codex_session_cwo_association_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) <= ($__to / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) >= ($__from / 1000)) and on (project_id, session_id) (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) <= ($__to / 1000))) and on (project_id, session_id) max by (project_id, session_id) (cwo_codex_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"})))",
           "instant": true,
           "range": false,
           "format": "table",
@@ -980,7 +988,7 @@
               "Value #D": "Last seen",
               "project": "Project",
               "Value #E": "Turns done",
-              "Value #F": "Turns failed",
+              "Value #F": "Turns stopped / failed",
               "Value #G": "Turn time"
             }
           }
@@ -992,7 +1000,7 @@
         "sortBy": [
           {
             "displayName": "Last seen",
-            "desc": true
+            "desc": false
           }
         ],
         "footer": {
@@ -1085,7 +1093,7 @@
       "id": 205,
       "type": "bargauge",
       "title": "Workflow events by type \u00b7 all projects",
-      "description": "Unique source-time events by type across all configured audit logs. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Unique audit events by type across all configured logs in the selected range. Unrecognized event types are grouped as Other. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -1142,54 +1150,6 @@
               {
                 "id": "displayName",
                 "value": "Reviews evaluated"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "review_cli_started"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Review CLI started"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "review_cli_finished"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Review CLI finished"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "astra_adjudication_received"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Adjudication received"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "prompt_coached"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Prompts coached"
               }
             ]
           },
@@ -1285,7 +1245,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "topk(10, count by (event_type) (((max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) >= ($__from / 1000)) and (max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds[$__range])) <= ($__to / 1000)))))",
+          "expr": "topk(10, count by (event_type) (((label_replace(max by (event_id) (last_over_time(cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range])), \"event_type\", \"other\", \"event_type\", \".*\") or max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range]))) >= ($__from / 1000)) and ((label_replace(max by (event_id) (last_over_time(cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range])), \"event_type\", \"other\", \"event_type\", \".*\") or max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range]))) <= ($__to / 1000))))",
           "instant": true,
           "range": false,
           "format": "time_series",
@@ -1297,7 +1257,7 @@
       "id": 401,
       "type": "table",
       "title": "External contractor reviews",
-      "description": "External contractor review attempts collected from CWO records. Shows the launching Codex session, whether each attempt completed or failed, requested and reported models, requested effort, token usage and duration. Includes attempts launched during the selected time range. Project and Session filter reviews through their proven launching session. Reviews without a proven source session appear only when both filters are All. Currently supports retained Claude review records. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Claude review attempts read by the custom review adapter, selected by launch time. Shows source session, result, requested and reported model, requested effort, tokens and duration. Project and Session filters use the linked source session. Choose All in both filters to include unlinked reviews; check Attribution if a source session is missing. [Custom Review Adapter](https://turbra.github.io/traceonaut/integrations/custom-review-adapter/). [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"

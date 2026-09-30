@@ -41,6 +41,14 @@
       "targetBlank": false,
       "includeVars": false,
       "keepTime": true
+    },
+    {
+      "title": "Codex TUI · Beta",
+      "type": "link",
+      "url": "/d/traceonaut-codex-tui-beta/codex-tui-beta?${__url_time_range}&${project:queryparam}&${session:queryparam}",
+      "targetBlank": false,
+      "includeVars": false,
+      "keepTime": true
     }
   ],
   "liveNow": true,
@@ -360,7 +368,7 @@
       "id": 184,
       "type": "stat",
       "title": "Commands coverage",
-      "description": "Covered: fresh available source, replay complete, and the selected start is within retained command history. Partial: the values shown are lower bounds because history, parsing or export coverage is incomplete. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Covered means collection is current, available files have been read, and command history covers the selected range. Partial counts include only the records collected so far. Check pending files and skipped records in Diagnostics when coverage is Partial. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -752,7 +760,7 @@
       "id": 110,
       "type": "table",
       "title": "Sessions and latest activity",
-      "description": "The range includes a session when its latest observed event is inside it. Recorded tokens, responses, turns, and observed turn time cover available observed session history and may omit older records. Model and effort are the latest selected settings, not per-model lifetime attribution. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Sessions active in the selected range. Tokens, responses, turns and turn time cover their available recorded history. Completed counts finished turns; Stopped counts failed or aborted turns. Last seen is the age of the latest activity at the selected range end. Model / effort shows the latest selected settings. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -890,7 +898,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "dateTimeFromNow"
+                "value": "s"
               }
             ]
           },
@@ -1116,7 +1124,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"})) * 1000) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "expr": "($__to / 1000 - max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (cwo_codex_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
           "instant": true,
           "range": false,
           "format": "table",
@@ -1179,7 +1187,7 @@
               "Value #H": "Turn time",
               "kind": "Kind",
               "Value #F": "Completed",
-              "Value #G": "Failed"
+              "Value #G": "Stopped"
             }
           }
         }
@@ -1190,7 +1198,7 @@
         "sortBy": [
           {
             "displayName": "Last seen",
-            "desc": true
+            "desc": false
           }
         ],
         "footer": {

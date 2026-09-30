@@ -60,8 +60,11 @@ class CurrentCwoDashboardTests(unittest.TestCase):
             self.assertIn("$__to / 1000", queries[ref])
             self.assertNotIn("vector(0)", queries[ref])
         titles = set(table["transformations"][-1]["options"]["renameByName"].values())
-        self.assertTrue({"Turns done", "Turns failed", "Turn time", "Tokens", "Model / effort"} <= titles)
-        self.assertIn("not assignment wall time", table["description"])
+        self.assertTrue({"Turns done", "Turns stopped / failed", "Turn time", "Tokens", "Model / effort"} <= titles)
+        last_seen = queries["D"]
+        self.assertIn("$__to / 1000 -", last_seen)
+        self.assertIn("cwo_codex_session_last_event_timestamp_seconds", last_seen)
+        self.assertNotIn("1000 *", last_seen)
         widths = [v["value"] for o in table["fieldConfig"]["overrides"] for v in o["properties"] if v["id"] == "custom.width"]
         self.assertLessEqual(sum(widths) + 70 * (len(titles) - len(widths)), 1700)
 
@@ -70,6 +73,23 @@ class CurrentCwoDashboardTests(unittest.TestCase):
         self.assertEqual([v["name"] for v in rendered["templating"]["list"]], ["project", "session"])
         self.assertNotIn("${DS_PROMETHEUS}", json.dumps(rendered))
         self.assertNotIn("__inputs", rendered)
+
+    def test_workflow_chart_normalizes_unknown_event_types(self):
+        chart = self.panels[205]
+        query = chart["targets"][0]["expr"]
+        for event in ("packet_built", "dispatch_prepared", "return_evaluated",
+                      "native_pool_rendered", "native_pool_status", "native_pool_terminal",
+                      "native_pool_interrupt_requested"):
+            self.assertIn(event, query)
+        for custom in ("prompt_coached", "review_cli_started", "review_cli_finished",
+                       "astra_adjudication_received"):
+            self.assertNotIn(custom, json.dumps(chart))
+        self.assertIn('"other"', query)
+        self.assertIn('"event_type"', query)
+        self.assertIn('event_type!~', query)
+        self.assertIn('event_type=~', query)
+        self.assertIn('label_replace(max by (event_id) (last_over_time', query)
+        self.assertIn('or max by (event_id, event_type)', query)
 
     def test_filters_cover_session_helper_and_review_panels(self):
         for identity in (301, 302, 303, 304, 305, 310, 401):

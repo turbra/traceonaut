@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 import copy
 from datetime import datetime, timezone
+import errno
 import json
 import os
 from pathlib import Path
 import re
 import signal
 import stat
+import sys
 import tempfile
 import threading
 from typing import Any, Iterator
@@ -138,6 +140,8 @@ def _read_snapshot_bytes(path: Path) -> bytes:
     for parent in reversed(path.parents):
         try:
             metadata = parent.lstat()
+        except FileNotFoundError:
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path) from None
         except OSError:
             raise ValueError("snapshot path invalid") from None
         if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
@@ -163,6 +167,8 @@ def _read_snapshot_bytes(path: Path) -> bytes:
         flags |= os.O_NOFOLLOW
     try:
         descriptor = os.open(path, flags)
+    except FileNotFoundError:
+        raise
     except OSError:
         raise ValueError("snapshot unreadable") from None
     try:
@@ -269,6 +275,7 @@ def render_dashboard(
 
     mappings = {
         "Session": _mapping(sessions, "Session name unavailable"),
+        "Chat": _mapping(sessions, "Chat name unavailable"),
         "Source session": _mapping(sessions, "Session name unavailable"),
         "Project": _mapping(projects, "Project name unavailable"),
         "Agent": _mapping(agents, "Agent name unavailable"),
@@ -278,7 +285,7 @@ def render_dashboard(
             _named_variable(variable, projects)
         elif variable.get("name") == "session":
             _named_variable(variable, sessions)
-            variable["label"] = "Session"
+            variable["label"] = variable.get("label") or "Session"
     for panel in walk_panels(dashboard.get("panels", [])):
         if panel.get("type") == "bargauge":
             panel.setdefault("fieldConfig", {}).setdefault("overrides", []).extend(
@@ -418,6 +425,13 @@ def main(argv: list[str] | None = None) -> int:
                 )
             if args.watch_seconds is None or stop.wait(args.watch_seconds):
                 break
+    except FileNotFoundError as error:
+        if (error.filename is not None
+                and Path(os.path.abspath(error.filename)) == Path(os.path.abspath(args.snapshot_file))):
+            print(f"Dashboard render unavailable: snapshot file not found: {args.snapshot_file}", file=sys.stderr)
+        else:
+            print("Dashboard render unavailable: check template, protected snapshot, and output path.")
+        return 1
     except (json.JSONDecodeError, OSError, ValueError, KeyError, TypeError):
         print("Dashboard render unavailable: check template, protected snapshot, and output path.")
         return 1

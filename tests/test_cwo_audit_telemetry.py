@@ -65,6 +65,23 @@ class AuditTests(unittest.TestCase):
             self.assertEqual(parser.call_count, 2)
             self.assertEqual(snapshot["events"][0][2], NOW - 11)
 
+    def test_custom_workflow_events_keep_counts_without_public_names(self):
+        custom = ("prompt_coached", "review_cli_started", "review_cli_finished",
+                  "astra_adjudication_received")
+        self.assertTrue(audit.EVENT_TYPES.isdisjoint(custom))
+        records = b"".join(record(kind) for kind in (*sorted(audit.EVENT_TYPES), *custom))
+        self.path.write_bytes(records)
+        snapshot = self.collector.scan(now=NOW)
+        self.assertEqual(snapshot["collection_complete"], 1)
+        self.assertEqual(len(snapshot["events"]), len(audit.EVENT_TYPES) + len(custom))
+        self.assertEqual(sum(kind == "other" for _, kind, _ in snapshot["events"]), 4)
+        payload = audit.render_audit_metrics(snapshot).decode()
+        for kind in custom:
+            self.assertNotIn(kind, payload)
+        for kind in audit.EVENT_TYPES:
+            self.assertIn('event_type="' + kind + '"', payload)
+        self.assertEqual(self.path.read_bytes(), records)
+
     def test_append_rotation_truncation_and_removal(self):
         first = self.collector.scan(now=NOW)
         with self.path.open("ab") as stream:

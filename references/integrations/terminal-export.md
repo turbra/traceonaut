@@ -10,7 +10,7 @@ Completed Dispatch Export is an optional command-line utility that saves finishe
 
 Use it to analyse recorded task outcomes, token usage and execution limits outside Grafana. **It is not a dashboard or a Grafana panel.**
 
-This utility reads an existing `observability.sqlite3` database created by a [controller observation integration](cwo.md#existing-controller-metrics). It does not read ordinary Codex session history. If you only use Traceonaut's session collector and dashboards, you can skip this page.
+This utility reads an existing `observability.sqlite3` database created by a [controller observation integration](controller-metrics.md). It does not read ordinary Codex session history. If you only use Traceonaut's session collector and dashboards, you can skip this page.
 
 ## Export Task Records
 

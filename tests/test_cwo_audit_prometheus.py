@@ -38,6 +38,16 @@ class AuditQueryTests(unittest.TestCase):
             fixtures.append({"input_series": [series("cwo_audit_collection_complete", coverage)],
                              "promql_expr_test": checks({}, coverage)})
         fixtures.extend([
+            {"input_series": sources + [
+                event("custom-1", "prompt_coached", 5400),
+                event("custom-2", "review_cli_started", 5400),
+                event("custom-3", "review_cli_finished", 5400),
+                event("custom-4", "astra_adjudication_received", 5400),
+                # The same event can have its former label in stored history
+                # and its normalized label after the collector is upgraded.
+                event("custom-4", "other", 5400),
+                series("cwo_audit_collection_complete", 1),
+            ], "promql_expr_test": checks({"packet_built": 2, "dispatch_prepared": 1, "other": 4}, 1)},
             {"input_series": [], "promql_expr_test": checks({}, None)},
             {"input_series": [series("cwo_audit_collection_complete", 1, 118)], "promql_expr_test": checks({}, None)},
             {"input_series": [series('cwo_audit_collection_complete{instance="one"}', 1), series('cwo_audit_collection_complete{instance="two"}', 0)],

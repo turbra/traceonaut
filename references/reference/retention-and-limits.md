@@ -38,24 +38,25 @@ The dashboard shows the earliest fully covered command/compaction interval. Choo
 
 The optional audit input exports the newest **2,000 unique events from the last 30 days**, across all configured files. One event produces one timestamp series. Copies with the same content hash count once. Source files remain unchanged; the collector uses an in-memory projection rather than another database.
 
-Each scan reads at most **256 files and 32 MiB**, visits at most **8,192 directory entries** and descends **16 levels** below each configured directory. Lines over **256 KiB**, malformed records and incomplete final lines are skipped. An incomplete line is retried on the next scan. Collection health reports gaps and limits; counts under partial coverage are lower bounds.
-
 Workflow queries use the event's original timestamp, so importing yesterday's log does not count as activity today. Prometheus history still starts with the first scrape: choosing an end time before that scrape cannot show newly imported events. Deleting or moving source logs stops their current export; already scraped samples remain available under Prometheus retention.
 
 Audit timestamps identify recorded events. They do not establish job completion, worker capacity or token usage.
+See [audit parsing and scan bounds](limits-and-internals.md#cwo-workflow-audit-inputs).
 
 ## CWO-Associated Sessions
 
 Association uses the session collector's export window and cap. Older parents can be read to establish a selected child's context. The optional feature has independent cursors and never resets usage accounting.
 
-Each pass reads at most **64 MiB**, up to **32 MiB per file**, from at most **4,096 selected rollout files**. A candidate record over **8 MiB** is a visible source gap. CWO helper detail retains at most **2,000 command records within 30 days**. Export-cap omissions remain visible until the omitted records age out. Initial backfill can take several scans.
+CWO helper detail retains at most **2,000 command records within 30 days**. Export-cap omissions remain visible until the omitted records age out. Initial backfill can take several scans.
 
 The dashboard selects sessions active in the chosen range that are exported at its end. Token totals cover those sessions' recorded history, including usage before CWO association. Choose a past end time with stored samples to inspect expired sessions.
+See [session association parsing and scan bounds](limits-and-internals.md#cwo-session-association).
 
 ## CWO CLI Review Results
 
-The optional paired-artifact reader exports at most **256 collected results launched within 30 days**. It shares the audit reader's directory-entry and depth bounds, reads at most **32 MiB per scan**, and limits each file to **2 MiB**. It reads owned regular files without following symlinks. Source files stay unchanged.
+The optional paired-artifact reader exports at most **256 collected results launched within 30 days**. Source files stay unchanged.
 
 Result identity comes from the CLI session and result UUIDs. Launch times select the interval; file modification times never substitute for missing source timestamps. Repeated scans and copied artifacts preserve one result. Prometheus history begins at the first scrape, including results collected from older files.
 
-Optional session attribution scans the exported session histories separately, up to **64 MiB per pass**, **32 MiB per file** and **4,096 files**. Its private index retains at most **4,096 launch evidence records** and **4,096 interactive launch records**. Incomplete scans, unreadable sources and bounds appear as Pending attribution. Review counts and usage remain visible. Expired or unsupported session sources leave reviews Unlinked; expanding the session export window can make older source histories eligible again.
+Incomplete session scans or unreadable sources can leave attribution Pending while review counts and usage remain visible. Expired or unsupported session sources leave reviews Unlinked; expanding the session export window can make older source histories eligible again.
+See [review artifact parsing and scan bounds](limits-and-internals.md#cwo-cli-review-artifacts).

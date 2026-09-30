@@ -234,9 +234,12 @@ class OnboardingTests(unittest.TestCase):
         result = subprocess.run(self.command() + ["--once"], cwd=ROOT,
                                 capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.presentation / "sessions-snapshot.json").exists())
         for guide, marker, output, uid in (
             ("getting-started.mdx", "render-beta", "work-overview.json", "cwo-codex-beta"),
             ("dashboards/all-sessions.md", "render-stable", "all-sessions.json", "cwo-supervisor-observability-v1"),
+            ("dashboards/cwo.md", "render-cwo", "dashboards/cwo-overview.json", "cwo-dispatch-observability-v1"),
+            ("dashboards/tui-beta.md", "render-tui", "codex-tui-beta.json", "traceonaut-codex-tui-beta"),
         ):
             with self.subTest(dashboard=output):
                 result = subprocess.run(["bash", "-eu", "-c", documented_block(marker, guide)],
@@ -250,6 +253,33 @@ class OnboardingTests(unittest.TestCase):
                 self.assertIn(self.sid, work["query"])
                 self.assertIn("Synthetic work", json.dumps(dashboard))
         self.assert_source_unchanged()
+
+    def test_missing_snapshot_errors_name_exact_path_without_output(self):
+        cases = (
+            ("render_observability_dashboard.py", "--session-snapshot-file",
+             "examples/observability/cwo-overview.json"),
+            ("render_codex_sessions_dashboard.py", "--snapshot-file",
+             "examples/observability/codex-all-sessions.json"),
+            ("render_codex_beta_dashboard.py", "--snapshot-file",
+             "examples/observability/codex-work-overview-beta.json"),
+        )
+        for renderer, snapshot_option, template in cases:
+            for missing_parent in (False, True):
+                with self.subTest(renderer=renderer, missing_parent=missing_parent), \
+                        tempfile.TemporaryDirectory() as folder:
+                    parent = Path(folder) / "missing-parent" if missing_parent else Path(folder)
+                    missing = parent / "missing-snapshot.json"
+                    output = Path(folder) / "dashboard.json"
+                    result = subprocess.run(
+                        [sys.executable, str(ROOT / "scripts" / renderer),
+                         "--template", str(ROOT / template), snapshot_option, str(missing),
+                         "--output", str(output)],
+                        cwd=ROOT, capture_output=True, text=True, timeout=10,
+                    )
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertEqual(result.stdout, "")
+                    self.assertIn(str(missing), result.stderr)
+                    self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":

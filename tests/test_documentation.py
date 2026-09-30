@@ -37,6 +37,7 @@ def heading_ids(markdown):
     anchors = set()
     counts = {}
     prose = re.sub(r"^```[^\n]*\n.*?^```\s*$", "", markdown, flags=re.M | re.S)
+    anchors.update(re.findall(r'<(?:a|[^>]+)\b[^>]*\bid=["\']([^"\']+)["\']', prose))
     for heading in re.findall(r"^#{1,6}\s+(.+?)\s*$", prose, re.M):
         slug = re.sub(r"[^\w -]", "", heading.lower()).replace(" ", "-")
         count = counts.get(slug, 0)
@@ -146,23 +147,59 @@ class DocumentationTests(unittest.TestCase):
                 for value in (data["uid"], data["title"], path.name):
                     self.assertIn(value, inventory)
 
-    def test_cwo_setup_separates_existing_sources_from_legacy_launcher(self):
+    def test_cwo_setup_separates_sources_and_advanced_interfaces(self):
         guide = (ROOT / "references/integrations/cwo.md").read_text()
+        controller = (ROOT / "references/integrations/controller-metrics.md").read_text()
+        adapter = (ROOT / "references/integrations/custom-review-adapter.md").read_text()
+        scripts = (ROOT / "references/reference/scripts.md").read_text()
         sessions = guide.split("## Collect CWO Sessions\n", 1)[1].split("\n## ", 1)[0]
         self.assertIn("--cwo-sessions", sessions)
-        self.assertIn("with your existing Codex installation", sessions)
+        self.assertIn("whole configured Codex profile", sessions)
         self.assertIn("It does not launch agents", guide)
         self.assertNotIn("--state-dir", sessions)
         self.assertNotIn("run_observed_codex", sessions)
-        self.assertNotIn("--cwo-pool-report", guide)
-        self.assertIn("Existing ledgers remain readable", guide)
-        self.assertIn("**deprecated**", guide)
+        self.assertIn("<CWO installation>/.orchestration-audit/audit.jsonl", guide)
+        self.assertIn("CWO_AUDIT_FILE", guide)
+        self.assertIn("CWO Overview", guide)
+        self.assertNotIn("--state-dir", guide)
+        self.assertIn("cwo_dispatch_*", controller)
+        self.assertNotIn("run_observed_codex.py", controller)
+        self.assertIn("Deprecated", scripts)
+        self.assertIn("--state-dir", controller)
+        self.assertIn("not built-in CWO artifacts", guide)
+        self.assertIn("not built-in CWO files or behavior", adapter)
+        self.assertIn("runner.py", adapter)
+        self.assertIn("at least one of `--session-snapshot-file` or `--presentation-file`", scripts)
+        custom_events = (
+            "prompt_coached", "review_cli_started", "review_cli_finished",
+            "astra_adjudication_received",
+        )
+        for event in custom_events:
+            self.assertIn(event, adapter)
+            for doc in DOCS:
+                if doc != ROOT / "references/integrations/custom-review-adapter.md":
+                    self.assertNotIn(event, doc.read_text(), str(doc))
+        self.assertIn("Other audit events", adapter)
         for doc in DOCS:
             with self.subTest(doc=doc):
                 text = doc.read_text()
                 self.assertNotIn("0.154.0", text)
                 self.assertNotIn("python3 scripts/run_observed_codex.py", text)
                 self.assertNotIn("observed-job-runner.md", text)
+
+    def test_dashboard_renderer_and_bundle_mapping_is_documented(self):
+        scripts = (ROOT / "references/reference/scripts.md").read_text()
+        rows = {
+            "Work Overview": ("cwo-codex-beta", "render_codex_beta_dashboard.py", "beta"),
+            "All Sessions": ("cwo-supervisor-observability-v1", "render_codex_sessions_dashboard.py", "stable"),
+            "CWO Overview": ("cwo-dispatch-observability-v1", "render_observability_dashboard.py", "dispatch"),
+            "Codex TUI · Beta": ("traceonaut-codex-tui-beta", "render_codex_sessions_dashboard.py", "tui-beta"),
+        }
+        for title, values in rows.items():
+            row = next(line for line in scripts.splitlines()
+                       if line.startswith(f"| {title} |"))
+            for value in values:
+                self.assertIn(f"`{value}`", row)
 
 
 if __name__ == "__main__":

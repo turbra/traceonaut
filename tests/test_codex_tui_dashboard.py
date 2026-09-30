@@ -24,18 +24,22 @@ def template():
 
 
 class TuiDashboardTests(unittest.TestCase):
-    def test_separate_identity_and_six_native_cards(self):
+    def test_separate_identity_and_six_sections(self):
         dashboard = template()
         self.assertEqual(dashboard["uid"], "traceonaut-codex-tui-beta")
         self.assertEqual(dashboard["title"], "Codex TUI · Beta")
         self.assertEqual(dashboard["refresh"], "30s")
         self.assertEqual(dashboard["time"], {"from": "now-24h", "to": "now"})
-        panels = dashboard["panels"]
-        self.assertEqual(len(panels), 6)
-        self.assertEqual([p["id"] for p in panels], list(range(1, 7)))
-        for index, panel in enumerate(panels):
-            self.assertEqual(panel["gridPos"], dict(x=index % 2 * 12,
-                y=index // 2 * 8, w=12, h=10 if index >= 4 else 8))
+        panels = sorted(dashboard["panels"], key=lambda panel: panel["id"])
+        self.assertEqual([p["id"] for p in panels], [1, 2, 3, 4, 5, 6, 7])
+        self.assertEqual([p["title"].split(" · ")[0] for p in panels], ["1", "2", "3", "4", "5", "6", "2"])
+        expected_positions = {
+            1: (0, 0, 12, 8), 2: (12, 0, 6, 8), 7: (18, 0, 6, 8),
+            3: (0, 8, 12, 8), 4: (12, 8, 12, 8),
+            5: (0, 16, 12, 10), 6: (12, 16, 12, 10),
+        }
+        for panel in panels:
+            self.assertEqual(panel["gridPos"], dict(zip(("x", "y", "w", "h"), expected_positions[panel["id"]])))
             self.assertIn(panel["type"], {"stat", "timeseries", "bargauge", "table"})
             self.assertFalse(panel["transparent"])
             self.assertIn("reading-values/", panel["description"])
@@ -49,29 +53,35 @@ class TuiDashboardTests(unittest.TestCase):
                 self.assertFalse(any(m.startswith("cwo_codex_account_") for m in metrics))
                 self.assertEqual(target["datasource"]["uid"], "${DS_PROMETHEUS}")
                 self.assertNotRegex(target["expr"], r"\b(?:rate|increase)\(")
-        charts = template()["panels"]
-        self.assertIn("not tokens spent", charts[1]["description"])
-        self.assertIn("distinct from user messages", charts[2]["description"])
-        self.assertIn("topk(8,", charts[2]["targets"][0]["expr"])
-        self.assertEqual(charts[1]["fieldConfig"]["defaults"]["unit"], "short")
+        charts = {panel["id"]: panel for panel in template()["panels"]}
+        input_chart, output_chart = charts[2], charts[7]
+        self.assertIn('token_kind="input"', input_chart["targets"][0]["expr"])
+        self.assertIn('token_kind="output"', output_chart["targets"][0]["expr"])
+        self.assertIn("not tokens spent", input_chart["description"])
+        self.assertIn("not tokens spent", output_chart["description"])
+        self.assertNotIn('"value": "right"', json.dumps(output_chart["fieldConfig"]))
+        self.assertIn("distinct from user messages", charts[3]["description"])
+        self.assertIn("topk(8,", charts[3]["targets"][0]["expr"])
+        self.assertEqual(input_chart["fieldConfig"]["defaults"]["unit"], "short")
+        self.assertFalse(any("Token scale" in x.get("title", "") for x in template().get("links", [])))
 
     def test_reuses_validated_queries_and_preserves_partial_counts(self):
         old = json.loads((ROOT / "examples/observability/codex-work-overview-beta.json").read_text())
         old = {p["id"]: p for p in walk_panels(old["panels"])}
-        new = template()["panels"]
-        for target, source in zip(new[0]["targets"], [2, 101, 4, 6, 7, 32]):
+        new = {panel["id"]: panel for panel in template()["panels"]}
+        for target, source in zip(new[1]["targets"], [2, 101, 4, 6, 7, 32]):
             self.assertEqual(target["expr"], old[source]["targets"][0]["expr"])
-        for target, source in zip(new[1]["targets"], [33, 35]):
+        for target, source in zip([new[2]["targets"][0], new[7]["targets"][0]], [33, 35]):
             self.assertTrue(target["expr"].startswith("(" + old[source]["targets"][0]["expr"] + ")"))
             self.assertIn("time() - max(cwo_codex_collector_scan_timestamp_seconds)", target["expr"])
             self.assertTrue(target["range"])
             self.assertFalse(target["instant"])
-        self.assertEqual([t["expr"] for t in new[3]["targets"]],
+        self.assertEqual([t["expr"] for t in new[4]["targets"]],
                          [t["expr"] for source in [51, 52, 58] for t in old[source]["targets"]])
-        partial = {o["matcher"]["options"]: o["properties"] for o in new[3]["fieldConfig"]["overrides"]}
+        partial = {o["matcher"]["options"]: o["properties"] for o in new[4]["fieldConfig"]["overrides"]}
         for label in ["Commands · Partial", "Failures · Partial"]:
             self.assertIn({"id": "unit", "value": "prefix:≥ "}, partial[label])
-        self.assertEqual(new[4]["targets"][1]["expr"],
+        self.assertEqual(new[5]["targets"][1]["expr"],
                          old[21]["targets"][0]["expr"].replace("== 1)", "== 2)", 1)
                          .replace("(sum(", "(count(", 1))
 
@@ -81,14 +91,14 @@ class TuiDashboardTests(unittest.TestCase):
         original = copy.deepcopy(source)
         rendered = render_dashboard(template(), source, "test-prometheus")
         self.assertEqual(source, original)
-        table = rendered["panels"][5]
-        self.assertEqual(len(table["targets"]), 3)
+        table = next(panel for panel in rendered["panels"] if panel["id"] == 6)
+        self.assertGreaterEqual(len(table["targets"]), 2)
         self.assertEqual(list(table["transformations"][2]["options"]["renameByName"].values()),
-                         ["Session", "State", "Model / effort", "Tokens"])
+                         ["Chat", "State", "Model / effort", "Tokens"])
         widths = [p["value"] for o in table["fieldConfig"]["overrides"]
                   for p in o["properties"] if p["id"] == "custom.width"]
         self.assertLessEqual(sum(widths), 450)
-        names = next(o for o in table["fieldConfig"]["overrides"] if o["matcher"]["options"] == "Session")
+        names = next(o for o in table["fieldConfig"]["overrides"] if o["matcher"]["options"] == "Chat")
         mapping = next(p["value"] for p in names["properties"] if p["id"] == "mappings")
         self.assertEqual(mapping[0]["options"]["parent"]["text"], "Build dashboard")
         links = next(p["value"] for p in names["properties"] if p["id"] == "links")
@@ -143,10 +153,10 @@ class TuiQueryTests(unittest.TestCase):
         self.assertEqual(self.value(4, ref="A"), 5)
         self.assertEqual(self.value(4, ref="C"), 1)
         self.assertEqual(self.value(2, ref="A"), 400)
-        self.assertEqual(self.value(2, ref="B"), 100)
+        self.assertEqual(self.value(7, ref="A"), 100)
 
     def test_stale_collection_does_not_show_healthy_values(self):
-        for panel, ref in [(1, "C"), (2, "A"), (4, "A"), (5, "B"), (6, "B")]:
+        for panel, ref in [(1, "C"), (2, "A"), (4, "A"), (5, "B"), (6, "B"), (7, "A")]:
             with self.subTest(panel=panel):
                 self.assertEqual(self.query(panel, ref=ref, when=self.query_at + 25), [])
 

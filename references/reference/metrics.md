@@ -157,6 +157,20 @@ These optional gauges come from configured CWO audit JSONL, independently of the
 
 Skip reasons: `invalid_json`, `unsupported_record`, `invalid_hash`, `invalid_timestamp`, `future_timestamp`, `oversized_line`, `partial_line`. Unknown valid event types use `other`. The content hash supports consistency and deduplication, not proof that a job executed.
 
+Recognized event types in the `event_type` label:
+
+| Event type | Meaning |
+| --- | --- |
+| `packet_built` | A contractor packet was prepared. |
+| `dispatch_prepared` | A dispatch was prepared for execution. |
+| `return_evaluated` | A returned review was evaluated; reevaluations are separate events. |
+| `native_pool_rendered` | A native agent-group report was rendered. |
+| `native_pool_status` | A native agent-group status was recorded. |
+| `native_pool_interrupt_requested` | An interrupt request for a native agent group was recorded. |
+| `native_pool_terminal` | A native agent group reached a recorded terminal state. |
+
+Here, a native agent group is a set of Codex native subagents supervised together. These events describe the group-level report or state; they are not per-agent task totals.
+
 ## CWO-Associated Sessions
 
 These optional gauges come from Codex rollout records with `--cwo-sessions`. The dashboard joins association with the existing session metrics; no second token ledger is created.

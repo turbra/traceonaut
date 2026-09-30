@@ -121,6 +121,17 @@ class CodexSessionsDashboardTests(unittest.TestCase):
             self.assertIn("cwo_codex_session_last_event_timestamp_seconds", expression)
             self.assertIn(">= $__from / 1000", expression)
             self.assertIn("<= $__to / 1000", expression)
+        last_seen = next(target["expr"] for target in table["targets"] if target["refId"] == "I")
+        self.assertIn("$__to / 1000 -", last_seen)
+        self.assertNotIn("* 1000", last_seen)
+        last_seen_unit = next(
+            prop["value"]
+            for override in table["fieldConfig"]["overrides"]
+            if override["matcher"]["options"] == "Last seen"
+            for prop in override["properties"]
+            if prop["id"] == "unit"
+        )
+        self.assertEqual(last_seen_unit, "s")
         shown = table["transformations"][1]["options"]["include"]["names"]
         for raw_identity in ("project_id", "parent_id"):
             self.assertNotIn(raw_identity, shown)
@@ -209,13 +220,13 @@ class CodexSessionsDashboardTests(unittest.TestCase):
         self.assertIn('"model_effort", " · ", "model", "effort"', identity)
         self.assertIn("label_join(", identity)
         self.assertIn("model_effort)", identity)
-        self.assertIn("not per-model lifetime attribution", table["description"])
+        self.assertIn("Model / effort shows the latest selected settings", table["description"])
 
     def test_usage_diagnostics_are_separate_without_losing_scope_or_values(self) -> None:
         table = self.panel("Sessions and latest activity")
         main_names = set(table["transformations"][2]["options"]["renameByName"].values())
         self.assertTrue({"Usage source", "Runtime reported"}.isdisjoint(main_names))
-        self.assertTrue({"Completed", "Failed", "Turn time", "Tokens"}.issubset(main_names))
+        self.assertTrue({"Completed", "Stopped", "Turn time", "Tokens"}.issubset(main_names))
         self.assertTrue({"D", "J"}.isdisjoint(t["refId"] for t in table["targets"]))
         diagnostics = self.panel("Session usage diagnostics")
         self.assertGreater(diagnostics["gridPos"]["y"], self.panel("Diagnostics")["gridPos"]["y"])
@@ -418,6 +429,35 @@ class CodexSessionsRendererTests(unittest.TestCase):
             "Review collector coverage",
         )
 
+    def test_tui_chat_matcher_receives_protected_session_name(self) -> None:
+        template = json.loads(
+            (ROOT / "examples/observability/codex-tui-beta.json").read_text(encoding="utf-8")
+        )
+        rendered = render_dashboard(template, self.snapshot)
+        session_selector = next(
+            item for item in rendered["templating"]["list"] if item["name"] == "session"
+        )
+        self.assertEqual(session_selector["label"], "Chat")
+        self.assertEqual(session_selector["name"], "session")
+        self.assertIn(self.session, session_selector["query"])
+        chats = next(panel for panel in walk_panels(rendered["panels"]) if panel["id"] == 6)
+        renamed_fields = chats["transformations"][2]["options"]["renameByName"]
+        self.assertIn("Chat", renamed_fields.values())
+        chat = next(
+            override for override in chats["fieldConfig"]["overrides"]
+            if override["matcher"].get("options") == "Chat"
+        )
+        mappings = next(
+            prop["value"] for prop in chat["properties"] if prop["id"] == "mappings"
+        )
+        self.assertEqual(mappings[0]["options"][self.session]["text"], "Review collector coverage")
+        self.assertEqual(mappings[1]["options"]["result"]["text"], "Chat name unavailable")
+        all_sessions = render_dashboard(self.template, self.snapshot)
+        stable_selector = next(
+            item for item in all_sessions["templating"]["list"] if item["name"] == "session"
+        )
+        self.assertEqual(stable_selector["label"], "Session")
+
     def test_snapshot_loader_requires_owned_mode_0600_regular_file(self) -> None:
         with tempfile.TemporaryDirectory() as name:
             root = Path(name)
@@ -484,6 +524,38 @@ class CodexSessionsRendererTests(unittest.TestCase):
                 process.send_signal(signal.SIGTERM)
                 _, stderr = process.communicate(timeout=5)
                 self.assertEqual(process.returncode, 0, stderr)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.communicate(timeout=5)
+
+    def test_cli_watch_reports_snapshot_removed_after_startup(self) -> None:
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            root.chmod(0o700)
+            snapshot_path = root / "sessions.json"
+            snapshot_path.write_text(json.dumps(self.snapshot), encoding="utf-8")
+            snapshot_path.chmod(0o600)
+            output = root / "dashboard.json"
+            process = subprocess.Popen(
+                [sys.executable, str(RENDERER_PATH), "--template", str(DASHBOARD_PATH),
+                 "--snapshot-file", str(snapshot_path), "--output", str(output),
+                 "--watch-seconds", "1"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
+            )
+            try:
+                deadline = time.monotonic() + 8
+                while time.monotonic() < deadline:
+                    self.assertIsNone(process.poll())
+                    if output.exists() and "Review collector coverage" in output.read_text(encoding="utf-8"):
+                        break
+                    time.sleep(0.05)
+                else:
+                    self.fail("dashboard watcher did not publish the initial snapshot")
+                snapshot_path.unlink()
+                _, stderr = process.communicate(timeout=5)
+                self.assertEqual(process.returncode, 1, stderr)
+                self.assertIn(str(snapshot_path), stderr)
             finally:
                 if process.poll() is None:
                     process.kill()

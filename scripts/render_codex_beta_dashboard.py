@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import signal
 import stat
+import sys
 import threading
 
 from render_codex_sessions_dashboard import (
@@ -310,6 +311,13 @@ def main(argv=None) -> int:
                 print(json.dumps({"status": "rendered", "dashboard": BETA_UID, "changed": changed}), flush=True)
             if args.watch_seconds is None or stop.wait(args.watch_seconds):
                 break
+    except FileNotFoundError as error:
+        if (error.filename is not None
+                and Path(os.path.abspath(error.filename)) == Path(os.path.abspath(args.snapshot_file))):
+            print(f"Beta dashboard render unavailable: snapshot file not found: {args.snapshot_file}", file=sys.stderr)
+        else:
+            print("Beta dashboard render unavailable: check template, protected metadata and beta output.")
+        return 1
     except (OSError, ValueError, KeyError, TypeError, RecursionError):
         print("Beta dashboard render unavailable: check template, protected metadata and beta output.")
         return 1

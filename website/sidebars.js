@@ -151,6 +151,16 @@ module.exports = {
         },
         {
           "type": "doc",
+          "id": "references/integrations/custom-review-adapter",
+          "label": "Custom Review Adapter"
+        },
+        {
+          "type": "doc",
+          "id": "references/integrations/controller-metrics",
+          "label": "Controller Metrics"
+        },
+        {
+          "type": "doc",
           "id": "references/dashboards/cwo",
           "label": "CWO Overview"
         },

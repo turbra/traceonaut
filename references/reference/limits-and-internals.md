@@ -26,6 +26,26 @@ The source inventory is capped at 100,000 files. The private database has a 2 Gi
 
 Session retention uses last observed activity, then creation time. Unknown activity remains eligible for the cap. The cutoff is inclusive; session ID breaks equal-activity ties.
 
+## CWO Workflow Audit Inputs
+
+Audit records must be newline-terminated JSON objects with an event type, event hash, and valid source timestamp. Duplicate JSON keys and non-finite values are rejected. Content hashes support consistency checks and deduplication; they do not prove that work ran. Unknown valid event types are exported as `other`.
+
+Each scan reads at most 256 files and 32 MiB, visits 8,192 directory entries, and descends 16 levels under each configured directory. Lines above 256 KiB, malformed records, and incomplete final lines are skipped; incomplete lines can be retried on the next scan. Configured source paths must be owned regular files/directories without symlink traversal.
+
+## CWO Session Association
+
+Association comes from whole user-message skill blocks naming `complex-work-orchestration`, terminal `CommandExecution` records for supported direct Python helper calls under its scripts directory, and native parent/subagent metadata. Plain mentions, documentation reads, and internal Codex tasks are excluded. Arbitrary shell programs and dynamically constructed helper paths are not classified. The supported helper names are listed in [Metrics](metrics.md#cwo-associated-sessions).
+
+Helper outcome and duration are recorded only when the helper is the sole command. A supported helper followed by a receipt read or simple Python post-processing is still associated, but its outcome is unknown and duration is omitted. Help requests, source reads, shell expansion, pipelines, and conditional prefixes are excluded.
+
+Each pass reads at most 64 MiB, up to 32 MiB per file, from at most 4,096 selected rollout files. Candidate records over 8 MiB create a visible source gap. The private feature index stores opaque IDs and cursors, not the inspected skill text, arguments, or output. Helper detail is separately capped at 2,000 records within 30 days.
+
+## CWO CLI Review Artifacts
+
+The custom review reader requires a matching hash-valid `dispatch_prepared` audit event recorded before launch, a launch receipt with explicit timezone-qualified start time, and a paired Claude CLI result. File modification time does not replace missing source time. Conflicting copies are omitted; repeated scans and copies preserve one result. See the [custom review adapter](../integrations/custom-review-adapter.md) for the artifact fields.
+
+The review reader scans at most 256 results, 32 MiB per scan, and 2 MiB per file; review attribution has a separate 64 MiB per pass, 32 MiB per file, and 4,096-file bound. Its private index retains at most 4,096 launch evidence records and 4,096 interactive launch records. Source files are read without following symlinks.
+
 ## Credential and Bind Validation
 
 A token contains 16–4,096 printable ASCII bytes after trimming, with no embedded whitespace. Its file must be regular, owned by the collector user and mode `0600`. Ancestors must be owned by that user or root; root-owned sticky directories are the writable-directory exception.

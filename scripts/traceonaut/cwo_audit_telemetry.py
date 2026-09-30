@@ -22,8 +22,7 @@ MAX_LINE_BYTES = 256 * 1024
 MAX_ENTRIES = 8192
 MAX_DEPTH = 16
 EVENT_TYPES = frozenset({
-    "packet_built", "dispatch_prepared", "return_evaluated", "prompt_coached",
-    "review_cli_started", "review_cli_finished", "astra_adjudication_received",
+    "packet_built", "dispatch_prepared", "return_evaluated",
     "native_pool_rendered", "native_pool_status", "native_pool_interrupt_requested",
     "native_pool_terminal",
 })

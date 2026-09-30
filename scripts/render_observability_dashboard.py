@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import signal
 import stat
+import sys
 import tempfile
 import threading
 from typing import Any, Iterator
@@ -212,8 +213,8 @@ def write_dashboard(path: Path, dashboard: dict[str, Any]) -> bool:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--template", type=Path, required=True)
-    parser.add_argument("--presentation-file", type=Path)
-    parser.add_argument("--session-snapshot-file", type=Path, help="optional existing session snapshot for CWO-associated session names")
+    parser.add_argument("--presentation-file", type=Path, help="controller name registry; required if --session-snapshot-file is omitted")
+    parser.add_argument("--session-snapshot-file", type=Path, help="existing session snapshot for CWO session/project names; required if --presentation-file is omitted")
     parser.add_argument("--datasource-uid")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--watch-seconds", type=float, help="refresh local name mappings every 1 to 60 seconds")
@@ -240,6 +241,14 @@ def main(argv: list[str] | None = None) -> int:
                                   "named_tasks": len(registry["dispatches"])}), flush=True)
             if args.watch_seconds is None or stop.wait(args.watch_seconds):
                 break
+    except FileNotFoundError as error:
+        if (args.session_snapshot_file is not None
+                and error.filename is not None
+                and Path(os.path.abspath(error.filename)) == Path(os.path.abspath(args.session_snapshot_file))):
+            print(f"Dashboard render unavailable: snapshot file not found: {args.session_snapshot_file}", file=sys.stderr)
+        else:
+            print("Dashboard render unavailable: check template, private labels, and output path.")
+        return 1
     except (OSError, ValueError, KeyError, TypeError):
         print("Dashboard render unavailable: check template, private labels, and output path.")
         return 1

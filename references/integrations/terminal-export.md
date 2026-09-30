@@ -1,12 +1,20 @@
 ---
 slug: /integrations/terminal-export
 title: Completed Dispatch Export
-description: Export completed CWO observations as private JSON for offline analysis.
+description: Save finished CWO-controller task records as private JSON files for offline analysis.
 ---
 
 # Completed Dispatch Export
 
-Read an existing [CWO ledger](cwo.md) from the checkout root:
+Completed Dispatch Export is an optional command-line utility that saves finished CWO task records as private JSON files. A **dispatch** is a task that a CWO controller assigned to an agent.
+
+Use it to analyse recorded task outcomes, token usage and execution limits outside Grafana. **It is not a dashboard or a Grafana panel.**
+
+This utility reads an existing `observability.sqlite3` database created by a [controller observation integration](cwo.md#existing-controller-metrics). It does not read ordinary Codex session history. If you only use Traceonaut's session collector and dashboards, you can skip this page.
+
+## Export Task Records
+
+From the checkout root:
 
 ```bash
 python3 scripts/export_terminal_observations.py \
@@ -14,14 +22,30 @@ python3 scripts/export_terminal_observations.py \
   --output-dir /absolute/path/to/separate/private-output
 ```
 
-The output directory is separate from the ledger. The exporter creates private directories/files and rejects unsafe permissions or overlapping paths.
+Set `--state-dir` to the private directory containing that database. Choose a separate output directory whose parent already exists. The exporter creates owner-only directories and files and rejects unsafe permissions or overlapping paths.
 
 ## Output
 
-Each `terminal_dispatch_projection.v1` record includes identity, requested/acknowledged configuration, available token values, outcome, elapsed time, allowances and collection health.
+Example output layout; the observation filename is abbreviated:
 
-A job is exported after it is terminal, its bindings/connections are closed and queues are drained. Failed and interrupted jobs can still have useful observations. Missing values are null; shared health is marked separately from job-attributed health.
+```text
+private-output/
+├── observations/
+│   └── <64-character-hash>.json  # One task record
+├── cursor.json                 # Tracks export progress
+└── export.lock                 # Prevents simultaneous exports
+```
 
-Files under `observations/` have stable opaque names. Later corrections update the same logical job. Interrupted writes can be retried without creating duplicate runs.
+Each `terminal_dispatch_projection.v1` JSON record contains:
 
-Prompts, model answers, commands, tool output and free-form errors are excluded. This is an offline read; it starts no model job or listener. [Limits and Internals](../reference/limits-and-internals.md) describes accounting and publication boundaries.
+- Project and task identifiers.
+- Requested and acknowledged model and effort settings.
+- Available token counts, outcome and elapsed time.
+- Declared response/time allowances and enforced execution limits, when recorded.
+- Collection health and missing-data indicators.
+
+A task is eligible after CWO records a final state, its source connections and task bindings close, and pending events are processed. Failed and interrupted tasks can be exported too. Missing values are null; requested or acknowledged model settings do not establish the model actually used.
+
+Later corrections update the same task file. Interrupted exports can be retried without creating duplicate task records.
+
+The exporter leaves the source database unchanged and starts no agent or server. Prompts, model answers, commands, tool output and free-form errors are excluded. [Limits and Internals](../reference/limits-and-internals.md) describes accounting and publication boundaries.

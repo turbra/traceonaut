@@ -1,14 +1,24 @@
 ---
 slug: /optional/account-allowance
 title: Account Allowance
-description: Enable the optional account reader for weekly allowance and reset credits.
+description: Show your Codex account's remaining weekly allowance and reset information in Grafana.
 ---
 
 # Account Allowance
 
-The status strip shows remaining weekly allowance, available earned resets and the next scheduled reset. It appears in Work Overview and All Sessions, independently of their session filters. Read freshness is in Diagnostics.
+Account Allowance shows how much of your signed-in Codex account's weekly usage allowance remains. These are the three tiles at the right of the top status strip in [Work Overview](../dashboards/work-overview.md) and [All Sessions](../dashboards/all-sessions.md).
 
-This collector makes upstream account requests using an existing Codex login. It reads the account signed into the selected profile. History begins when collection is enabled.
+![Grafana account allowance tiles showing Weekly remaining 45%, Resets 3 and Next reset in 1 day, using synthetic data](../../assets/screenshots/account-allowance.png)
+
+*Actual Grafana panels with synthetic values. These values apply to the whole account, regardless of the selected project or session.*
+
+| Tile | What the example means |
+| --- | --- |
+| Weekly remaining: 45% | The account has 45% of its reported weekly usage allowance left. |
+| Resets: 3 | Codex reports three earned usage resets available. Traceonaut displays this count; it does not redeem them. |
+| Next reset: in 1 day | The reported weekly reset is due in one day. The tile also shows its date and time. |
+
+This is account allowance, separate from the token totals recorded for individual sessions. The optional account reader fetches these values using your existing Codex login. The session collector exposes them on its existing Prometheus endpoint. History begins when the reader is enabled; read freshness appears in Diagnostics.
 
 ## Start the Reader
 

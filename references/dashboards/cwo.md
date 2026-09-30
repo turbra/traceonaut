@@ -10,7 +10,7 @@ description: View CWO sessions, agents, usage and workflow activity.
 
 *Synthetic data in the current dashboard layout. Counts depend on enabled sources and the selected time range.*
 
-CWO Overview combines observed jobs, workflow audit events, optional external contractor reviews and CWO-associated Codex sessions. Enable the sources you use through [CWO Integration](../integrations/cwo.md).
+CWO Overview shows CWO-associated Codex sessions. Workflow audits, external contractor reviews and existing observed-job ledgers add separate sections. Start with `--cwo-sessions` in [CWO Integration](../integrations/cwo.md#collect-cwo-sessions).
 
 ## Import
 
@@ -28,7 +28,7 @@ python3 scripts/render_observability_dashboard.py \
   --output "$CWO_DASHBOARD_DIR/cwo-overview.json"
 ```
 
-For observed-job names, also pass `--presentation-file /absolute/path/to/private/presentation.json` from the controller or observed-job runner. Either input can be used alone.
+If you use an observed-job ledger, also pass `--presentation-file /absolute/path/to/private/presentation.json` from its controller. Either input can be used alone.
 
 Import the generated file. Names remain presentation metadata; missing names have explicit fallbacks. See [Automatic Name Updates](../operations/automatic-name-updates.md) for watcher/provisioning use.
 
@@ -54,7 +54,7 @@ This section covers the whole configured Codex profile. Association comes from a
 
 ### Optional Observed Jobs
 
-Expand **Observed jobs · optional observation hook** for jobs recorded by the observation hook or [Observed Job Runner](../integrations/observed-job-runner.md). Its completion, failure and token metrics describe those recorded jobs. Ordinary CWO sessions remain in the main overview.
+Expand **Observed jobs · existing ledger required** only when you have [connected an existing ledger](../integrations/cwo.md#use-an-existing-ledger). Its completion, failure and token metrics describe those recorded jobs. Empty panels in this row do not mean ordinary CWO session collection is broken; those sessions appear in the main overview.
 
 **Observed project** and **Observed task** filter only the observed-job panels and their technical details. They leave the profile-wide overview and workflow sources unchanged.
 

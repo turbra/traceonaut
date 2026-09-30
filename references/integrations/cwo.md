@@ -8,6 +8,15 @@ description: Show CWO-associated sessions, existing workflow audit logs and opti
 
 [Complex Work Orchestration](https://github.com/gprocunier/complex-work-orchestration) is a Codex skill for coordinating agents and tracking work across sessions. Traceonaut can identify associated Codex sessions, read optional workflow audit logs, and expose separately observed jobs.
 
+Start with **Collect CWO Sessions** for work performed using the CWO skill. The other sources add detail when their files exist.
+
+| Data | Collector option | Source |
+| --- | --- | --- |
+| CWO sessions, agents, models, session tokens and helper commands | `--cwo-sessions` | Existing Codex session files. |
+| Workflow events | `--cwo-audit-dir` | Existing CWO audit logs. |
+| External contractor reviews | `--cwo-review-dir` | Paired launch receipts and result files. |
+| Separately observed jobs | `--state-dir` | An existing `observability.sqlite3` ledger from an integrated controller. |
+
 ## Collect CWO Sessions
 
 Append this flag to your [session collector command](../getting-started.mdx), then restart the collector:
@@ -26,7 +35,7 @@ Import [CWO Overview](../dashboards/cwo.md). Its main overview shows sessions an
 
 **Association is session context.** Token totals cover whole sessions, including earlier history, rather than CWO-only cost. Plain mentions of CWO in conversation, reading a guide, or generic agent activity do not establish association. [Data Sources and Privacy](../reference/data-sources-and-privacy.md#cwo-session-association) describes the supported signals.
 
-No per-project audit path or new CWO logging step is needed for this section.
+This section needs no controller hook, observed-job ledger or separate job launcher. Keep your installed Codex version; collection uses the [supported session record formats](../reference/data-sources-and-privacy.md).
 
 ## Collect Workflow Activity
 
@@ -101,7 +110,9 @@ Choose roots that contain this layout. Other result formats need a supported rea
 
 ## Observed Job Metrics
 
-Jobs launched with Traceonaut's [Observed Job Runner](observed-job-runner.md), or a controller with the optional observation hook, write a separate `observability.sqlite3` ledger. That source supplies job, token and outcome panels. Workflow audit logs do not populate that ledger.
+This section is for installations that already have a controller writing Traceonaut's `observability.sqlite3` ledger. That source supplies the collapsed **Observed jobs · existing ledger required** row. If you have no ledger, leave that row collapsed and use the CWO session and workflow sections above.
+
+The source-checkout launcher `run_observed_codex.py` is **deprecated** and excluded from release bundles. Its fixed legacy protocol is not maintained for current Codex versions. Do not downgrade Codex or launch extra model jobs to populate a dashboard. Existing ledgers remain readable.
 
 ### Use an Existing Ledger
 
@@ -132,7 +143,7 @@ TRACEONAUT_DISPATCH_RELEASE="$(python3 scripts/build_release.py --component disp
 export PYTHONPATH="$TRACEONAUT_DISPATCH_RELEASE/scripts${PYTHONPATH:+:$PYTHONPATH}"
 ```
 
-For a controller that supports the observation hook, pass `--observability-config` with an absolute path to an owned `0600` JSON file:
+This is an embedding interface for controller maintainers, not a switch available in every CWO installation. Confirm that your controller supports the observation hook before using `--observability-config`. The configuration is an owned `0600` JSON file at an absolute path:
 
 | Field | Content |
 | --- | --- |
@@ -148,5 +159,3 @@ Use protected directories and preserve the ledger key. Traceonaut supplies the o
 ## View and Export
 
 Import [CWO Overview](../dashboards/cwo.md), or use [Completed Dispatch Export](terminal-export.md). [Limits and Internals](../reference/limits-and-internals.md#cwo-embedding-and-recovery) covers embedding, recovery and final-sample confirmation.
-
-The [Observed Job Runner](observed-job-runner.md) is a separate option that starts explicitly authorized model work.

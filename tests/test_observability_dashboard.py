@@ -273,6 +273,9 @@ class ObservabilityDashboardTests(unittest.TestCase):
         self.assertIn("whole-session", next(p for p in root if p["id"] == 303)["description"].lower())
         optional = next(p for p in root if p["id"] == 150)
         self.assertTrue(optional["collapsed"])
+        self.assertEqual(optional["title"], "Observed jobs · existing ledger required")
+        self.assertIn("--cwo-sessions", self.dashboard["description"])
+        self.assertIn("--state-dir", self.panel("Dispatch telemetry")["description"])
         self.assertEqual({p["id"] for p in optional["panels"]}, {3, 101, 102, 103, 104, 110, 111, 112, 121})
         variables = {v["name"]: v for v in self.dashboard["templating"]["list"]}
         self.assertEqual(variables["project"]["label"], "Observed project")

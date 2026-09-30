@@ -19,7 +19,7 @@ Run Traceonaut on the workstation that holds your Codex profile. Use your existi
 | Grafana with built-in panels | 11.5.0 |
 | Git and Bash | Used by the setup commands. |
 
-Use the tested versions above; older versions have not been tested. The optional [Observed Job Runner](integrations/observed-job-runner.md) requires an exact Codex CLI version.
+Use the tested versions above; older versions have not been tested.
 
 ## Get the Code
 

@@ -12,7 +12,7 @@
   "annotations": {
     "list": []
   },
-  "description": "CWO-associated Codex sessions, native agents and helper activity in the selected range. Recorded session tokens cover whole-session history. Workflow audit events and CLI reviews are separate sources; observation-hook jobs are available in the optional Observed jobs row.",
+  "description": "CWO-associated Codex sessions, native agents and helper activity in the selected range. Enable --cwo-sessions on the collector. Recorded session tokens cover whole-session history. Workflow audits and contractor reviews use separate files; the optional Observed jobs row requires an existing observability ledger.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -1582,14 +1582,14 @@
     {
       "id": 150,
       "type": "row",
-      "title": "Observed jobs \u00b7 optional observation hook",
+      "title": "Observed jobs \u00b7 existing ledger required",
       "collapsed": true,
       "panels": [
         {
           "id": 121,
           "type": "stat",
           "title": "Dispatch telemetry",
-          "description": "Ledger health for all observed-dispatch sources at the range end. An idle job stream can still be healthy. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "description": "Health of the existing observability ledger connected with --state-dir. Without that optional source, this row has no job data; ordinary CWO sessions remain in the main overview. An idle job stream can still be healthy. [CWO sources](https://turbra.github.io/traceonaut/integrations/cwo/).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"

@@ -9,7 +9,6 @@
   "references/getting-started.mdx",
   "references/install.md",
   "references/integrations/cwo.md",
-  "references/integrations/observed-job-runner.md",
   "references/integrations/terminal-export.md",
   "references/operations.md",
   "references/operations/automatic-name-updates.md",

@@ -32,7 +32,6 @@ COMPONENTS = {
         TEMPLATES + "codex-tui-beta.json",
     ),
     "dispatch": (
-        "scripts/run_observed_codex.py",
         "scripts/export_dispatch_observability.py",
         "scripts/export_terminal_observations.py",
         "scripts/render_observability_dashboard.py",

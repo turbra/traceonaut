@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one or two fresh standard Codex jobs with owned response observation.
+"""Deprecated source-only launcher for a fixed legacy app-server protocol.
 
 The runner owns the app-server process and its fresh ephemeral threads.  It
 persists controller receipts and hashes, but never persists model text, raw
@@ -31,6 +31,13 @@ from traceonaut.observability_presentation import record_presentation_submission
 
 
 SUPPORTED_CODEX_VERSION = "0.154.0"
+LEGACY_RUNNER_NOTICE = (
+    "Deprecated: this source-only job launcher is excluded from release bundles "
+    f"and supports only Codex {SUPPORTED_CODEX_VERSION}. Do not downgrade Codex "
+    "for Traceonaut. Collect existing CWO sessions with "
+    "collect_codex_sessions.py --cwo-sessions; no job launcher is required. "
+    "See https://turbra.github.io/traceonaut/integrations/cwo/."
+)
 EXECUTOR_LABEL = "standard_codex"
 MAX_MANIFEST_BYTES = 1024 * 1024
 MAX_PROMPT_BYTES = 128 * 1024
@@ -1868,7 +1875,7 @@ def run_observed_jobs(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Run fresh read-only Codex jobs with owned completion observation."
+        description=LEGACY_RUNNER_NOTICE,
     )
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--authorization-file", type=Path, required=True)
@@ -1886,6 +1893,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    print(LEGACY_RUNNER_NOTICE, file=sys.stderr)
     try:
         outcome = run_observed_jobs(
             manifest_path=args.manifest,
@@ -1904,6 +1912,12 @@ def main(argv: list[str] | None = None) -> int:
             "failure_code": exc.code,
             "jobs": [],
         }
+    if outcome.get("failure_code") == "app-server-version-unsupported":
+        print(
+            "The installed Codex version is unsupported by this legacy launcher. "
+            "No model jobs were started. Session collection is a separate path.",
+            file=sys.stderr,
+        )
     sys.stdout.write(json.dumps(outcome, sort_keys=True, separators=(",", ":")) + "\n")
     jobs = outcome.get("jobs")
     return (

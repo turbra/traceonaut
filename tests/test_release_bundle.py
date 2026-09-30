@@ -41,6 +41,8 @@ class ReleaseBundleTests(unittest.TestCase):
             root = Path(temporary)
             release = build_release("dispatch", root / "releases")
             templates = release / "examples/observability"
+            self.assertFalse((release / "scripts/run_observed_codex.py").exists())
+            self.assertNotIn("scripts/run_observed_codex.py", json.loads((release / "manifest.json").read_text()))
             self.assertEqual({p.name for p in templates.glob("*.json")}, {"cwo-overview.json"})
             snapshot = root / "sessions.json"
             snapshot.write_text(json.dumps({"version": 1, "sessions": []}))
@@ -108,7 +110,7 @@ class ReleaseBundleTests(unittest.TestCase):
             "stable": ["render_codex_sessions_dashboard.py"],
             "beta": ["render_codex_beta_dashboard.py"],
             "tui-beta": ["render_codex_sessions_dashboard.py"],
-            "dispatch": ["run_observed_codex.py", "export_dispatch_observability.py",
+            "dispatch": ["export_dispatch_observability.py",
                          "export_terminal_observations.py", "render_observability_dashboard.py"],
         }
         with tempfile.TemporaryDirectory() as temporary:
@@ -118,6 +120,7 @@ class ReleaseBundleTests(unittest.TestCase):
                     release = build_release(component, root / "releases")
                     self.assertEqual(build_release(component, root / "releases"), release)
                     manifest = json.loads((release / "manifest.json").read_text())
+                    self.assertNotIn("scripts/run_observed_codex.py", manifest)
                     self.assertIn("LICENSE", manifest)
                     self.assertEqual((release / "LICENSE").read_bytes(), (ROOT / "LICENSE").read_bytes())
                     for name, digest in manifest.items():

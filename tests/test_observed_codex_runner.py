@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from contextlib import closing
+from contextlib import closing, redirect_stderr, redirect_stdout
 import fcntl
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -90,7 +91,7 @@ while True:
         emit({
             "id": response_id,
             "result": {
-                "userAgent": "cwo-observed-runner/0.154.0 (test)",
+                "userAgent": "cwo-observed-runner/" + ("0.159.2" if mode == "unsupported-version" else "0.154.0") + " (test)",
                 "codexHome": "/tmp/fake-codex-home",
                 "platformFamily": "unix",
                 "platformOs": "linux",
@@ -400,6 +401,15 @@ class ObservedCodexRunnerTests(unittest.TestCase):
             json.loads(path.read_text(encoding="utf-8"))
             for path in sorted(self.receipts.glob("*.json"))
         ]
+
+    def test_newer_version_is_refused_before_model_work(self):
+        outcome, host, popen = self._run("unsupported-version")
+        self.assertEqual(outcome["failure_code"], "app-server-version-unsupported")
+        self.assertEqual(outcome["runner_status"], "failed")
+        self.assertEqual(host.observer.preparations, [])
+        messages = [json.loads(line) for line in self.capture.read_text().splitlines()]
+        self.assertEqual([message.get("method") for message in messages], ["initialize"])
+        self.assertIsNotNone(popen.processes[0].poll())
 
     def test_pre_ack_raw_completion_binds_to_receipts_without_raw_persistence(self):
         outcome, host, popen = self._run("success")
@@ -986,6 +996,31 @@ class ObservedCodexRunnerTests(unittest.TestCase):
                 popen_factory=mock.Mock(side_effect=AssertionError("must not spawn")),
                 host_factory=mock.Mock(side_effect=AssertionError("must not open")),
             )
+
+
+class LegacyRunnerCliTests(unittest.TestCase):
+    def test_help_marks_runner_deprecated_and_points_to_collection(self):
+        help_text = " ".join(observed.build_parser().format_help().split())
+        self.assertIn("Deprecated:", help_text)
+        self.assertIn("excluded from release bundles", help_text)
+        self.assertIn("Do not downgrade Codex", help_text)
+        self.assertIn("collect_codex_sessions.py --cwo-sessions", help_text)
+
+    def test_cli_warning_preserves_json_and_explains_version_refusal(self):
+        expected = {"runner_status": "failed", "failure_code": "app-server-version-unsupported", "jobs": []}
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(observed, "run_observed_jobs", return_value=expected), redirect_stdout(out), redirect_stderr(err):
+            status = observed.main([
+                "--manifest", "/example/manifest.json",
+                "--authorization-file", "/example/authorization.json",
+                "--observability-config", "/example/config.json",
+                "--receipt-dir", "/example/receipts",
+            ])
+        self.assertEqual(status, 1)
+        self.assertEqual(json.loads(out.getvalue()), expected)
+        self.assertIn("Deprecated:", err.getvalue())
+        self.assertIn("Do not downgrade Codex", err.getvalue())
+        self.assertIn("No model jobs were started", err.getvalue())
 
 
 if __name__ == "__main__":

@@ -146,6 +146,20 @@ class DocumentationTests(unittest.TestCase):
                 for value in (data["uid"], data["title"], path.name):
                     self.assertIn(value, inventory)
 
+    def test_cwo_setup_separates_existing_sources_from_legacy_launcher(self):
+        guide = (ROOT / "references/integrations/cwo.md").read_text()
+        sessions = guide.split("## Collect CWO Sessions\n", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("--cwo-sessions", sessions)
+        self.assertIn("no controller hook, observed-job ledger or separate job launcher", sessions)
+        self.assertIn("Existing ledgers remain readable", guide)
+        self.assertIn("**deprecated**", guide)
+        for doc in DOCS:
+            with self.subTest(doc=doc):
+                text = doc.read_text()
+                self.assertNotIn("0.154.0", text)
+                self.assertNotIn("python3 scripts/run_observed_codex.py", text)
+                self.assertNotIn("observed-job-runner.md", text)
+
 
 if __name__ == "__main__":
     unittest.main()

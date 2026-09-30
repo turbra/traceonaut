@@ -43,6 +43,9 @@ All accept `--datasource-uid` for provisioning and `--watch-seconds` (1–60). O
 | --- | --- | --- |
 | `export_dispatch_observability.py` | `--state-dir`; `--credential-file` when serving | Loopback `--host 127.0.0.1`, default `--port 9464`. Use **9465** alongside session collection. `--once` prints metrics; `--capacity-report` prints local counts. These modes are exclusive. |
 | `export_terminal_observations.py` | `--state-dir`, `--output-dir` | Exports eligible completed jobs, then exits. |
-| `run_observed_codex.py` | `--manifest`, `--authorization-file`, `--observability-config`, `--receipt-dir` | Starts authorized model work. `--linger-seconds 0`; optional `--presentation-file` and `--project-name` must be paired. See [Observed Job Runner](../integrations/observed-job-runner.md). |
 | `build_release.py` | `--component`, `--output-dir` | Builds a content-hashed bundle. Components: `sessions`, `account`, `stable`, `beta`, `tui-beta`, `dispatch`. |
 | `validate_repository.py` | None | Checks source assets and links. `--staged` checks the exact Git index before publication. |
+
+## Legacy Compatibility
+
+`run_observed_codex.py` is a deprecated source-only job launcher, excluded from release bundles. It is separate from collection. See [Observed Job Metrics](../integrations/cwo.md#observed-job-metrics) for current source requirements.

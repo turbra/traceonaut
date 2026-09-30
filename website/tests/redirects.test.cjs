@@ -17,7 +17,16 @@ test('dashboard aliases use the matching Docusaurus redirect plugin', () => {
     {from: '/dashboards/beta/', to: '/dashboards/work-overview/'},
     {from: '/dashboards/stable/', to: '/dashboards/all-sessions/'},
     {from: '/dashboards/unified/', to: '/dashboards/work-overview/'},
+    {from: '/integrations/observed-job-runner/', to: '/integrations/cwo/'},
   ]);
+});
+
+test('legacy runner guide redirects to collection without remaining in navigation', () => {
+  assert(!config.presets[0][1].docs.include.includes('references/integrations/observed-job-runner.md'));
+  assert(!JSON.stringify(sidebars).includes('observed-job-runner'));
+  assert(!fs.existsSync(path.join(root, 'references/integrations/observed-job-runner.md')));
+  assert.deepEqual(rules.find(rule => rule.from === '/integrations/observed-job-runner/'),
+    {from: '/integrations/observed-job-runner/', to: '/integrations/cwo/'});
 });
 
 test('legacy data links preserve their dashboard destination and query string', () => {

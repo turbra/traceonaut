@@ -158,11 +158,6 @@ module.exports = {
           "type": "doc",
           "id": "references/integrations/terminal-export",
           "label": "Completed Dispatch Export"
-        },
-        {
-          "type": "doc",
-          "id": "references/integrations/observed-job-runner",
-          "label": "Observed Job Runner"
         }
       ]
     }

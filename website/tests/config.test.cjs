@@ -22,13 +22,13 @@ test('renders only explicit public documents, directly from source', () => {
   assert.equal(path.isAbsolute(docs.sidebarPath), false);
   assert.equal(path.isAbsolute(config.presets[0][1].theme.customCss), false);
   assert.deepEqual(docs.include, require('../docs-manifest.json'));
-  assert.equal(docs.include.length, 27);
+  assert.equal(docs.include.length, 26);
   assert.equal(new Set(docs.include).size, docs.include.length);
   for (const file of docs.include) {
     assert.match(file, /^(references\/(?:[a-z-]+\/)*[a-z-]+\.mdx?|website\/docs\/home\.mdx)$/);
     assert(fs.lstatSync(path.join(root, file)).isFile());
   }
-  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 26);
+  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 25);
 });
 
 test('sidebar document IDs resolve to the same authoritative files', () => {

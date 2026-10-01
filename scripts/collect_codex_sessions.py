@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import signal
 import threading
+import time
 
 from traceonaut.codex_session_telemetry import (
     DEFAULT_SESSION_EXPORT_CAP, MAX_SESSIONS, SAFE_INTEGER,
@@ -23,30 +24,163 @@ from traceonaut.observability_exporter import (
     MetricsEndpoint, build_samples, metrics_bind_address, read_credential, render_prometheus,
 )
 from traceonaut.observability_ledger import ObservabilityLedger
+from traceonaut.bob_session_telemetry import BobCollector, empty_snapshot, render_bob_metrics
+from traceonaut.collector_paths import validate_outputs
 
 
 class SessionMetricsEndpoint(MetricsEndpoint):
-    def update_sessions(self, snapshot, legacy=None, account=None, audit=None, reviews=None):
-        payload = render_session_metrics(snapshot)
-        if legacy is not None:
-            payload += render_prometheus(build_samples(legacy)[0])
-        if account is not None:
-            payload += account.render_metrics()
-        if audit is not None:
-            payload += render_audit_metrics(audit)
-        if reviews is not None:
-            payload += render_review_metrics(reviews)
-        if "cwo_sessions" in snapshot:
-            payload += render_cwo_session_metrics(snapshot["cwo_sessions"])
+    def update_part(self, source, payload):
         with self._lock:
-            self._payload = payload
+            if not hasattr(self, '_parts'):
+                self._parts = {}
+            self._parts[source] = payload
+            self._payload = b''.join(self._parts[key] for key in sorted(self._parts))
+
+    def update_sessions(self, snapshot, legacy=None, account=None, audit=None, reviews=None):
+        self.update_part('codex', codex_payload(snapshot, legacy, account, audit, reviews))
 
 
-def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--codex-home", type=Path, required=True)
+def codex_payload(snapshot, legacy=None, account=None, audit=None, reviews=None):
+    payload = render_session_metrics(snapshot)
+    if legacy is not None:
+        payload += render_prometheus(build_samples(legacy)[0])
+    if account is not None:
+        payload += account.render_metrics()
+    if audit is not None:
+        payload += render_audit_metrics(audit)
+    if reviews is not None:
+        payload += render_review_metrics(reviews)
+    if "cwo_sessions" in snapshot:
+        payload += render_cwo_session_metrics(snapshot["cwo_sessions"])
+    return payload
+
+
+class CodexSource:
+    """Existing Codex collection and optional attachments, owned by one thread."""
+
+    def __init__(self, args, audit, reviews):
+        self.args, self.audit, self.reviews = args, audit, reviews
+        self.collector = self.cwo = self.ledger = self.account = self.provenance = None
+        try:
+            self.collector = SessionCollector(args.codex_home, args.session_state_dir,
+                session_retention_seconds=args.session_retention_seconds, session_export_cap=args.session_export_cap)
+            if args.cwo_sessions:
+                self.cwo = CwoSessionCollector(args.codex_home, args.session_state_dir)
+                if reviews:
+                    self.provenance = ProvenanceIndex(self.cwo)
+            if args.state_dir:
+                self.ledger = ObservabilityLedger(args.state_dir, readonly=True)
+            if args.account_snapshot_file:
+                self.account = AccountSnapshotMetrics(args.account_snapshot_file)
+        except Exception:
+            self.close()
+            raise
+
+    def close(self):
+        for resource in (self.ledger, self.cwo, self.collector):
+            if resource:
+                resource.close()
+
+    def scan(self):
+        try:
+            self.collector.scan()
+        except (OSError, ValueError):
+            self.collector.available = False
+        snapshot = self.collector.snapshot()
+        if self.cwo:
+            snapshot['cwo_sessions'] = self.cwo.scan(self.collector.db, snapshot)
+        audit = self.audit.scan() if self.audit else None
+        reviews = self.reviews.scan() if self.reviews else None
+        if self.provenance:
+            reviews['provenance'] = self.provenance.scan(self.collector.db, snapshot, reviews,
+                                                        now=reviews['scan_timestamp_seconds'])
+        status = {"sessions": len(snapshot["sessions"]), "pending_files": snapshot["pending_files"],
+                  "source_available": snapshot["source_available"]}
+        if self.cwo:
+            status['cwo_sessions'] = {k: snapshot['cwo_sessions'][k] for k in
+                ('scan_ready', 'pending_files', 'source_errors', 'source_gaps')}
+            status['cwo_sessions']['associated_sessions'] = len(snapshot['cwo_sessions']['associations'])
+        if audit is not None:
+            status['cwo_audit'] = {k: audit[k] for k in ('source_available', 'collection_complete', 'source_files', 'source_errors', 'limit_reached')}
+            status['cwo_audit']['exported_events'] = len(audit['events'])
+        if reviews is not None:
+            status['cwo_reviews'] = {k: reviews[k] for k in ('source_available', 'collection_complete', 'source_files', 'source_errors', 'pending_results', 'limit_reached', 'skipped_records')}
+            status['cwo_reviews']['exported_reviews'] = len(reviews['reviews'])
+            if self.provenance:
+                status['cwo_reviews']['provenance'] = reviews['provenance']
+                status['cwo_reviews']['attribution'] = {state: sum(r['attribution'] == state for r in reviews['reviews'])
+                    for state in ('linked', 'unlinked', 'ambiguous', 'pending')}
+        payload = codex_payload(snapshot, self.ledger.snapshot() if self.ledger else None,
+                                self.account, audit, reviews)
+        return snapshot, payload, status
+
+
+class SourceWorker:
+    """One thread and independent cache per enabled source; no scrape-path I/O."""
+
+    def __init__(self, name, args, stopping, endpoint=None, audit=None, reviews=None):
+        self.name, self.args, self.stopping, self.endpoint = name, args, stopping, endpoint
+        self.audit, self.reviews = audit, reviews
+        self.snapshot = (empty_snapshot() if name == 'bob' else {
+            'version': 1, 'sessions': [], 'source_available': 0, 'scan_timestamp': 0,
+            'last_event': 0, 'pending_files': 0, 'errors': {}})
+        self.status = {'sessions': 0, 'source_available': 0, 'pending_files': 0}
+        self.render = render_bob_metrics if name == 'bob' else render_session_metrics
+        self.output = args.bob_snapshot_file if name == 'bob' else args.snapshot_file
+        if endpoint:
+            endpoint.update_part(name, self.render(self.snapshot))
+
+    def run(self):
+        source = None
+        try:
+            while not self.stopping.is_set():
+                started = time.monotonic()
+                try:
+                    if source is None:
+                        source = (BobCollector(self.args.bob_home, self.args.session_state_dir,
+                            session_retention_seconds=self.args.session_retention_seconds,
+                            session_export_cap=self.args.session_export_cap) if self.name == 'bob' else
+                            CodexSource(self.args, self.audit, self.reviews))
+                    if self.name == 'bob':
+                        snapshot = source.scan()
+                        payload = self.render(snapshot)
+                        status = {k: snapshot[k] for k in ('source_available', 'collection_complete', 'pending', 'limit_reached')}
+                        status['sessions'] = len(snapshot['sessions'])
+                    else:
+                        snapshot, payload, status = source.scan()
+                    write_snapshot(self.output, snapshot)
+                    self.snapshot, self.status = snapshot, status
+                except Exception:
+                    # No source content, paths or credentials in logs or health.
+                    self.snapshot = {**self.snapshot, 'source_available': 0}
+                    if self.name == 'bob':
+                        self.snapshot.update(source_errors=1, collection_complete=0)
+                    # Codex's error counters belong to its persisted ledger;
+                    # retain them while availability reports a worker failure.
+                    self.status = {**self.status, 'source_available': 0}
+                    payload = self.render(self.snapshot)
+                    try:
+                        write_snapshot(self.output, self.snapshot)
+                    except (OSError, ValueError):
+                        pass
+                if self.endpoint:
+                    self.endpoint.update_part(self.name, payload)
+                if self.args.once:
+                    break
+                self.stopping.wait(max(0, self.args.poll_seconds - (time.monotonic() - started)))
+        finally:
+            if source:
+                source.close()
+
+
+def main(argv=None, *, require_codex=True):
+    parser = argparse.ArgumentParser(description=__doc__ if require_codex else
+        "Collect local Codex sessions, IBM Bob chats, or both on one metrics endpoint.")
+    parser.add_argument("--codex-home", type=Path, required=require_codex)
+    parser.add_argument("--bob-home", type=Path, help="enable Bob collection from db/bob.db inside this home")
+    parser.add_argument("--bob-snapshot-file", type=Path, help="private Bob presentation snapshot")
     parser.add_argument("--session-state-dir", type=Path, required=True)
-    parser.add_argument("--snapshot-file", type=Path, required=True)
+    parser.add_argument("--snapshot-file", type=Path, required=require_codex)
     parser.add_argument("--state-dir", type=Path, help="optional directory containing an existing controller task database; read-only")
     parser.add_argument("--cwo-sessions", action="store_true",
                         help="associate CWO skill blocks and direct helper commands across the selected Codex profile")
@@ -69,6 +203,15 @@ def main(argv=None):
                         help="optional private numeric snapshot from collect_codex_account.py")
     parser.add_argument("--once", action="store_true", help="scan once without starting the metrics server")
     args = parser.parse_args(argv)
+    if not args.codex_home and not args.bob_home:
+        parser.error("enable at least one source with --codex-home or --bob-home")
+    if bool(args.codex_home) != bool(args.snapshot_file):
+        parser.error("--codex-home and --snapshot-file must be supplied together")
+    if bool(args.bob_home) != bool(args.bob_snapshot_file):
+        parser.error("--bob-home and --bob-snapshot-file must be supplied together")
+    if not args.codex_home and any((args.cwo_sessions, args.cwo_audit_file, args.cwo_audit_dir,
+                                   args.cwo_review_dir, args.account_snapshot_file, args.state_dir)):
+        parser.error("CWO and account options require --codex-home")
     if not 1 <= args.poll_seconds <= 60:
         parser.error("poll interval must be between 1 and 60 seconds")
     if not 0 <= args.session_retention_seconds <= SAFE_INTEGER:
@@ -81,19 +224,27 @@ def main(argv=None):
         metrics_bind_address(args.host, allow_remote=True)
     except ValueError as error:
         parser.error(str(error))
-    if any(not p.is_absolute() for p in (args.codex_home, args.session_state_dir, args.snapshot_file)):
+    if any(not p.is_absolute() for p in (args.codex_home, args.bob_home, args.session_state_dir,
+                                        args.snapshot_file, args.bob_snapshot_file) if p):
         parser.error("source, state, and snapshot paths must be absolute")
-    source = Path(os.path.abspath(args.codex_home))
-    snapshot = Path(os.path.abspath(args.snapshot_file))
+    source = Path(os.path.abspath(args.codex_home)) if args.codex_home else None
+    snapshot = Path(os.path.abspath(args.snapshot_file)) if args.snapshot_file else None
     state = Path(os.path.abspath(args.session_state_dir))
-    if snapshot.is_relative_to(source) or state.is_relative_to(source):
+    if source and (snapshot.is_relative_to(source) or state.is_relative_to(source)):
         parser.error("collector output must be outside the Codex source home")
-    if snapshot.parent == state and snapshot.name in ("sessions.sqlite3", "sessions.sqlite3-wal", "sessions.sqlite3-shm", "writer.lock", "cwo-sessions.sqlite3", "cwo-sessions.sqlite3-wal", "cwo-sessions.sqlite3-shm", "cwo-writer.lock"):
-        parser.error("snapshot must not replace collector state")
+    try:
+        validate_outputs([p for p in (args.codex_home, args.bob_home) if p], state,
+                         [p for p in (snapshot, args.bob_snapshot_file) if p])
+        if args.credential_file and Path(os.path.abspath(args.credential_file)) in (snapshot, args.bob_snapshot_file):
+            raise ValueError("snapshot must be separate from the metrics credential")
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
     if args.account_snapshot_file:
         account_path = Path(os.path.abspath(args.account_snapshot_file))
         if (not args.account_snapshot_file.is_absolute() or account_path == snapshot
-                or account_path.is_relative_to(source) or account_path.is_relative_to(state)):
+                or account_path.is_relative_to(source) or account_path.is_relative_to(state)
+                or (args.bob_home and account_path.is_relative_to(args.bob_home))
+                or account_path == args.bob_snapshot_file):
             parser.error("account snapshot must be separate from Codex source and session state")
     try:
         review_collector = ReviewCollector(directories=args.cwo_review_dir) if args.cwo_review_dir else None
@@ -113,64 +264,39 @@ def main(argv=None):
         for directory in review_collector.directories:
             if snapshot.is_relative_to(directory) or state.is_relative_to(directory) or directory.is_relative_to(state):
                 parser.error("review inputs must be separate from collector output")
+    if args.bob_snapshot_file:
+        for directory in [*args.cwo_audit_dir, *args.cwo_review_dir]:
+            if args.bob_snapshot_file.is_relative_to(directory):
+                parser.error("Bob snapshot must be separate from CWO inputs")
+        if args.bob_snapshot_file in args.cwo_audit_file:
+            parser.error("Bob snapshot must be separate from CWO inputs")
     os.umask(0o077)
     stopping = threading.Event()
     for sig in (signal.SIGINT, signal.SIGTERM):
         signal.signal(sig, lambda *_: stopping.set())
-    collector = endpoint = ledger = account = cwo = provenance = None
+    endpoint = None
+    workers, threads = [], []
     try:
-        collector = SessionCollector(
-            args.codex_home, args.session_state_dir,
-            session_retention_seconds=args.session_retention_seconds,
-            session_export_cap=args.session_export_cap,
-        )
-        if args.cwo_sessions:
-            cwo = CwoSessionCollector(args.codex_home, args.session_state_dir)
-            if review_collector:
-                provenance = ProvenanceIndex(cwo)
-        if args.state_dir:
-            ledger = ObservabilityLedger(args.state_dir, readonly=True)
         if not args.once:
             endpoint = SessionMetricsEndpoint(
                 args.host, args.port, read_credential(args.credential_file), allow_remote=True,
             )
+        for name, enabled in (('codex', args.codex_home), ('bob', args.bob_home)):
+            if enabled:
+                workers.append(SourceWorker(name, args, stopping, endpoint, audit_collector, review_collector))
+        if endpoint:
             endpoint.start()
-        if args.account_snapshot_file:
-            account = AccountSnapshotMetrics(args.account_snapshot_file)
-        while not stopping.is_set():
-            try:
-                collector.scan()
-            except (OSError, ValueError):
-                collector.available = False
-            snapshot = collector.snapshot()
-            if cwo:
-                snapshot["cwo_sessions"] = cwo.scan(collector.db, snapshot)
-            write_snapshot(args.snapshot_file, snapshot)
-            audit = audit_collector.scan() if audit_collector else None
-            reviews = review_collector.scan() if review_collector else None
-            if provenance:
-                reviews["provenance"] = provenance.scan(collector.db, snapshot, reviews,
-                                                       now=reviews["scan_timestamp_seconds"])
-            if endpoint:
-                endpoint.update_sessions(snapshot, ledger.snapshot() if ledger else None, account, audit, reviews)
-            if args.once:
-                status = {"sessions": len(snapshot["sessions"]), "pending_files": snapshot["pending_files"], "source_available": snapshot["source_available"]}
-                if cwo:
-                    status["cwo_sessions"] = {key: snapshot["cwo_sessions"][key] for key in ("scan_ready", "pending_files", "source_errors", "source_gaps")}
-                    status["cwo_sessions"]["associated_sessions"] = len(snapshot["cwo_sessions"]["associations"])
-                if audit is not None:
-                    status["cwo_audit"] = {key: audit[key] for key in ("source_available", "collection_complete", "source_files", "source_errors", "limit_reached")}
-                    status["cwo_audit"]["exported_events"] = len(audit["events"])
-                if reviews is not None:
-                    status["cwo_reviews"] = {key: reviews[key] for key in ("source_available", "collection_complete", "source_files", "source_errors", "pending_results", "limit_reached", "skipped_records")}
-                    status["cwo_reviews"]["exported_reviews"] = len(reviews["reviews"])
-                    if provenance:
-                        status["cwo_reviews"]["provenance"] = reviews["provenance"]
-                        status["cwo_reviews"]["attribution"] = {state: sum(r["attribution"] == state for r in reviews["reviews"])
-                            for state in ("linked", "unlinked", "ambiguous", "pending")}
-                print(json.dumps(status))
+        for worker in workers:
+            if stopping.is_set():
                 break
-            stopping.wait(args.poll_seconds)
+            thread = threading.Thread(target=worker.run, name='traceonaut-' + worker.name)
+            thread.start()
+            threads.append(thread)
+        for thread in threads:
+            thread.join()
+        if args.once:
+            statuses = {worker.name: worker.status for worker in workers}
+            print(json.dumps(statuses['codex'] if require_codex and not args.bob_home else statuses))
         return 0
     except Exception:
         # No paths, messages, raw source lines, credential contents, or traceback.
@@ -178,14 +304,11 @@ def main(argv=None):
               file=__import__("sys").stderr)
         return 1
     finally:
+        stopping.set()
+        for thread in threads:
+            thread.join()
         if endpoint:
             endpoint.close()
-        if ledger:
-            ledger.close()
-        if cwo:
-            cwo.close()
-        if collector:
-            collector.close()
 
 
 if __name__ == "__main__":

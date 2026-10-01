@@ -36,7 +36,8 @@ def main(argv=None):
         parser.exit(1, f"Metrics HTTP {status}; check authentication and collector readiness.\n")
     except (OSError, ValueError, URLError):
         parser.exit(1, "Metrics check failed: check the URL, private token, network and certificate trust.\n")
-    if b"cwo_codex_collector_scan_timestamp_seconds" not in payload:
+    if not any(name in payload for name in (b"cwo_codex_collector_scan_timestamp_seconds",
+                                           b"traceonaut_bob_collector_scan_timestamp_seconds")):
         parser.exit(1, "Expected collector health metrics are absent.\n")
     print("Authenticated metrics: HTTP 200; collector health metrics present")
     return 0

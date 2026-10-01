@@ -1,0 +1,1093 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.5.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Reading Bob values",
+      "type": "link",
+      "url": "https://turbra.github.io/traceonaut/dashboards/ibm-bob-beta/",
+      "targetBlank": true
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Overview",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Bob collection health is source-wide. Usage is recorded history, not interval spending. Partial means some source records or fields are missing. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. ",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "unit": "locale",
+          "noValue": "—",
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Collection"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unavailable / stale"
+                      },
+                      "1": {
+                        "text": "Available"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Scan age"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Recorded tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Coverage"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Partial"
+                      },
+                      "1": {
+                        "text": "Complete"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 28,
+          "titleSize": 14
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(traceonaut_bob_collector_source_available) * ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < bool 90)",
+          "legendFormat": "Collection",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "B",
+          "expr": "time() - (max(traceonaut_bob_collector_last_success_timestamp_seconds) > 0)",
+          "legendFormat": "Scan age",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "C",
+          "expr": "count(((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)",
+          "legendFormat": "Chats",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "D",
+          "expr": "sum((max by (project_id, session_id) (traceonaut_bob_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "legendFormat": "Recorded tokens",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "E",
+          "expr": "max(traceonaut_bob_collector_collection_complete)",
+          "legendFormat": "Coverage",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Input tokens",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Charts begin when Prometheus starts scraping. Gaps indicate unavailable collection.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "noValue": "—",
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisLabel": "Recorded tokens",
+            "axisCenteredZero": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "axisColorMode": "text",
+            "axisPlacement": "left",
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "insertNulls": false,
+            "pointSize": 5,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum((max by (project_id, session_id) (traceonaut_bob_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"input\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
+          "legendFormat": "input",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Output tokens",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Charts begin when Prometheus starts scraping. Gaps indicate unavailable collection.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "noValue": "—",
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisLabel": "Recorded tokens",
+            "axisCenteredZero": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "axisColorMode": "text",
+            "axisPlacement": "left",
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "insertNulls": false,
+            "pointSize": 5,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum((max by (project_id, session_id) (traceonaut_bob_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"output\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
+          "legendFormat": "output",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Responses by chat",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Top eight chats by saved assistant responses. Local UI messages are excluded.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "unit": "locale",
+          "noValue": "—",
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Responses"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(8, (max by (project_id, session_id) (traceonaut_bob_session_response_count{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "project_id": true
+            },
+            "indexByName": {
+              "session_id": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "session_id": "Chat",
+              "Value": "Responses"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Responses",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Tool activity",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Counts are saved tool results, not tool requests or shell exit codes. Unknown outcomes make the totals partial. Duration covers results with duration metadata.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "unit": "locale",
+          "noValue": "—",
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 28,
+          "titleSize": 14
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum((max by (project_id, session_id) (traceonaut_bob_session_tool_result_count{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "legendFormat": "Results",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "B",
+          "expr": "sum((max by (project_id, session_id) (traceonaut_bob_session_tool_error_count{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "legendFormat": "Errors",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "C",
+          "expr": "sum((max by (project_id, session_id) (traceonaut_bob_session_tool_unknown_count{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "legendFormat": "Unknown outcomes",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Chat activity",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Chats with a saved message in the preceding five minutes at each point. This measures recent messages, not whether an agent is currently running. Project and Chat filters apply.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "locale",
+          "noValue": "—",
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisLabel": "Chats",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "axisColorMode": "text",
+            "axisPlacement": "left",
+            "barAlignment": 0,
+            "gradientMode": "none",
+            "insertNulls": false,
+            "pointSize": 5,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "((count((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) > time() - 300) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= time()) and ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) or vector(0)) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
+          "legendFormat": "Recent chats",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Chats",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 12,
+        "h": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Blank values are missing. Partial marks incomplete token fields or tool outcomes. Scan age in Overview also applies to cached table values.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "unit": "locale",
+          "noValue": "—",
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last activity"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Responses"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tool errors"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Coverage"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Recorded"
+                      },
+                      "1": {
+                        "text": "Partial"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Project"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 115
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1000 * ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "expr": "(max by (project_id, session_id) (traceonaut_bob_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "expr": "(max by (project_id, session_id) (traceonaut_bob_session_response_count{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "expr": "(max by (project_id, session_id) (traceonaut_bob_session_tool_error_count{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "expr": "(max by (project_id, session_id) (traceonaut_bob_session_partial{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "indexByName": {
+              "session_id": 0,
+              "project_id": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5,
+              "Value #E": 6
+            },
+            "renameByName": {
+              "session_id": "Chat",
+              "project_id": "Project",
+              "Value #A": "Last activity",
+              "Value #B": "Tokens",
+              "Value #C": "Responses",
+              "Value #D": "Tool errors",
+              "Value #E": "Coverage"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Last activity",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 40,
+  "tags": [
+    "traceonaut",
+    "ibm-bob",
+    "beta"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "project",
+        "label": "Project",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": {
+          "query": "label_values(traceonaut_bob_session_info, project_id)",
+          "refId": "StandardVariableQuery"
+        },
+        "definition": "label_values(traceonaut_bob_session_info, project_id)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 1,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "session",
+        "label": "Chat",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": {
+          "query": "label_values(traceonaut_bob_session_info, session_id)",
+          "refId": "StandardVariableQuery"
+        },
+        "definition": "label_values(traceonaut_bob_session_info, session_id)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 1,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "IBM Bob · Beta",
+  "uid": "traceonaut-ibm-bob-beta",
+  "version": 1
+}

@@ -6,7 +6,11 @@ description: See which local records the collector reads and which data stays pr
 
 # Data Sources and Privacy
 
-The session collector reads `sessions/`, `archived_sessions/`, and selected metadata from `state_*.sqlite` in one Codex profile. It follows new records while Codex runs.
+Enable Codex, IBM Bob, or both explicitly. Disabled source homes are never opened.
+
+## Codex
+
+The Codex reader uses `sessions/`, `archived_sessions/`, and selected metadata from `state_*.sqlite` in one profile. It follows new records while Codex runs.
 
 | Source | Collected values |
 | --- | --- |
@@ -23,11 +27,29 @@ Repeated response identities are deduplicated. Copied parent history stays with 
 
 Prometheus receives numeric values and opaque IDs. Explicit session names, agent names/paths and project folder names stay in the protected snapshot and rendered dashboards. Missing names get a project/kind/time fallback.
 
-Prompts, prompt-derived titles, messages, command text, tool output and reasoning are excluded. The collector reads source files without modifying them. Protect the snapshot, database, rendered dashboards and Grafana access.
+The Codex reader excludes prompts, prompt-derived titles, messages, command text, tool output and reasoning. The collector reads source files without modifying them. Protect the snapshot, database, rendered dashboards and Grafana access.
 
 Each additional profile needs its own collection. [Account Allowance](../optional/account-allowance.md) and [CWO Integration](../integrations/cwo.md) use separate optional sources.
 
+## IBM Bob
+
+The Bob reader opens `db/bob.db` using a read-only connection. SQLite may also use
+its WAL, shared-memory and rollback-journal files in the same directory.
+The reader stores task token counts, relationships, timestamps, response counts
+and tool outcomes in a private index. It retains no message content, nested messages, arguments, environment
+objects, credentials or tool output. It makes no network requests.
+
+Database records and WAL contents stay unchanged. SQLite may update reader markers
+in the existing shared-memory file while coordinating with Bob's writer.
+
+Metrics use hashed project/task IDs and bounded categories. Stored task titles and
+project directory basenames appear only in the private snapshot and rendered
+dashboard; titles can contain personal text, so protect Grafana access too.
+Symlinks, hardlinked files and writable-by-others paths are rejected.
+
 ## CWO Workflow Audit Inputs
+
+These optional inputs belong to Codex collection.
 
 With `--cwo-audit-dir` or `--cwo-audit-file`, Traceonaut reads only the selected audit sources. Prometheus receives the event's content hash as an opaque ID, a bounded event type and its source timestamp, plus numeric collection health. Other fields, including model names, paths, review text and packet contents, are excluded. Source files must be owned by the collector's user; symlinked files and directory paths are rejected. Discovery does not follow symlinked subdirectories.
 

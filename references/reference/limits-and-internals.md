@@ -26,6 +26,14 @@ The source inventory is capped at 100,000 files. The private database has a 2 Gi
 
 Session retention uses last observed activity, then creation time. Unknown activity remains eligible for the cap. The cutoff is inclusive; session ID breaks equal-activity ties.
 
+## IBM Bob
+
+Bob reads at most 2,000 rows or 4 MiB of JSON per scan slice, with a 0.5-second read
+budget and a 100 ms SQLite lock timeout. Slices continue over subsequent polls.
+A source transaction is limited to 60 seconds; the index is limited to 100,000
+tasks, 1,000,000 messages and 512 MiB. Individual message JSON is limited to 1 MiB;
+task costs to 64 KiB. Limits and malformed records are visible in collection health.
+
 ## CWO Workflow Audit Inputs
 
 Audit records must be newline-terminated JSON objects with an event type, event hash, and valid source timestamp. Duplicate JSON keys and non-finite values are rejected. Content hashes are verified and used to deduplicate records. Unknown valid event types are exported as `other`.

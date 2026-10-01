@@ -18,7 +18,21 @@ For a 90-day window and a 2,000-session cap, append:
 
 Use `--session-retention-seconds 0` to disable age expiry. The cap accepts 1 through 100,000.
 
-Source files and the private index retain their history. Prometheus keeps already scraped samples according to its own retention policy.
+Export retention leaves source records and the Codex index intact. Prometheus keeps already scraped samples according to its own retention policy.
+
+## IBM Bob
+
+Bob uses the same retention settings, with a separate export cap. With both sources
+enabled, the default allows up to 1,000 Codex sessions and 1,000 Bob tasks, each
+active within 30 days.
+Tasks with no saved messages use their creation time for retention. Source records
+are unchanged. Bob's private index mirrors the current database, including deletions.
+
+Large histories are read over several scans. See [Bob scan and storage bounds](limits-and-internals.md#ibm-bob)
+for the exact limits.
+
+Bob's snapshot maps only exported tasks. Charts begin with Prometheus's first
+scrape, even when task totals include older work.
 
 ## Historical Views
 
@@ -28,6 +42,8 @@ Names in the snapshot can outlive exported metrics. Prometheus history begins wi
 
 ## Command and Compaction Detail
 
+These detail limits apply to Codex.
+
 Command detail keeps the newest **512 completions within seven days**. Compaction detail separately keeps the newest **64 completions within seven days**.
 
 The dashboard shows the earliest fully covered command/compaction interval. Choose a start after that boundary for complete interval counts. Positive counts can be lower bounds during incomplete collection.
@@ -35,6 +51,8 @@ The dashboard shows the earliest fully covered command/compaction interval. Choo
 [Limits and Internals](limits-and-internals.md) records scan budgets, tie handling and storage bounds. Export limits bound current metrics, while Prometheus storage grows with retained history.
 
 ## CWO Workflow Audits
+
+These optional inputs require Codex collection.
 
 The optional audit input exports the newest **2,000 unique events from the last 30 days**, across all configured files. One event produces one timestamp series. Copies with the same content hash count once. Source files remain unchanged; the collector uses an in-memory projection rather than another database.
 

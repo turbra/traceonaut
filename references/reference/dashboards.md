@@ -12,6 +12,7 @@ description: Dashboard titles, stable UIDs, templates and renderer entry points.
 | [All Sessions](../dashboards/all-sessions.md) | `cwo-supervisor-observability-v1` | `codex-all-sessions.json` | `render_codex_sessions_dashboard.py` |
 | [CWO Overview](../dashboards/cwo.md) | `cwo-dispatch-observability-v1` | `cwo-overview.json` | `render_observability_dashboard.py` |
 | [Codex TUI · Beta](../dashboards/tui-beta.md) | `traceonaut-codex-tui-beta` | `codex-tui-beta.json` | `render_codex_sessions_dashboard.py` |
+| [IBM Bob · Beta](../dashboards/ibm-bob-beta.md) | `traceonaut-ibm-bob-beta` | `ibm-bob-beta.json` | `render_bob_dashboard.py` |
 
 Dashboard UIDs and renderer script names remain stable for compatibility. Session dashboards refresh every 30 seconds; CWO Overview refreshes every minute. Codex TUI · Beta is an additional experimental view, separate from Work Overview.
 

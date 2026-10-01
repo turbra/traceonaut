@@ -24,6 +24,7 @@ class ReleaseBundleTests(unittest.TestCase):
             "beta": ("codex-work-overview-beta.json", "Work Overview"),
             "dispatch": ("cwo-overview.json", "CWO Overview"),
             "tui-beta": ("codex-tui-beta.json", "Codex TUI · Beta"),
+            "bob-beta": ("ibm-bob-beta.json", "IBM Bob · Beta"),
         }
         self.assertEqual(set(COMPONENTS), {"sessions", "account", *templates})
         self.assertEqual(
@@ -105,11 +106,12 @@ class ReleaseBundleTests(unittest.TestCase):
 
     def test_every_component_runs_without_the_checkout_or_cwo(self):
         entrypoints = {
-            "sessions": ["collect_codex_sessions.py", "collect_codex_account.py"],
-            "account": ["collect_codex_sessions.py", "collect_codex_account.py"],
+            "sessions": ["collect_sessions.py", "collect_codex_sessions.py", "collect_codex_account.py"],
+            "account": ["collect_sessions.py", "collect_codex_sessions.py", "collect_codex_account.py"],
             "stable": ["render_codex_sessions_dashboard.py"],
             "beta": ["render_codex_beta_dashboard.py"],
             "tui-beta": ["render_codex_sessions_dashboard.py"],
+            "bob-beta": ["render_bob_dashboard.py"],
             "dispatch": ["export_dispatch_observability.py",
                          "export_terminal_observations.py", "render_observability_dashboard.py"],
         }

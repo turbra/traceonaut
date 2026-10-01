@@ -19,6 +19,11 @@ module.exports = {
           "type": "doc",
           "id": "references/getting-started",
           "label": "Quick Start"
+        },
+        {
+          "type": "doc",
+          "id": "references/bob-collection",
+          "label": "IBM Bob Collection"
         }
       ]
     },
@@ -46,6 +51,11 @@ module.exports = {
           "type": "doc",
           "id": "references/dashboards/tui-beta",
           "label": "Codex TUI · Beta"
+        },
+        {
+          "type": "doc",
+          "id": "references/dashboards/ibm-bob-beta",
+          "label": "IBM Bob · Beta"
         },
         {
           "type": "doc",

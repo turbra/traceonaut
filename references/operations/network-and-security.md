@@ -17,7 +17,7 @@ A container needs a route to the workstation and a read-only mount of the token.
 ## Credentials and Private Files
 
 - Token: owned by the collector user, mode `0600`, regular file.
-- State and snapshot directories: mode `0700`, outside the Codex profile.
+- State and snapshot directories: mode `0700`, outside the Codex and Bob profiles.
 - Paths: trusted owners, with symlinks and writable ancestor directories rejected.
 - Prometheus: its own protected copy of the token, readable by its service user.
 - Grafana: access to Prometheus and rendered dashboard JSON; the collector's private files stay on the workstation.

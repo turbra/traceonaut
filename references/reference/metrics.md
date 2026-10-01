@@ -12,6 +12,48 @@ Metric names are stable public identifiers. The `cwo_codex_` prefix belongs to s
 
 Labels use opaque identities and bounded categories. Display names stay in rendered dashboards.
 
+## IBM Bob
+
+These gauges come from the explicitly enabled Bob source. Task tokens exclude completed
+subtasks already included in their parent's costs. `total` is `input + output`;
+`cached_input` and `cache_write_input` are input breakdowns, never added to the total.
+Saved response/tool counts cover rows currently retained by Bob. Use these as recorded
+history totals, not `rate()` counters. Source-wide coverage also includes skipped records.
+
+| Name | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `traceonaut_bob_collector_source_available` | gauge | None | One when the source was readable on the latest scan. |
+| `traceonaut_bob_collector_scan_timestamp_seconds` | gauge | None | Latest scan attempt, Unix seconds. |
+| `traceonaut_bob_collector_last_success_timestamp_seconds` | gauge | None | Latest successful full source check, Unix seconds. |
+| `traceonaut_bob_collector_collection_complete` | gauge | None | One when the latest generation has no pending work, skipped records or missing numeric fields. |
+| `traceonaut_bob_collector_pending` | gauge | None | One while a bounded source generation is being read. |
+| `traceonaut_bob_collector_limit_reached` | gauge | None | One when a scan or storage limit prevents completion. |
+| `traceonaut_bob_collector_source_errors` | gauge | None | Source failures in the latest scan. |
+| `traceonaut_bob_collector_indexed_sessions` | gauge | None | Tasks in the last completed generation. |
+| `traceonaut_bob_collector_expired_sessions` | gauge | None | Tasks excluded by inactivity retention. |
+| `traceonaut_bob_collector_cap_omitted_sessions` | gauge | None | Eligible tasks omitted by the export cap. |
+| `traceonaut_bob_collector_retention_seconds` | gauge | None | Per-source export inactivity window; zero disables expiry. |
+| `traceonaut_bob_collector_export_cap` | gauge | None | Maximum exported Bob tasks. |
+| `traceonaut_bob_collector_skipped_records` | gauge | `reason` | Skips in the latest completed generation. |
+| `traceonaut_bob_session_info` | gauge | `project_id`, `session_id`, `kind` | Bob task identity; value 1. |
+| `traceonaut_bob_session_usage_tokens` | gauge | `project_id`, `session_id`, `token_kind` | Recorded tokens by input, output, cached_input, cache_write_input or total. |
+| `traceonaut_bob_session_last_event_timestamp_seconds` | gauge | `project_id`, `session_id` | Latest saved message time, Unix seconds. |
+| `traceonaut_bob_session_response_count` | gauge | `project_id`, `session_id` | Saved assistant responses, excluding local UI messages. |
+| `traceonaut_bob_session_tool_result_count` | gauge | `project_id`, `session_id` | Saved tool results, including unknown outcomes. |
+| `traceonaut_bob_session_tool_error_count` | gauge | `project_id`, `session_id` | Saved tool results explicitly marked as errors. |
+| `traceonaut_bob_session_tool_unknown_count` | gauge | `project_id`, `session_id` | Saved tool results with unknown outcomes. |
+| `traceonaut_bob_session_tool_duration_seconds` | gauge | `project_id`, `session_id` | Sum of recorded tool durations in seconds. |
+| `traceonaut_bob_session_timed_tool_count` | gauge | `project_id`, `session_id` | Tool results with recorded durations. |
+| `traceonaut_bob_session_partial` | gauge | `project_id`, `session_id` | One when task usage or tool outcomes have missing or inconsistent fields. |
+
+Task kinds: `normal`, `subtask`, `subagent`. Skip reasons: `invalid_record`,
+`invalid_json`, `invalid_number`, `invalid_timestamp`, `unsupported_version`,
+`unsupported_kind`, `oversized_record`, `unknown_tool_outcome`.
+
+Missing usage and durations are absent, while known zero values are exported. On
+source failure the last numeric cache remains visible with availability 0 and an
+unchanged last-success timestamp. [IBM Bob Collection](../bob-collection.md) covers setup.
+
 ## Session Collector
 
 | Name | Type | Labels | Meaning |

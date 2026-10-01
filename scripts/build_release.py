@@ -16,8 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = "examples/observability/"
 COMPONENTS = {
     # Existing account/exporter launchers share one configured scripts directory.
-    "sessions": ("scripts/collect_codex_sessions.py", "scripts/collect_codex_account.py"),
-    "account": ("scripts/collect_codex_sessions.py", "scripts/collect_codex_account.py"),
+    "sessions": ("scripts/collect_sessions.py", "scripts/collect_codex_sessions.py", "scripts/collect_codex_account.py"),
+    "account": ("scripts/collect_sessions.py", "scripts/collect_codex_sessions.py", "scripts/collect_codex_account.py"),
     "stable": (
         "scripts/render_codex_sessions_dashboard.py",
         TEMPLATES + "codex-all-sessions.json",
@@ -30,6 +30,11 @@ COMPONENTS = {
     "tui-beta": (
         "scripts/render_codex_sessions_dashboard.py",
         TEMPLATES + "codex-tui-beta.json",
+    ),
+    "bob-beta": (
+        "scripts/render_bob_dashboard.py",
+        "scripts/render_codex_sessions_dashboard.py",
+        TEMPLATES + "ibm-bob-beta.json",
     ),
     "dispatch": (
         "scripts/export_dispatch_observability.py",

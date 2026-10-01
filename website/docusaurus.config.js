@@ -5,7 +5,7 @@ const {themes} = require('prism-react-renderer');
 const config = {
   title: 'Traceonaut',
   favicon: 'traceonaut-favicon.png',
-  tagline: 'Codex session metrics for your existing Prometheus and Grafana.',
+  tagline: 'Codex and IBM Bob session metrics for your existing Prometheus and Grafana.',
   url: 'https://turbra.github.io',
   baseUrl: '/traceonaut/',
   trailingSlash: true,
@@ -52,6 +52,7 @@ const config = {
           {to: '/dashboards/all-sessions/', label: 'All Sessions'},
           {to: '/dashboards/cwo/', label: 'CWO Overview'},
           {to: '/dashboards/tui-beta/', label: 'Codex TUI · Beta'},
+          {to: '/dashboards/ibm-bob-beta/', label: 'IBM Bob · Beta'},
         ]},
         {href: 'https://github.com/turbra/traceonaut', label: 'GitHub', position: 'right'},
       ],

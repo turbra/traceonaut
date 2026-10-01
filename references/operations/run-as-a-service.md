@@ -6,9 +6,15 @@ description: Run the collector persistently with your existing service manager.
 
 # Run as a Service
 
-Use the collector command from [Quick Start](../getting-started.mdx#1-run-the-collector). Run it as the user who owns the Codex profile, with absolute paths and one writer per state directory.
+Use the collector command from [Quick Start](../getting-started.mdx#1-run-the-collector)
+or [IBM Bob Collection](../bob-collection.md#run-the-collector). Run it as the user
+who owns the source profiles, with absolute paths and one collector per state directory.
 
-For a Linux user service, save this as `~/.config/systemd/user/traceonaut.service`. Replace the checkout path:
+For a Linux user service, save this as `~/.config/systemd/user/traceonaut.service`.
+Replace the checkout path. This example collects Codex; for Bob or both sources,
+replace `ExecStart` with your chosen collection command, without `--once`.
+Use absolute paths or `%h` for your home directory. Variables exported in your
+terminal, such as `TRACEONAUT_DATA_DIR`, are not set by this service definition.
 
 ```ini
 [Unit]
@@ -17,7 +23,7 @@ Description=Traceonaut session collector
 [Service]
 Type=simple
 WorkingDirectory=/absolute/path/to/traceonaut
-ExecStart=/usr/bin/python3 /absolute/path/to/traceonaut/scripts/collect_codex_sessions.py --codex-home %h/.codex --session-state-dir %h/.local/share/traceonaut/session-state --snapshot-file %h/.local/share/traceonaut/sessions.json --credential-file %h/.local/share/traceonaut/metrics.token
+ExecStart=/usr/bin/python3 /absolute/path/to/traceonaut/scripts/collect_sessions.py --codex-home %h/.codex --session-state-dir %h/.local/share/traceonaut/session-state --snapshot-file %h/.local/share/traceonaut/sessions.json --credential-file %h/.local/share/traceonaut/metrics.token
 Restart=on-failure
 RestartSec=5
 UMask=0077

@@ -1,7 +1,7 @@
 ---
 slug: /
 title: Documentation
-description: Collect Codex session metrics, connect Prometheus and explore your runs in Grafana.
+description: Collect Codex or IBM Bob session metrics and explore your runs in Grafana.
 hide_title: true
 ---
 
@@ -12,10 +12,10 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
   <img src={useBaseUrl('/traceonaut.png')} alt="Traceonaut: Explore every run" />
 </h1>
 
-<p className="traceonaut-lead">Codex session metrics for your existing Prometheus and Grafana.</p>
+<p className="traceonaut-lead">Codex and IBM Bob session metrics for your existing Prometheus and Grafana.</p>
 
 Read session activity, recorded token usage, command outcomes and collector health.
-Traceonaut reads Codex files on your workstation; Prometheus scrapes its endpoint;
+Traceonaut reads Codex files, IBM Bob's database, or both; Prometheus scrapes one endpoint;
 Grafana queries Prometheus.
 
 <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square" alt="License: Apache-2.0" /></a>
@@ -28,6 +28,9 @@ Grafana queries Prometheus.
 </figure>
 
 ## Quick Start
+
+The example below collects Codex. For Bob alone or alongside Codex, use
+[IBM Bob Collection](/bob-collection/).
 
 Complete [Install](/install/), then run these steps from the checkout root.
 This example uses Prometheus on the same machine. See [Quick Start](/getting-started/)
@@ -105,7 +108,7 @@ datasource. The dashboard title is **Work Overview**.
 <div className="traceonaut-cards traceonaut-cards--explore">
   <Link className="traceonaut-card" to="/dashboards/work-overview/">
     <strong>Work Overview</strong>
-    <span>Start here for session and subagent activity, command outcomes, tokens and collector health.</span>
+    <span>Start here for Codex session and subagent activity, command outcomes, tokens and collector health.</span>
   </Link>
   <Link className="traceonaut-card" to="/dashboards/all-sessions/">
     <strong>All Sessions</strong>
@@ -118,6 +121,10 @@ datasource. The dashboard title is **Work Overview**.
   <Link className="traceonaut-card" to="/dashboards/tui-beta/">
     <strong>Codex TUI · Beta</strong>
     <span>Minimal Grafana version of the Codex CLI Usage screen in Dashboard view.</span>
+  </Link>
+  <Link className="traceonaut-card" to="/dashboards/ibm-bob-beta/">
+    <strong>IBM Bob · Beta</strong>
+    <span>Bob chats, recorded tokens and tool results in a compact layout.</span>
   </Link>
 </div>
 

@@ -8,6 +8,8 @@
   "references/dashboards/tui-beta.md",
   "references/getting-started.mdx",
   "references/install.md",
+  "references/bob-collection.md",
+  "references/dashboards/ibm-bob-beta.md",
   "references/integrations/cwo.md",
   "references/integrations/custom-review-adapter.md",
   "references/integrations/controller-metrics.md",

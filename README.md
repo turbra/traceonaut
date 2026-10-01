@@ -1,7 +1,7 @@
 <h1 align="center"><a href="https://turbra.github.io/traceonaut/"><img src="assets/traceonaut.png" alt="Traceonaut: Explore every run" width="840"></a></h1>
 
 <p align="center">
-  <strong>Codex session metrics for your existing Prometheus and Grafana.</strong>
+  <strong>Codex and IBM Bob session metrics for your existing Prometheus and Grafana.</strong>
 </p>
 
 <p align="center">
@@ -17,31 +17,34 @@
 
 ---
 
-Traceonaut shows Codex session activity, recorded token usage, command outcomes,
-and collector health in Grafana. It reads your existing Codex files and serves
-metrics for your Prometheus to scrape.
+Traceonaut shows session activity, recorded token usage and collector health in
+Grafana. It reads local Codex files or IBM Bob's database and serves metrics for
+Prometheus to scrape. Use Codex, Bob, or both.
 
 ![Work Overview with synthetic example data](assets/screenshots/work-overview.png)
 
 *Work Overview. All screenshots use synthetic example data.*
 
 ```text
-Codex files → Traceonaut collector → Prometheus → Grafana
+Codex files / Bob database → Traceonaut collector → Prometheus → Grafana
 ```
 
 ## Install
 
-Clone on the workstation holding your Codex profile. The collector uses Python's
+Clone on the workstation holding your Codex or Bob profile. The collector uses Python's
 standard library. See [Install](https://turbra.github.io/traceonaut/install/) for
 supported and tested versions.
 
 ```bash
 git clone https://github.com/turbra/traceonaut.git
 cd traceonaut
-python3 scripts/collect_codex_sessions.py --help
+python3 scripts/collect_sessions.py --help
 ```
 
 ## Quick Start
+
+The commands below collect Codex. For Bob alone or alongside Codex, use
+[IBM Bob Collection](https://turbra.github.io/traceonaut/bob-collection/).
 
 These commands use Prometheus on the same machine. For remote or container
 Prometheus, use the [Quick Start network tabs](https://turbra.github.io/traceonaut/getting-started/#1-run-the-collector).
@@ -121,6 +124,7 @@ your Prometheus datasource. The dashboard opens as **Work Overview**.
 | [All Sessions](https://turbra.github.io/traceonaut/dashboards/all-sessions/) | A compact session inventory and usage summary. |
 | [CWO Overview](https://turbra.github.io/traceonaut/dashboards/cwo/) | CWO sessions, agents, usage and workflow activity from [CWO](https://github.com/gprocunier/complex-work-orchestration), a Codex skill for coordinating agents. |
 | [Codex TUI · Beta](https://turbra.github.io/traceonaut/dashboards/tui-beta/) | Minimal Grafana version of the Codex CLI Usage screen in Dashboard view. |
+| [IBM Bob · Beta](https://turbra.github.io/traceonaut/dashboards/ibm-bob-beta/) | Bob chats, recorded tokens and tool results in a compact terminal-style layout. |
 
 ## Documentation
 

@@ -197,7 +197,10 @@ class OnboardingTests(unittest.TestCase):
                 try:
                     with opener.open(request, timeout=2) as response:
                         payload = response.read()
-                    break
+                    # Health is served while independent sources initialize.
+                    # HTTP readiness alone does not mean the first scan finished.
+                    if b"cwo_codex_collector_source_available{} 1" in payload.splitlines():
+                        break
                 except HTTPError as error:
                     error.close()
                     if error.code != 503:

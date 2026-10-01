@@ -81,6 +81,7 @@ PUBLIC_ASSETS = {
     "screenshots/work-overview.png",
     "screenshots/all-sessions.png", "screenshots/cwo-dispatches.png",
     "screenshots/codex-tui-beta.png",
+    "screenshots/ibm-bob-beta.png",
     "screenshots/account-allowance.png",
 }
 

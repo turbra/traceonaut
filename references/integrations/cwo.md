@@ -14,7 +14,7 @@ Add `--cwo-sessions` to your [session collector command](../getting-started.mdx)
 
 Import [CWO Overview](../dashboards/cwo.md). It shows sessions and agents active in the selected range, their recorded session usage, helper-command counts, and workflow activity when audit collection is enabled. Source gaps and pending scans are shown with the data. [Data Sources and Privacy](../reference/data-sources-and-privacy.md) describes what is read and excluded; [Retention and Limits](../reference/retention-and-limits.md) explains which history is visible.
 
-Association is session context, not token attribution: session totals include recorded history from before CWO association. Plain mentions of CWO, reading a guide, or generic agent activity do not establish association.
+Session totals include recorded history from before CWO association. Plain mentions of CWO, reading a guide, or generic agent activity do not establish association.
 
 ## Collect Workflow Activity
 
@@ -26,7 +26,7 @@ CWO writes its audit log by default to `<CWO installation>/.orchestration-audit/
 
 Append the option to the [session collector command](../getting-started.mdx). Repeat it for multiple CWO installations. For a custom `CWO_AUDIT_FILE`, pass its exact path to `--cwo-audit-file`. Use `--once` with the same options to check source availability, scan coverage, and exported event count.
 
-[CWO Overview](../dashboards/cwo.md) shows recorded workflow activity by event type. These records describe logged events; they do not prove job completion, token usage, or worker capacity. Traceonaut exports the newest 2,000 unique events from the last 30 days. Partial reads make displayed counts lower bounds. See [CWO audit retention](../reference/retention-and-limits.md#cwo-workflow-audits).
+[CWO Overview](../dashboards/cwo.md) shows recorded workflow activity by event type. Traceonaut exports the newest 2,000 unique events from the last 30 days. Partial reads make displayed counts lower bounds. See [CWO audit retention](../reference/retention-and-limits.md#cwo-workflow-audits).
 
 <a id="collect-external-contractor-reviews"></a>
 <a id="link-reviews-to-sessions"></a>

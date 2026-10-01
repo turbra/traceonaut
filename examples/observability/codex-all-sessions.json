@@ -760,7 +760,7 @@
       "id": 110,
       "type": "table",
       "title": "Sessions and latest activity",
-      "description": "Sessions active in the selected range. Tokens, responses, turns and turn time cover their available recorded history. Completed counts finished turns; Stopped counts failed or aborted turns. Last seen is the age of the latest activity at the selected range end. Model / effort shows the latest selected settings. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Sessions active in the selected range. Tokens, responses, turns and turn time cover their available recorded history. Completed turns reports finished turns; Failed / aborted turns combines failed and aborted outcomes. Last seen is the age of the latest activity at the selected range end. Model / effort shows the latest selected settings. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -830,7 +830,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 480
+                "value": 380
               },
               {
                 "id": "custom.minWidth",
@@ -960,7 +960,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 180
+                "value": 170
               }
             ]
           },
@@ -993,6 +993,34 @@
               {
                 "id": "decimals",
                 "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completed turns"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed / aborted turns"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
               }
             ]
           },
@@ -1186,8 +1214,8 @@
               "Value #E": "Responses",
               "Value #H": "Turn time",
               "kind": "Kind",
-              "Value #F": "Completed",
-              "Value #G": "Stopped"
+              "Value #F": "Completed turns",
+              "Value #G": "Failed / aborted turns"
             }
           }
         }
@@ -1653,8 +1681,8 @@
         {
           "id": 112,
           "type": "bargauge",
-          "title": "Observed turn time by session",
-          "description": "Sum of supplied completed-turn durations in available observed session history. Missing and older turn durations stay missing. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+          "title": "Turn time by session",
+          "description": "Sum of reported turn durations in available session history. Missing durations stay missing. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -1729,7 +1757,7 @@
                 },
                 "renameByName": {
                   "session_id": "Session",
-                  "Value": "Observed turn time"
+                  "Value": "Turn time"
                 }
               }
             },
@@ -1738,7 +1766,7 @@
               "options": {
                 "sort": [
                   {
-                    "field": "Observed turn time",
+                    "field": "Turn time",
                     "desc": true
                   }
                 ]
@@ -1753,7 +1781,7 @@
                     "handlerKey": "field.name"
                   },
                   {
-                    "fieldName": "Observed turn time",
+                    "fieldName": "Turn time",
                     "handlerKey": "field.value"
                   }
                 ]

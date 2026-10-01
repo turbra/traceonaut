@@ -174,12 +174,12 @@ class DocumentationTests(unittest.TestCase):
             "prompt_coached", "review_cli_started", "review_cli_finished",
             "astra_adjudication_received",
         )
+        public_docs = [doc for doc in DOCS if doc != ROOT / "AGENTS.md"]
+        public_docs.append(ROOT / "website/docs/home.mdx")
         for event in custom_events:
-            self.assertIn(event, adapter)
-            for doc in DOCS:
-                if doc != ROOT / "references/integrations/custom-review-adapter.md":
+            for doc in public_docs:
+                with self.subTest(event=event, doc=doc):
                     self.assertNotIn(event, doc.read_text(), str(doc))
-        self.assertIn("Other audit events", adapter)
         for doc in DOCS:
             with self.subTest(doc=doc):
                 text = doc.read_text()

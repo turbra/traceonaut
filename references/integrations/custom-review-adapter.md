@@ -44,15 +44,4 @@ Supported evidence includes completed direct Claude commands with matching resul
 
 All collected reviews remain visible, including failures and retries. Requested effort comes from the launch receipt; the result reports a model but does not attest to effort. Review usage stays separate from Codex session usage. Source commands are inspected without execution. Names and command text are not metric labels.
 
-## Custom Audit Event Types
-
-Some custom workflows may write these event names to their audit log:
-
-- `prompt_coached`
-- `review_cli_started`
-- `review_cli_finished`
-- `astra_adjudication_received`
-
-These names are custom-adapter context, not a standard CWO event contract. Traceonaut groups them as **Other audit events** in the standard workflow activity view. Their presence records a custom event only; it does not prove that work completed or establish token usage.
-
 For review retention, scan bounds, and source handling, see [Retention and Limits](../reference/retention-and-limits.md#cwo-cli-review-results) and [Limits and Internals](../reference/limits-and-internals.md#cwo-cli-review-artifacts).

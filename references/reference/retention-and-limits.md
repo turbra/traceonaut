@@ -40,7 +40,6 @@ The optional audit input exports the newest **2,000 unique events from the last 
 
 Workflow queries use the event's original timestamp, so importing yesterday's log does not count as activity today. Prometheus history still starts with the first scrape: choosing an end time before that scrape cannot show newly imported events. Deleting or moving source logs stops their current export; already scraped samples remain available under Prometheus retention.
 
-Audit timestamps identify recorded events. They do not establish job completion, worker capacity or token usage.
 See [audit parsing and scan bounds](limits-and-internals.md#cwo-workflow-audit-inputs).
 
 ## CWO-Associated Sessions

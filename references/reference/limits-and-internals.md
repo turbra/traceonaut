@@ -28,7 +28,7 @@ Session retention uses last observed activity, then creation time. Unknown activ
 
 ## CWO Workflow Audit Inputs
 
-Audit records must be newline-terminated JSON objects with an event type, event hash, and valid source timestamp. Duplicate JSON keys and non-finite values are rejected. Content hashes support consistency checks and deduplication; they do not prove that work ran. Unknown valid event types are exported as `other`.
+Audit records must be newline-terminated JSON objects with an event type, event hash, and valid source timestamp. Duplicate JSON keys and non-finite values are rejected. Content hashes are verified and used to deduplicate records. Unknown valid event types are exported as `other`.
 
 Each scan reads at most 256 files and 32 MiB, visits 8,192 directory entries, and descends 16 levels under each configured directory. Lines above 256 KiB, malformed records, and incomplete final lines are skipped; incomplete lines can be retried on the next scan. Configured source paths must be owned regular files/directories without symlink traversal.
 

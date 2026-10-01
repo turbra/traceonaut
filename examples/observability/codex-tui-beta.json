@@ -331,7 +331,7 @@
     {
       "id": 2,
       "type": "timeseries",
-      "title": "2 · Input tokens",
+      "title": "2a · Input tokens",
       "description": "Recorded input tokens over time for selected chats. This is a snapshot of recorded history, not tokens spent in each time bucket. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
@@ -435,7 +435,7 @@
     {
       "id": 7,
       "type": "timeseries",
-      "title": "2 · Output tokens",
+      "title": "2b · Output tokens",
       "description": "Recorded output tokens over time for selected chats. This is a snapshot of recorded history, not tokens spent in each time bucket. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
       "gridPos": {"x": 18, "y": 0, "w": 6, "h": 8},

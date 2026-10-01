@@ -586,7 +586,7 @@
       "id": 305,
       "type": "table",
       "title": "CWO-associated session activity",
-      "description": "Sessions and subagents using CWO, active in the selected range. Tokens and turn counts cover their recorded session history. Stopped / failed turns includes aborted turns. Turn time sums reported turn durations, excluding time between turns. Last seen measures age at the selected range end. Model / effort shows the latest selected settings. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Sessions and subagents using CWO, active in the selected range. Tokens and turn counts cover their recorded session history. Turn counts separate completed turns from failed or aborted turns. Turn time sums reported turn durations, excluding time between turns. Last seen measures age at the selected range end. Model / effort shows the latest selected settings. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -840,6 +840,30 @@
                 "value": 185
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completed turns"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed / aborted turns"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
           }
         ]
       },
@@ -987,8 +1011,8 @@
               "Value #C": "Tokens",
               "Value #D": "Last seen",
               "project": "Project",
-              "Value #E": "Turns done",
-              "Value #F": "Turns stopped / failed",
+              "Value #E": "Completed turns",
+              "Value #F": "Failed / aborted turns",
               "Value #G": "Turn time"
             }
           }

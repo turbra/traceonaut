@@ -52,4 +52,4 @@ All accept `--datasource-uid` for provisioning and `--watch-seconds` (1–60). O
 | `export_terminal_observations.py` | `--state-dir`, `--output-dir` | Exports eligible completed jobs, then exits. |
 | `build_release.py` | `--component`, `--output-dir` | Builds a content-hashed bundle. Components: `sessions`, `account`, `stable`, `beta`, `tui-beta`, `dispatch`. |
 | `validate_repository.py` | None | Checks source assets and links. `--staged` checks the exact Git index before publication. |
-| `run_observed_codex.py` | Legacy source-checkout launcher | Deprecated and excluded from release bundles; unrelated to session collection. See [Controller Metrics](../integrations/controller-metrics.md). |
+| `run_observed_codex.py` | `--manifest`, `--authorization-file`, `--observability-config`, `--receipt-dir` | Deprecated source-checkout launcher, excluded from release bundles and unrelated to session collection. See [Controller Metrics](../integrations/controller-metrics.md). |

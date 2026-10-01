@@ -60,13 +60,29 @@ class CurrentCwoDashboardTests(unittest.TestCase):
             self.assertIn("$__to / 1000", queries[ref])
             self.assertNotIn("vector(0)", queries[ref])
         titles = set(table["transformations"][-1]["options"]["renameByName"].values())
-        self.assertTrue({"Turns done", "Turns stopped / failed", "Turn time", "Tokens", "Model / effort"} <= titles)
+        self.assertTrue({"Completed turns", "Failed / aborted turns", "Turn time", "Tokens", "Model / effort"} <= titles)
         last_seen = queries["D"]
         self.assertIn("$__to / 1000 -", last_seen)
         self.assertIn("cwo_codex_session_last_event_timestamp_seconds", last_seen)
         self.assertNotIn("1000 *", last_seen)
         widths = [v["value"] for o in table["fieldConfig"]["overrides"] for v in o["properties"] if v["id"] == "custom.width"]
         self.assertLessEqual(sum(widths) + 70 * (len(titles) - len(widths)), 1700)
+
+    def test_turn_labels_are_consistent_across_session_tables(self):
+        dashboards = (
+            ("codex-work-overview-beta.json", 42),
+            ("codex-all-sessions.json", 110),
+            ("cwo-overview.json", 305),
+        )
+        expected = {"Completed turns", "Failed / aborted turns", "Turn time"}
+        forbidden = {"Turns done", "Turns stopped / failed", "Stopped / failed turns", "Recorded turn time"}
+        for filename, panel_id in dashboards:
+            document = json.loads((ROOT / "examples/observability" / filename).read_text())
+            panel = {item["id"]: item for item in walk_panels(document["panels"])}[panel_id]
+            names = set(panel["transformations"][-1]["options"]["renameByName"].values())
+            self.assertTrue(expected <= names, filename)
+            self.assertTrue(forbidden.isdisjoint(names), filename)
+            self.assertNotIn("Observed turn time", json.dumps(document), filename)
 
     def test_renderer_keeps_current_template_free_of_legacy_filters(self):
         rendered = render_dashboard(self.dashboard, {"projects": {}, "dispatches": {}}, datasource_uid="example")

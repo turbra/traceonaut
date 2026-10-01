@@ -20,7 +20,7 @@ Token, response and turn totals cover each selected session's recorded history. 
 | --- | --- |
 | Chat / session / work | One Codex conversation and its stable session ID. Work Overview calls it Work; the TUI dashboard calls it a Chat. |
 | Response | A recorded model response. It is not the same as a user message or a completed turn. |
-| Turn | One run from a user request or continuation until Codex finishes or stops. A turn can produce several model responses. Aborted turns are included in the stopped / failed count. |
+| Turn | One run from a user request or continuation until Codex finishes or stops. A turn can produce several model responses. Aborted turns are included in **Failed / aborted turns**. |
 | Native agent / subagent | A separate Codex session started as an agent. It has its own session measurements. |
 | Helper command | A supported CWO command invocation recorded in a Codex command item. Failed invocations are still counted. |
 | Contractor review | A review attempt launched through a configured external review adapter. |
@@ -32,11 +32,13 @@ Token, response and turn totals cover each selected session's recorded history. 
 | --- | --- |
 | Token counts | Tokens reported by the available response records for the selected sessions. Total tokens combine input and output. Older sessions may lack records, so treat totals as minimums rather than a bill. |
 | Cached input / reasoning output | Parts of input / output respectively. Total tokens already include them. |
-| Observed turn time | Sum of reported completed-turn durations. Parallel agents can overlap. |
+| Completed turns | Recorded turns that finished without a reported error. |
+| Failed / aborted turns | Recorded turns that reported an error or were aborted. |
+| Turn time | Sum of reported turn durations, including failed or aborted turns when a duration is supplied. Parallel agents can overlap. |
 | Model / effort | The latest selected settings for that session. Historical usage can span other settings. |
 | Working | A turn is open and has had activity within two minutes. |
 | Waiting | The last turn finished and no new turn has started. |
-| Stopped / failed | The latest turn stopped, failed, or was aborted. Aborted turns are included in this state and in stopped / failed turn counts. |
+| Stopped / failed | The latest turn stopped, failed, or was aborted. This is a session state; failed and aborted turn counts are shown as **Failed / aborted turns**. |
 | No recent signal | A turn remains open but has had no recent activity. |
 
 Token summaries and comparison bars use compact values: **K = thousand, Mil = million, Bil = billion, Tri = trillion**. For example, `1.4 Bil` means 1.4 billion tokens and `7.2 Mil` means 7.2 million tokens. The token panels link here from their ⓘ descriptions.

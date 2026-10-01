@@ -34,8 +34,7 @@ Select **Project**, **Session** and a time range. The default range is 30 minute
 [Reading the Values](reading-values.md) explains history totals, activity states and missing values. [Automatic Name Updates](../operations/automatic-name-updates.md) explains selector refreshes.
 
 The session table combines the latest selected model and effort in **Model / effort**.
-**Turn time** adds up recorded completed-turn durations. Expand a cell to inspect a long name.
-**Completed** counts finished turns; **Stopped** counts failed or aborted turns.
+**Completed turns**, **Failed / aborted turns** and **Turn time** cover the session's recorded history. Expand a cell to inspect a long name.
 The collapsed **Diagnostics** section holds **Usage source** and **Runtime reported** for checking token coverage.
 
 The status strip leads directly into the inventory. **Usage** contains ranked comparisons; the working-sessions chart shows activity over time. The default refresh is 30 seconds.

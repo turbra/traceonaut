@@ -2585,7 +2585,7 @@
         {
           "id": 81,
           "type": "bargauge",
-          "title": "Observed turn time by work",
+          "title": "Turn time by work",
           "description": "The ten selected sessions with the most recorded turn time. Sums reported turn durations across saved session history; time between turns is excluded. Select a bar to focus that session. A dash means duration records are missing. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
           "datasource": {
             "type": "prometheus",
@@ -2662,7 +2662,7 @@
                 },
                 "renameByName": {
                   "session_id": "Work",
-                  "Value": "Observed turn time"
+                  "Value": "Turn time"
                 }
               }
             },
@@ -2671,7 +2671,7 @@
               "options": {
                 "sort": [
                   {
-                    "field": "Observed turn time",
+                    "field": "Turn time",
                     "desc": true
                   }
                 ]
@@ -2686,7 +2686,7 @@
                     "handlerKey": "field.name"
                   },
                   {
-                    "fieldName": "Observed turn time",
+                    "fieldName": "Turn time",
                     "handlerKey": "field.value"
                   }
                 ]
@@ -2792,7 +2792,7 @@
                   },
                   {
                     "id": "custom.width",
-                    "value": 480
+                    "value": 380
                   },
                   {
                     "id": "custom.minWidth",
@@ -2848,7 +2848,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Recorded turn time"
+                  "options": "Turn time"
                 },
                 "properties": [
                   {
@@ -2858,6 +2858,34 @@
                   {
                     "id": "decimals",
                     "value": 1
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Completed turns"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 140
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Failed / aborted turns"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 180
                   }
                 ]
               }
@@ -3081,9 +3109,9 @@
                   "Value #F": "Reasoning output",
                   "Value #G": "Responses",
                   "Value #H": "Coverage",
-                  "Value #I": "Recorded turn time",
+                  "Value #I": "Turn time",
                   "Value #J": "Completed turns",
-                  "Value #K": "Stopped / failed turns"
+                  "Value #K": "Failed / aborted turns"
                 }
               }
             }

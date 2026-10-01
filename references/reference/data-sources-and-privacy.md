@@ -13,7 +13,7 @@ The session collector reads `sessions/`, `archived_sessions/`, and selected meta
 | `session_meta` and the local index | Session identity, project, explicit names and agent relationships. |
 | `token_usage_record` | Response identity and token usage. |
 | Legacy `token_count` and index counters | Separate runtime-reported token snapshots. |
-| Turn events | State, completed/failed turns and supplied durations. |
+| Turn events | Session state, **Completed turns**, **Failed / aborted turns**, and reported turn durations. |
 | `item_completed` / `CommandExecution` | Completion time, exit outcome and reported duration. |
 | `item_completed` / `ContextCompaction` | Compaction completion time. |
 
@@ -37,4 +37,4 @@ With `--cwo-sessions`, Traceonaut adds supported CWO association signals to the 
 
 ## CWO CLI Review Artifacts
 
-The [optional custom review reader](../integrations/custom-review-adapter.md) reads paired launch receipts, Claude CLI results, and their audit file. Metrics contain hashed result identities, requested/reported model names, requested effort, outcome, source launch time, and numeric usage. Proven source links use existing Codex project and session IDs. Prompts, response text, account names, paths, and contractor session/result UUIDs stay out of metrics.
+The [optional custom review reader](../integrations/custom-review-adapter.md) reads paired launch receipts, Claude CLI results, and their audit file. Metrics contain hashed result identities, requested/reported model names, requested effort, outcome, source launch time, and numeric usage. Linked review rows use existing Codex project and session IDs. Prompts, response text, account names, paths, and contractor session/result UUIDs stay out of metrics.

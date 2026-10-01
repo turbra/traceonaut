@@ -42,12 +42,13 @@ a 30-second refresh.
 
 | Section | Shows |
 | --- | --- |
-| Overview | Collection health, scan age, working/waiting chats, native agents and recorded tokens. |
-| Token usage | Recorded input and output token totals over time in separate charts. |
-| Responses by chat | The eight selected chats with the most recorded model responses. |
-| Commands | Recorded commands and failures in the selected interval, with coverage. |
-| Chat activity | Working and waiting chats over time. |
-| Chats | Chat name, state, model/effort and recorded tokens. Click a name to open Work Overview. |
+| 1 · Overview | Collection health, scan age, working/waiting chats, subagents and recorded tokens. |
+| 2a · Input tokens | Recorded input token totals over time. |
+| 2b · Output tokens | Recorded output token totals over time. |
+| 3 · Responses by chat | The eight selected chats with the most recorded model responses. |
+| 4 · Commands | Recorded commands and failures in the selected interval, with coverage. |
+| 5 · Chat activity | Working and waiting chats over time. |
+| 6 · Chats | Chat name, state, model/effort and recorded tokens. Click a name to open Work Overview. |
 
 Token and response totals cover recorded session history for selected chats.
 The time range selects activity; it does not turn those totals into interval

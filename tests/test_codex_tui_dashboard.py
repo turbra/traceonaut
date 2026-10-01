@@ -32,7 +32,7 @@ class TuiDashboardTests(unittest.TestCase):
         self.assertEqual(dashboard["time"], {"from": "now-24h", "to": "now"})
         panels = sorted(dashboard["panels"], key=lambda panel: panel["id"])
         self.assertEqual([p["id"] for p in panels], [1, 2, 3, 4, 5, 6, 7])
-        self.assertEqual([p["title"].split(" · ")[0] for p in panels], ["1", "2", "3", "4", "5", "6", "2"])
+        self.assertEqual([p["title"].split(" · ")[0] for p in panels], ["1", "2a", "3", "4", "5", "6", "2b"])
         expected_positions = {
             1: (0, 0, 12, 8), 2: (12, 0, 6, 8), 7: (18, 0, 6, 8),
             3: (0, 8, 12, 8), 4: (12, 8, 12, 8),

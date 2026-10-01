@@ -70,8 +70,8 @@ Labels use opaque identities and bounded categories. Display names stay in rende
 | `cwo_codex_session_reported_tokens` | untyped | `project_id`, `session_id` | Separate legacy runtime token snapshot. |
 | `cwo_codex_session_response_count` | untyped | `project_id`, `session_id` | Deduplicated recorded response count. |
 | `cwo_codex_session_completed_turns` | untyped | `project_id`, `session_id` | Recorded completed turns. |
-| `cwo_codex_session_failed_turns` | untyped | `project_id`, `session_id` | Recorded failed turns. |
-| `cwo_codex_session_observed_turn_seconds` | untyped | `project_id`, `session_id` | Sum of reported completed-turn durations. |
+| `cwo_codex_session_failed_turns` | untyped | `project_id`, `session_id` | Recorded failed or aborted turns. |
+| `cwo_codex_session_observed_turn_seconds` | untyped | `project_id`, `session_id` | Sum of reported turn durations. |
 | `cwo_codex_session_usage_state` | untyped | `project_id`, `session_id` | Recorded-usage coverage code. |
 | `cwo_codex_session_usage_tokens` | untyped | `project_id`, `session_id`, `token_kind` | Deduplicated recorded tokens by category. |
 
@@ -153,9 +153,9 @@ These optional gauges come from configured CWO audit JSONL, independently of the
 | `cwo_audit_limit_reached` | gauge | None | A discovery, byte or event export limit was reached. |
 | `cwo_audit_exported_events` | gauge | None | Unique audit events currently exported within the retention window. |
 | `cwo_audit_skipped_records` | gauge | `reason` | Records omitted in the latest scan, by bounded reason. |
-| `cwo_audit_event_timestamp_seconds` | gauge | `event_id`, `event_type` | Source Unix timestamp of one unique CWO audit event; not a job or token count. |
+| `cwo_audit_event_timestamp_seconds` | gauge | `event_id`, `event_type` | Source Unix timestamp of one unique CWO audit event. |
 
-Skip reasons: `invalid_json`, `unsupported_record`, `invalid_hash`, `invalid_timestamp`, `future_timestamp`, `oversized_line`, `partial_line`. Unknown valid event types use `other`. The content hash supports consistency and deduplication, not proof that a job executed.
+Skip reasons: `invalid_json`, `unsupported_record`, `invalid_hash`, `invalid_timestamp`, `future_timestamp`, `oversized_line`, `partial_line`. Unknown valid event types use `other`. The content hash is verified for consistency and deduplication.
 
 Recognized event types in the `event_type` label:
 
@@ -170,6 +170,8 @@ Recognized event types in the `event_type` label:
 | `native_pool_terminal` | A native agent group reached a recorded terminal state. |
 
 Here, a native agent group is a set of Codex native subagents supervised together. These events describe the group-level report or state; they are not per-agent task totals.
+
+Audit events record logged activity only. They do not establish task completion, token usage, or worker capacity.
 
 ## CWO-Associated Sessions
 
@@ -206,5 +208,5 @@ Optional paired-artifact collection uses gauges. Review usage is separate from C
 | `cwo_review_started_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | Recorded launch time of a CLI review with a collected result; not its finish time. |
 | `cwo_review_tokens` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `kind` | CLI top-level usage by kind; thinking is a subset of output. Input excludes cache creation and reads. |
 | `cwo_review_duration_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | CLI-reported result duration; not time inferred from file timestamps. |
-| `cwo_review_session_info` | gauge | `review_id`, `project_id`, `session_id` | Value 1 links a review to its proven immediate launching Codex session. |
+| `cwo_review_session_info` | gauge | `review_id`, `project_id`, `session_id` | Value 1 identifies the launching Codex session for a Linked review. |
 | `cwo_review_attribution_state` | gauge | `review_id`, `state` | Value 1 for the review's current state: `linked`, `unlinked`, `pending` or `ambiguous`. |

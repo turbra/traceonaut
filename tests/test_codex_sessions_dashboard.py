@@ -188,7 +188,7 @@ class CodexSessionsDashboardTests(unittest.TestCase):
 
     def test_observed_history_scope_is_in_descriptions(self):
         for title in ("Recorded session tokens", "Sessions and latest activity",
-                      "Recorded tokens by session", "Observed turn time by session"):
+                      "Recorded tokens by session", "Turn time by session"):
             self.assertIn("available", self.panel(title)["description"].lower())
             self.assertIn("reading-values/", self.panel(title)["description"])
         self.assertIn("not tokens spent within the selected range", self.panel("Recorded session tokens")["description"])
@@ -226,7 +226,7 @@ class CodexSessionsDashboardTests(unittest.TestCase):
         table = self.panel("Sessions and latest activity")
         main_names = set(table["transformations"][2]["options"]["renameByName"].values())
         self.assertTrue({"Usage source", "Runtime reported"}.isdisjoint(main_names))
-        self.assertTrue({"Completed", "Stopped", "Turn time", "Tokens"}.issubset(main_names))
+        self.assertTrue({"Completed turns", "Failed / aborted turns", "Turn time", "Tokens"}.issubset(main_names))
         self.assertTrue({"D", "J"}.isdisjoint(t["refId"] for t in table["targets"]))
         diagnostics = self.panel("Session usage diagnostics")
         self.assertGreater(diagnostics["gridPos"]["y"], self.panel("Diagnostics")["gridPos"]["y"])
@@ -245,6 +245,24 @@ class CodexSessionsDashboardTests(unittest.TestCase):
             self.assertIn("<= $__to / 1000", target["expr"])
         self.assertIn("not added to recorded tokens", diagnostics["description"])
 
+    def test_session_table_turn_headers_fit_existing_width_budget(self) -> None:
+        table = self.panel("Sessions and latest activity")
+        rename = table["transformations"][2]["options"]["renameByName"]
+        labels = set(rename.values())
+        self.assertTrue({"Completed turns", "Failed / aborted turns", "Turn time"} <= labels)
+        explicit_widths = {
+            override["matcher"]["options"]: next(
+                prop["value"] for prop in override["properties"] if prop["id"] == "custom.width"
+            )
+            for override in table["fieldConfig"]["overrides"]
+            if override["matcher"].get("id") == "byName"
+            and any(prop["id"] == "custom.width" for prop in override["properties"])
+        }
+        self.assertLessEqual(
+            sum(explicit_widths.values()) + 70 * (len(labels) - len(explicit_widths)),
+            1700,
+        )
+
     def test_inventory_leads_and_detail_rows_are_collapsed(self):
         table = self.panel("Sessions and latest activity")
         self.assertEqual(table["gridPos"], dict(x=0, y=2, w=24, h=10))
@@ -254,7 +272,7 @@ class CodexSessionsDashboardTests(unittest.TestCase):
 
 
     def test_comparison_bars_receive_table_fields_for_human_name_mapping(self) -> None:
-        for title in ("Recorded tokens by session", "Observed turn time by session"):
+        for title in ("Recorded tokens by session", "Turn time by session"):
             panel = self.panel(title)
             self.assertTrue(all(target["format"] == "table" for target in panel["targets"]))
             self.assertEqual(

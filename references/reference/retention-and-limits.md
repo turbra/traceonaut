@@ -23,16 +23,19 @@ Export retention leaves source records and the Codex index intact. Prometheus ke
 ## IBM Bob
 
 Bob uses the same retention settings, with a separate export cap. With both sources
-enabled, the default allows up to 1,000 Codex sessions and 1,000 Bob tasks, each
+enabled, the default allows up to 1,000 Codex sessions and 1,000 Bob chats, each
 active within 30 days.
-Tasks with no saved messages use their creation time for retention. Source records
+Chats with no saved messages use their creation time for retention. Source records
 are unchanged. Bob's private index mirrors the current database, including deletions.
 
 Large histories are read over several scans. See [Bob scan and storage bounds](limits-and-internals.md#ibm-bob)
 for the exact limits.
 
-Bob's snapshot maps only exported tasks. Charts begin with Prometheus's first
-scrape, even when task totals include older work.
+The Bob dashboard shows currently exported chats. A chat's recorded totals can
+include work from before Prometheus first scraped the collector; charts begin at
+that first scrape. The selected time range chooses chats by their last saved
+message, while tokens and responses cover each selected chat's recorded history.
+Totals can fall when chats expire from export or the selection changes.
 
 ## Historical Views
 

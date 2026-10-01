@@ -71,7 +71,7 @@ python3 scripts/create_metrics_token.py --credential-file "$TRACEONAUT_METRICS_C
 
 <!-- run-collector -->
 ```bash
-python3 scripts/collect_codex_sessions.py \
+python3 scripts/collect_sessions.py \
   --codex-home "$TRACEONAUT_SOURCE_HOME" \
   --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \

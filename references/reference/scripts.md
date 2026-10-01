@@ -12,13 +12,18 @@ Run `python3 scripts/<name> --help` from the checkout root for argument syntax. 
 
 | Script | Required arguments | Behavior and defaults |
 | --- | --- | --- |
-| `collect_codex_sessions.py` | `--codex-home`, `--session-state-dir`, `--snapshot-file`; `--credential-file` when serving | `--host 127.0.0.1`, `--port 9464`, `--poll-seconds 5` (1–60). `--once` scans one pass and exits without a listener. |
-| `collect_sessions.py` | `--session-state-dir`; at least one of `--codex-home` + `--snapshot-file` or `--bob-home` + `--bob-snapshot-file`; `--credential-file` when serving | Independently enables each source on one endpoint. Same host, port, polling and retention options as the Codex command. `--once` reports enabled sources under `codex` / `bob` keys. |
+| `collect_sessions.py` | `--session-state-dir`; at least one of `--codex-home` + `--snapshot-file` or `--bob-home` + `--bob-snapshot-file`; `--credential-file` when serving | Independently enables each source on one endpoint. Defaults: `--host 127.0.0.1`, `--port 9464`, `--poll-seconds 5` (1–60). `--once` reports enabled sources under `codex` / `bob` keys and exits without a listener. |
+| `collect_codex_sessions.py` | `--codex-home`, `--session-state-dir`, `--snapshot-file`; `--credential-file` when serving | Compatibility entry point for existing Codex-only commands, including `--once`. |
 | `collect_codex_account.py` | `--codex-bin`, `--codex-home`, `--snapshot-file` | Account reads about once per minute; `--once` performs one read. Makes upstream requests. |
 | `create_metrics_token.py` | `--credential-file` | Creates a new `0600` token file in an existing trusted directory; refuses replacement. Prints no token. |
 | `check_metrics.py` | `--credential-file` | `--url http://127.0.0.1:9464/metrics`; four-second timeout. Checks health-metric presence; disables proxies and redirects. |
 
 Session collection also accepts `--session-retention-seconds 2592000` and `--session-export-cap 1000`; see [Retention and Limits](retention-and-limits.md).
+
+Invalid arguments or configuration and fatal state or snapshot writes exit nonzero.
+Source read failures keep the listener running with that source's availability at
+`0`; in `--once` mode, an unavailable enabled source makes the command exit
+nonzero. Pending scan work alone does not.
 
 The following options require Codex collection. `--state-dir` adds an existing dispatch ledger, and `--account-snapshot-file` adds the optional account snapshot. These are separate inputs from the session state and snapshot.
 

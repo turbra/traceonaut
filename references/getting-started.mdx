@@ -75,17 +75,18 @@ Check the source before starting the server:
 
 {/* <!-- collect-once --> */}
 ```bash
-python3 scripts/collect_codex_sessions.py \
+python3 scripts/collect_sessions.py \
   --codex-home "$TRACEONAUT_SOURCE_HOME" \
   --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" --once
 ```
 
-Expect `source_available: 1`. `pending_files` counts files still to scan. The continuous collector finishes that work.
+Expect `source_available: 1` under `codex` in the JSON output. `pending_files`
+counts files still to scan. The continuous collector finishes that work.
 
 {/* <!-- run-collector --> */}
 ```bash
-python3 scripts/collect_codex_sessions.py \
+python3 scripts/collect_sessions.py \
   --codex-home "$TRACEONAUT_SOURCE_HOME" \
   --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \

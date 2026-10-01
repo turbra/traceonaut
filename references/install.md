@@ -15,7 +15,7 @@ Run Traceonaut on the workstation that holds your Codex or IBM Bob profile. Choo
 | Linux workstation | Linux. macOS has not been tested. |
 | Python | 3.13.13 |
 | Codex session files, when collecting Codex | Fixtures for the [supported record formats](reference/data-sources-and-privacy.md). Compatibility is checked by record format rather than CLI version. |
-| IBM Bob Shell, when collecting Bob | 2.0.1 local SQLite format. Codex is optional. |
+| IBM Bob Shell, when collecting Bob | 2.0.1 local SQLite format. |
 | Prometheus | 3.1.0 |
 | Grafana with built-in panels | 11.5.0 |
 | Git and Bash | Used by the setup commands. |

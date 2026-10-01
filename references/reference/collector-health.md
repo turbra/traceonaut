@@ -6,6 +6,8 @@ description: Read scan freshness, error rates and skipped-record reasons.
 
 # Collector Health
 
+## Codex
+
 Work Overview and All Sessions have a collector-wide status strip. Project and Work filters leave these values unchanged. Skipped records and detailed coverage are in Diagnostics.
 
 | Signal | Read it as |
@@ -29,3 +31,18 @@ An idle Codex profile can have a healthy collector. **Latest source event age** 
 These totals count encounters, so retries and file replays can count a record again. Errors and skips are separate; one record can affect both. Prefix filtering happens before JSON parsing, so this signal cannot detect every format change.
 
 Use the [Example Queries](example-queries.md) for checks in Prometheus. Alerting is left to your monitoring setup.
+
+## IBM Bob
+
+Bob health covers the whole enabled Bob source, independent of dashboard filters.
+These signals are gauges showing the latest observed state, not cumulative counters:
+
+| Signal | Read it as |
+| --- | --- |
+| `traceonaut_bob_collector_source_available` | `1` after a readable source check; `0` before the first check or after a source read failure. |
+| `traceonaut_bob_collector_pending` | `1` while records remain to be read in later scans. |
+| `traceonaut_bob_collector_collection_complete` | `1` after a full read with no known skipped records or missing values. |
+| `traceonaut_bob_collector_last_success_timestamp_seconds` | Time of the latest successful full source check. |
+| `traceonaut_bob_collector_source_errors` and `traceonaut_bob_collector_skipped_records` | Latest read failures and skipped records, not rates. |
+
+The [Metrics reference](metrics.md#ibm-bob) lists all Bob health and chat metrics.

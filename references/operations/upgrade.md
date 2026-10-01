@@ -34,6 +34,8 @@ export TRACEONAUT_RELEASES_DIR="$HOME/.local/share/traceonaut/releases"
 python3 scripts/build_release.py --component sessions --output-dir "$TRACEONAUT_RELEASES_DIR"
 ```
 
-The command prints an immutable release path. Point the service at its `scripts/collect_codex_sessions.py`, restart, and check health. Keep the old release path for rollback.
+The command prints an immutable release path. Point the service at its
+`scripts/collect_sessions.py`, restart, and check health. Keep the old release
+path for rollback.
 
 Update session and account collectors together. The [Scripts Reference](../reference/scripts.md) lists other bundle components.

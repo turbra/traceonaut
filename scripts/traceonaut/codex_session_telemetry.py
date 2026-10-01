@@ -179,6 +179,24 @@ def write_snapshot(path, snapshot):
         temporary.unlink(missing_ok=True)
 
 
+class SessionSourceUnavailable(ValueError):
+    """A source read can be retried without replacing collector state."""
+
+
+def _read_thread_metadata(path):
+    try:
+        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=1)) as source:
+            source.row_factory = sqlite3.Row
+            columns = {r[1] for r in source.execute("PRAGMA table_info(threads)")}
+            # Never select title, preview or first_user_message: they can be prompts.
+            selected = [c for c in ("id", "cwd", "name", "created_at", "created_at_ms", "source", "thread_source", "agent_nickname", "agent_path", "model", "reasoning_effort", "tokens_used", "archived") if c in columns]
+            if "id" in selected:
+                for row in source.execute("SELECT " + ",".join(selected) + " FROM threads LIMIT ?", (MAX_SESSIONS + 1,)):
+                    yield row["id"], dict(row)
+    except sqlite3.Error:
+        raise SessionSourceUnavailable("Codex source unavailable") from None
+
+
 class SessionCollector:
     """Single private writer; source databases and rollouts are read-only."""
 
@@ -195,7 +213,10 @@ class SessionCollector:
         session_retention_seconds=SESSION_RETENTION_SECONDS,
         session_export_cap=DEFAULT_SESSION_EXPORT_CAP,
     ):
-        self.home = _safe_path(Path(codex_home), owner=True)
+        try:
+            self.home = _safe_path(Path(codex_home), owner=True)
+        except OSError:
+            raise SessionSourceUnavailable("Codex source unavailable") from None
         if not self.home.is_dir():
             raise ValueError("Codex home must be a directory")
         self.state = Path(os.path.abspath(state_dir))
@@ -772,14 +793,8 @@ class SessionCollector:
         databases = sorted(self.home.glob("state_*.sqlite"), reverse=True)
         if databases:
             path = _safe_path(databases[0], owner=True)
-            with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=1)) as source:
-                source.row_factory = sqlite3.Row
-                columns = {r[1] for r in source.execute("PRAGMA table_info(threads)")}
-                # Never select title, preview or first_user_message: they can be prompts.
-                selected = [c for c in ("id", "cwd", "name", "created_at", "created_at_ms", "source", "thread_source", "agent_nickname", "agent_path", "model", "reasoning_effort", "tokens_used", "archived") if c in columns]
-                if "id" in selected:
-                    for row in source.execute("SELECT " + ",".join(selected) + " FROM threads LIMIT ?", (MAX_SESSIONS + 1,)):
-                        self._register(row["id"], dict(row))
+            for session_id, metadata in _read_thread_metadata(path):
+                self._register(session_id, metadata)
         for path in paths:
             info = path.lstat()
             if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid():
@@ -1160,7 +1175,10 @@ class SessionCollector:
         compaction_per_file_budget=4 * 1024**2,
     ):
         """Bound work per pass; durable offsets make restart and replay idempotent."""
-        self.sync_inventory()
+        try:
+            self.sync_inventory()
+        except (OSError, ValueError):
+            raise SessionSourceUnavailable("Codex source unavailable") from None
         if sum(p.stat().st_size for p in self.state.iterdir() if p.is_file()) >= self.max_disk_bytes:
             self.available = False
             self.errors["capacity"] += 1

@@ -13,7 +13,8 @@ import time
 
 from traceonaut.codex_session_telemetry import (
     DEFAULT_SESSION_EXPORT_CAP, MAX_SESSIONS, SAFE_INTEGER,
-    SESSION_RETENTION_SECONDS, SessionCollector, render_session_metrics, write_snapshot,
+    SESSION_RETENTION_SECONDS, SessionCollector, SessionSourceUnavailable,
+    render_session_metrics, write_snapshot,
 )
 from traceonaut.codex_account_telemetry import AccountSnapshotMetrics
 from traceonaut.cwo_audit_telemetry import AuditCollector, render_audit_metrics
@@ -84,7 +85,7 @@ class CodexSource:
     def scan(self):
         try:
             self.collector.scan()
-        except (OSError, ValueError):
+        except SessionSourceUnavailable:
             self.collector.available = False
         snapshot = self.collector.snapshot()
         if self.cwo:
@@ -121,6 +122,7 @@ class SourceWorker:
     def __init__(self, name, args, stopping, endpoint=None, audit=None, reviews=None):
         self.name, self.args, self.stopping, self.endpoint = name, args, stopping, endpoint
         self.audit, self.reviews = audit, reviews
+        self.failed = False
         self.snapshot = (empty_snapshot() if name == 'bob' else {
             'version': 1, 'sessions': [], 'source_available': 0, 'scan_timestamp': 0,
             'last_event': 0, 'pending_files': 0, 'errors': {}})
@@ -148,29 +150,31 @@ class SourceWorker:
                         status['sessions'] = len(snapshot['sessions'])
                     else:
                         snapshot, payload, status = source.scan()
-                    write_snapshot(self.output, snapshot)
-                    self.snapshot, self.status = snapshot, status
-                except Exception:
-                    # No source content, paths or credentials in logs or health.
-                    self.snapshot = {**self.snapshot, 'source_available': 0}
-                    if self.name == 'bob':
-                        self.snapshot.update(source_errors=1, collection_complete=0)
-                    # Codex's error counters belong to its persisted ledger;
-                    # retain them while availability reports a worker failure.
-                    self.status = {**self.status, 'source_available': 0}
-                    payload = self.render(self.snapshot)
-                    try:
-                        write_snapshot(self.output, self.snapshot)
-                    except (OSError, ValueError):
-                        pass
+                except SessionSourceUnavailable:
+                    snapshot = {**self.snapshot, 'source_available': 0}
+                    status = {**self.status, 'source_available': 0}
+                    payload = self.render(snapshot)
+                write_snapshot(self.output, snapshot)
+                self.snapshot, self.status = snapshot, status
                 if self.endpoint:
                     self.endpoint.update_part(self.name, payload)
                 if self.args.once:
                     break
                 self.stopping.wait(max(0, self.args.poll_seconds - (time.monotonic() - started)))
+        except Exception:
+            # Reader-reported outages are recoverable; storage and unexpected
+            # failures must reach the process exit status without leaking data.
+            self.failed = True
+            self.snapshot = {**self.snapshot, 'source_available': 0}
+            self.status = {**self.status, 'source_available': 0}
+            self.stopping.set()
         finally:
             if source:
-                source.close()
+                try:
+                    source.close()
+                except Exception:
+                    self.failed = True
+                    self.stopping.set()
 
 
 def main(argv=None, *, require_codex=True):
@@ -297,6 +301,11 @@ def main(argv=None, *, require_codex=True):
         if args.once:
             statuses = {worker.name: worker.status for worker in workers}
             print(json.dumps(statuses['codex'] if require_codex and not args.bob_home else statuses))
+        if any(worker.failed for worker in workers):
+            raise RuntimeError("collector worker failed")
+        if args.once and any(not worker.status['source_available'] for worker in workers):
+            print("Collection failed: one or more enabled sources are unavailable.", file=__import__("sys").stderr)
+            return 1
         return 0
     except Exception:
         # No paths, messages, raw source lines, credential contents, or traceback.

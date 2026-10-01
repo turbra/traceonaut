@@ -100,7 +100,8 @@ class OnboardingTests(unittest.TestCase):
         result = subprocess.run(["bash", "-eu", "-c", documented_block("collect-once")],
                                 env=self.env, cwd=ROOT, capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(result.stdout), {"sessions": 1, "pending_files": 0, "source_available": 1})
+        self.assertEqual(json.loads(result.stdout), {
+            "codex": {"sessions": 1, "pending_files": 0, "source_available": 1}})
         self.assertFalse(self.token.exists())
         self.assert_source_unchanged()
 

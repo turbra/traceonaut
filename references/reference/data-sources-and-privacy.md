@@ -6,7 +6,7 @@ description: See which local records the collector reads and which data stays pr
 
 # Data Sources and Privacy
 
-Enable Codex, IBM Bob, or both explicitly. Disabled source homes are never opened.
+Enable Codex, IBM Bob, or both explicitly.
 
 ## Codex
 
@@ -33,16 +33,13 @@ Each additional profile needs its own collection. [Account Allowance](../optiona
 
 ## IBM Bob
 
-The Bob reader opens `db/bob.db` using a read-only connection. SQLite may also use
-its WAL, shared-memory and rollback-journal files in the same directory.
-The reader stores task token counts, relationships, timestamps, response counts
+The Bob reader opens `db/bob.db` using a read-only connection. Source database
+records remain unchanged.
+The reader stores chat token counts, relationships, timestamps, response counts
 and tool outcomes in a private index. It retains no message content, nested messages, arguments, environment
 objects, credentials or tool output. It makes no network requests.
 
-Database records and WAL contents stay unchanged. SQLite may update reader markers
-in the existing shared-memory file while coordinating with Bob's writer.
-
-Metrics use hashed project/task IDs and bounded categories. Stored task titles and
+Metrics use hashed project/chat IDs and bounded categories. Stored chat titles and
 project directory basenames appear only in the private snapshot and rendered
 dashboard; titles can contain personal text, so protect Grafana access too.
 Symlinks, hardlinked files and writable-by-others paths are rejected.

@@ -1,15 +1,15 @@
 ---
 slug: /bob-collection
 title: IBM Bob Collection
-description: Collect Bob Shell sessions alone or alongside Codex on one metrics endpoint.
+description: Collect Bob Shell chats alone or alongside Codex on one metrics endpoint.
 ---
 
 # IBM Bob Collection
 
 Traceonaut reads Bob Shell's local `db/bob.db`. Prometheus scrapes the collector's
 metrics endpoint, and Grafana displays the results in [IBM Bob · Beta](dashboards/ibm-bob-beta.md).
-Collect Bob only, Codex only, or both through the same endpoint. Each source is
-collected separately; a failure in one leaves the other running.
+Collect Bob alone or alongside Codex through the same endpoint. Each source is
+collected separately; a source read failure leaves the other running.
 
 Tested with **Bob Shell 2.0.1** on Linux. The Bob reader needs access to the local
 database, with no account credentials or API calls.
@@ -20,9 +20,11 @@ From the [installed checkout](install.md), set the paths for the sources you use
 create private collector storage. Run as the user who owns those profiles.
 
 ```bash
-export TRACEONAUT_BOB_HOME="$HOME/.bob"      # For Bob collection
-export TRACEONAUT_CODEX_HOME="$HOME/.codex"  # For Codex collection
+export TRACEONAUT_BOB_HOME="$HOME/.bob"
+export TRACEONAUT_CODEX_HOME="$HOME/.codex"
 export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+export TRACEONAUT_METRICS_CREDENTIAL="$TRACEONAUT_DATA_DIR/metrics.token"
+export TRACEONAUT_LISTEN_ADDRESS="127.0.0.1"
 install -d -m 700 "$TRACEONAUT_DATA_DIR"
 ```
 
@@ -32,11 +34,11 @@ state directory, snapshot paths and token.
 
 ## Check the Source
 
-Choose **one** command below. `--once` reads the source and exits without serving
-metrics. The output reports each enabled source separately; expect
-`source_available: 1`. For Bob, `pending: 1` means more records remain to be read.
-The continuous collector finishes that work on later scans. `collection_complete: 1`
-means the scan finished without known gaps.
+Choose one command below. `--once` reads each enabled source and exits without
+serving metrics. Expect `source_available: 1` under each enabled source in the
+JSON output. `pending: 1` for Bob means more records remain to be read; the
+continuous collector finishes that work on later scans. An unavailable enabled
+source makes `--once` exit nonzero. Pending work alone does not.
 
 ### Bob Only
 
@@ -49,23 +51,9 @@ python3 scripts/collect_sessions.py \
   --once
 ```
 
-Codex does not need to be installed. Only Bob metrics and state are created.
+For Codex alone, follow [Quick Start](getting-started.mdx).
 
-### Codex Only
-
-<!-- codex-only-once -->
-```bash
-python3 scripts/collect_sessions.py \
-  --codex-home "$TRACEONAUT_CODEX_HOME" \
-  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
-  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
-  --once
-```
-
-Bob does not need to be installed. Existing `collect_codex_sessions.py` commands
-continue to work unchanged.
-
-### Both
+### Bob and Codex
 
 <!-- both-sources-once -->
 ```bash
@@ -85,21 +73,42 @@ If you already collect Codex account or CWO data, keep those options when adding
 Create a token once, or reuse your existing token:
 
 ```bash
-python3 scripts/create_metrics_token.py \
-  --credential-file "$TRACEONAUT_DATA_DIR/metrics.token"
+python3 scripts/create_metrics_token.py --credential-file "$TRACEONAUT_METRICS_CREDENTIAL"
 ```
 
-Remove `--once` from your chosen command and add:
+Choose the matching continuous command. Leave the collector running; **Ctrl+C**
+stops it.
 
-```text
---credential-file "$TRACEONAUT_DATA_DIR/metrics.token" \
-  --host 127.0.0.1 --port 9464
+### Bob Only
+
+<!-- bob-only-serve -->
+```bash
+python3 scripts/collect_sessions.py \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
 ```
 
-Leave the collector running; **Ctrl+C** stops it. The default address above is for
-Prometheus on the same machine. For remote or container Prometheus, replace
-`127.0.0.1` with the workstation's numeric LAN or VPN address in both the collector
-command and scrape target. Follow [Network and Security](operations/network-and-security.md).
+### Bob and Codex
+
+<!-- both-sources-serve -->
+```bash
+python3 scripts/collect_sessions.py \
+  --codex-home "$TRACEONAUT_CODEX_HOME" \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+
+The default address serves Prometheus on the same machine. For remote or container
+Prometheus, set `TRACEONAUT_LISTEN_ADDRESS` to the workstation's numeric LAN or VPN
+address before starting, and use it in the scrape target. Follow
+[Network and Security](operations/network-and-security.md).
 
 For persistent collection, use [Run as a Service](operations/run-as-a-service.md)
 with your chosen command.
@@ -119,9 +128,8 @@ traceonaut_bob_collector_source_available
 
 Use your actual job name if it differs from `traceonaut`.
 
-Import [IBM Bob · Beta](dashboards/ibm-bob-beta.md) for Bob. Import Codex dashboards
-only when you collect Codex. Run the renderer in a second terminal while the
-collector remains running.
+Import [IBM Bob · Beta](dashboards/ibm-bob-beta.md) for Bob. Run the renderer in
+a second terminal while the collector remains running.
 
 ## Disable a Source
 
@@ -132,11 +140,8 @@ options.
 
 ## Data and Limits
 
-Bob exports recorded task tokens, saved response counts, tool results/errors and
-message activity. Completed subtasks are removed from parent totals before summing;
-cached tokens are already included in input. Missing values stay missing.
-Model, effort, currency cost and account allowance are outside this beta's data.
-
-The default [retention window and export cap](reference/retention-and-limits.md#ibm-bob)
-apply separately to each source. Reading older Bob records supplies recorded totals;
-Prometheus charts still begin at the first scrape.
+Bob exports recorded chat tokens, saved responses, tool results and recent message
+activity. See [Metrics](reference/metrics.md#ibm-bob) for accounting and
+[Retention and Limits](reference/retention-and-limits.md#ibm-bob) for history and
+export limits. The [IBM Bob dashboard guide](dashboards/ibm-bob-beta.md) explains
+the available panels and filters.

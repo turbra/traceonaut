@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import json
 import math
@@ -250,9 +251,10 @@ class BobCollector:
         self.source.execute('BEGIN')
         # Establish the source snapshot before any task/message projection.
         self.source.execute('SELECT rowid FROM tasks LIMIT 1').fetchone()
-        self.db.execute('DELETE FROM tasks')
-        self.db.execute('DELETE FROM messages')
-        self.db.commit()
+        with self._index_errors():
+            self.db.execute('DELETE FROM tasks')
+            self.db.execute('DELETE FROM messages')
+            self.db.commit()
         self.stage = 'tasks'
         self.cursor = -(2**63)
         self.started = time.monotonic()
@@ -282,9 +284,21 @@ class BobCollector:
             FROM messages WHERE rowid > ? ORDER BY rowid LIMIT 1''',
             (MAX_JSON_BYTES, self.cursor)).fetchone()
 
+    @contextmanager
+    def _index_errors(self):
+        try:
+            yield
+        except sqlite3.Error:
+            # A failed private index is not an outage of Bob's source database.
+            raise RuntimeError('Bob collector storage unavailable') from None
+
     def _finish(self, now):
         self.source.execute('ROLLBACK')
         self.stage = None
+        with self._index_errors():
+            self._publish(now)
+
+    def _publish(self, now):
         self.db.commit()
         tasks = [json.loads(r[0]) for r in self.db.execute('SELECT body FROM tasks')]
         usages = exclusive_usage(tasks)
@@ -351,19 +365,26 @@ class BobCollector:
                 try:
                     if self.stage == 'tasks':
                         item = project_task(row, now)
-                        self.db.execute('INSERT OR REPLACE INTO tasks VALUES (?, ?)',
-                                        (item['session_id'], json.dumps(item)))
+                        with self._index_errors():
+                            self.db.execute('INSERT OR REPLACE INTO tasks VALUES (?, ?)',
+                                            (item['session_id'], json.dumps(item)))
                     else:
                         item = project_message(row, now)
                         if item['unknown']:
                             self._skip('unknown_tool_outcome')
-                        self.db.execute('INSERT OR REPLACE INTO messages VALUES (?,?,?,?,?,?,?,?)',
-                            tuple(item[k] for k in ('message_id', 'session_id', 'at', 'responses', 'tools',
-                                                   'errors', 'unknown', 'duration')))
+                        with self._index_errors():
+                            self.db.execute('INSERT OR REPLACE INTO messages VALUES (?,?,?,?,?,?,?,?)',
+                                tuple(item[k] for k in ('message_id', 'session_id', 'at', 'responses', 'tools',
+                                                       'errors', 'unknown', 'duration')))
                 except (ValueError, TypeError, KeyError) as error:
                     self._skip(str(error))
-            self.db.commit()
-            if sum(p.stat().st_size for p in self.state.glob('bob.sqlite3*')) > MAX_INDEX_BYTES:
+            with self._index_errors():
+                self.db.commit()
+            try:
+                index_bytes = sum(p.stat().st_size for p in self.state.glob('bob.sqlite3*'))
+            except OSError:
+                raise RuntimeError('Bob collector storage unavailable') from None
+            if index_bytes > MAX_INDEX_BYTES:
                 raise OverflowError('index capacity')
         except (OSError, sqlite3.Error, ValueError, OverflowError) as error:
             self.value.update(source_available=0, collection_complete=0, pending=0,
@@ -392,25 +413,25 @@ HEALTH = {
     'source_available': 'One when the Bob source was readable on the latest scan.',
     'scan_timestamp_seconds': 'Latest scan attempt, Unix seconds.',
     'last_success_timestamp_seconds': 'Latest successful full source check, Unix seconds.',
-    'collection_complete': 'One when the latest generation has no known skipped records or pending work.',
-    'pending': 'One while a bounded source generation is still being read.',
+    'collection_complete': 'One when the latest full scan has no known skipped records or pending work.',
+    'pending': 'One while records remain to be read in the current scan.',
     'limit_reached': 'One when a scan or storage limit prevented completion.',
     'source_errors': 'Source failures in the latest scan.',
-    'indexed_sessions': 'Tasks in the last completed source generation.',
-    'expired_sessions': 'Tasks excluded from export by inactivity retention.',
-    'cap_omitted_sessions': 'Eligible tasks omitted by the export cap.',
+    'indexed_sessions': 'Chats in the last completed scan.',
+    'expired_sessions': 'Chats excluded from export by inactivity retention.',
+    'cap_omitted_sessions': 'Eligible chats omitted by the export cap.',
     'retention_seconds': 'Per-source export inactivity window; zero disables expiry.',
-    'export_cap': 'Maximum exported Bob tasks.',
+    'export_cap': 'Maximum exported Bob chats.',
 }
 SESSION_METRICS = {
     'last_event_timestamp_seconds': ('last_event', 'Latest saved message time, Unix seconds.'),
     'response_count': ('responses', 'Saved assistant responses excluding local UI messages.'),
     'tool_result_count': ('tool_results', 'Saved tool results, including unknown outcomes.'),
     'tool_error_count': ('tool_errors', 'Saved tool results explicitly marked as errors.'),
-    'tool_unknown_count': ('tool_unknown', 'Saved tool results without a qualified outcome.'),
+    'tool_unknown_count': ('tool_unknown', 'Saved tool results with unknown outcomes.'),
     'tool_duration_seconds': ('tool_seconds', 'Sum of recorded tool durations in seconds.'),
     'timed_tool_count': ('timed_tools', 'Tool results with recorded durations.'),
-    'partial': ('partial', 'One when task usage or tool outcomes have missing or inconsistent fields.'),
+    'partial': ('partial', 'One when chat usage or tool outcomes have missing or inconsistent fields.'),
 }
 
 
@@ -429,11 +450,11 @@ def render_bob_metrics(snapshot):
         source_key = {'scan_timestamp_seconds': 'scan_timestamp', 'last_success_timestamp_seconds': 'last_success'}.get(key, key)
         emit(name, snapshot.get(source_key))
     name = 'traceonaut_bob_collector_skipped_records'
-    family(name, 'Skipped records by reason in the latest completed generation.')
+    family(name, 'Skipped records by reason in the latest completed scan.')
     for reason in SKIP_REASONS:
         emit(name, snapshot['skipped_records'].get(reason, 0), {'reason': reason})
-    family('traceonaut_bob_session_info', 'Bob task identity; value one.')
-    family('traceonaut_bob_session_usage_tokens', 'Recorded task tokens after removing completed subtasks from parents; cache is included in input.')
+    family('traceonaut_bob_session_info', 'Bob chat identity; value one.')
+    family('traceonaut_bob_session_usage_tokens', 'Recorded chat tokens after removing completed subtask usage from parents; cache is included in input.')
     for suffix, (_, description) in SESSION_METRICS.items():
         family('traceonaut_bob_session_' + suffix, description)
     for row in snapshot['sessions']:

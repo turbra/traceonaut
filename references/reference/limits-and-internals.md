@@ -34,6 +34,11 @@ A source transaction is limited to 60 seconds; the index is limited to 100,000
 tasks, 1,000,000 messages and 512 MiB. Individual message JSON is limited to 1 MiB;
 task costs to 64 KiB. Limits and malformed records are visible in collection health.
 
+The read-only SQLite connection may use Bob's write-ahead log (`-wal`), shared-memory
+(`-shm`) and rollback-journal (`-journal`) files. SQLite may update reader markers
+in an existing shared-memory file while coordinating with Bob's writer. Database
+records and write-ahead log contents remain unchanged.
+
 ## CWO Workflow Audit Inputs
 
 Audit records must be newline-terminated JSON objects with an event type, event hash, and valid source timestamp. Duplicate JSON keys and non-finite values are rejected. Content hashes are verified and used to deduplicate records. Unknown valid event types are exported as `other`.

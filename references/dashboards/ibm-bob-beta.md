@@ -37,7 +37,7 @@ hours with a 30-second refresh.
 
 | Section | Shows |
 | --- | --- |
-| Overview | Source availability, scan age, selected chats, recorded tokens and coverage. |
+| Overview | Collection status, scan age, selected chats, recorded tokens and coverage. |
 | Input tokens | Recorded input totals over Prometheus history. |
 | Output tokens | Recorded output totals on a separate scale. |
 | Responses by chat | The eight selected chats with the most saved assistant responses. |
@@ -45,20 +45,21 @@ hours with a 30-second refresh.
 | Chat activity | Chats with a saved message in the preceding five minutes. |
 | Chats | Chat, project, last message, tokens, responses, tool errors and coverage. |
 
-A chat is a conversation, subtask or subagent. Recent messages show activity.
+A chat is a conversation, subtask or subagent.
 Tool errors reflect Bob's saved outcome, including errors from tools other than
 the shell.
 
 ## Read the Values
 
-The selected range chooses chats by their last saved message. Chats with no saved
-messages stay out of this view. [Retention and Limits](../reference/retention-and-limits.md#ibm-bob)
-explains how older work and export selection affect totals. **K**, **Mil** and
-**Bil** mean thousand, million and billion.
+[Retention and Limits](../reference/retention-and-limits.md#ibm-bob) explains how
+the selected range, older work and export selection affect totals. **K**, **Mil**
+and **Bil** mean thousand, million and billion.
 
 **Partial** means some records are missing, unsupported or have unknown values.
-Available counts remain visible; missing values appear as **—**. If collection fails, tables retain the last
-collected values and Overview shows unavailable or stale. Charts leave gaps.
+Available counts remain visible; missing values appear as **—**.
+[Collector Health](../reference/collector-health.md#ibm-bob) explains Overview's
+**Collection**, **Scan age** and **Coverage**. If collection fails, tables retain
+the last collected values and Overview shows unavailable or stale. Charts leave gaps.
 
 Model, effort, currency cost and account allowance are unavailable in this beta.
 Re-render and re-import to refresh chat names, or use

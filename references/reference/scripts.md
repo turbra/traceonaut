@@ -22,8 +22,9 @@ Session collection also accepts `--session-retention-seconds 2592000` and `--ses
 
 Invalid arguments or configuration and fatal state or snapshot writes exit nonzero.
 Source read failures keep the listener running with that source's availability at
-`0`; in `--once` mode, an unavailable enabled source makes the command exit
-nonzero. Pending scan work alone does not.
+`0`. `--once` performs one bounded scan slice per enabled source without starting
+a listener. It exits nonzero if an enabled source is unavailable; readable sources
+with pending work still exit `0`.
 
 The following options require Codex collection. `--state-dir` adds an existing dispatch ledger, and `--account-snapshot-file` adds the optional account snapshot. These are separate inputs from the session state and snapshot.
 

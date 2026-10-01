@@ -34,11 +34,13 @@ state directory, snapshot paths and token.
 
 ## Check the Source
 
-Choose one command below. `--once` reads each enabled source and exits without
-serving metrics. Expect `source_available: 1` under each enabled source in the
-JSON output. `pending: 1` for Bob means more records remain to be read; the
-continuous collector finishes that work on later scans. An unavailable enabled
-source makes `--once` exit nonzero. Pending work alone does not.
+Choose one command below. The check reads one bounded slice and exits. Expect
+`source_available: 1` under each enabled source in the JSON output. Bob can also
+report `pending: 1`, meaning more records remain to be read. The continuous
+collector resumes pending Bob slices promptly, then
+returns to its normal polling interval after completion or failure. See the
+[collector command reference](reference/scripts.md#collection-and-checks) for
+`--once` behavior and exit codes.
 
 ### Bob Only
 
@@ -110,8 +112,8 @@ Prometheus, set `TRACEONAUT_LISTEN_ADDRESS` to the workstation's numeric LAN or 
 address before starting, and use it in the scrape target. Follow
 [Network and Security](operations/network-and-security.md).
 
-For persistent collection, use [Run as a Service](operations/run-as-a-service.md)
-with your chosen command.
+For persistent collection, use the matching source example in
+[Run as a Service](operations/run-as-a-service.md).
 
 ## Connect Prometheus and Grafana
 

@@ -160,6 +160,9 @@ class SourceWorker:
                     self.endpoint.update_part(self.name, payload)
                 if self.args.once:
                     break
+                if self.name == 'bob' and snapshot['source_available'] and snapshot['pending']:
+                    # Finish the bounded read before waiting for the next poll.
+                    continue
                 self.stopping.wait(max(0, self.args.poll_seconds - (time.monotonic() - started)))
         except Exception:
             # Reader-reported outages are recoverable; storage and unexpected

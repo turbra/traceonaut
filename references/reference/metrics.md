@@ -16,8 +16,7 @@ Labels use opaque identities and bounded categories. Display names stay in rende
 
 These gauges come from the explicitly enabled Bob source. A dashboard Chat maps to
 a saved Bob task. Its hashed task ID uses the existing `session_id` metric label;
-the hashed Bob project ID uses `project_id`. The `traceonaut_bob_session_` names
-retain the session metric convention.
+the hashed Bob project ID uses `project_id`.
 
 Chat token values remove completed subtask costs from their parent when Bob's
 recorded values and times support the subtraction; subagent costs remain separate.
@@ -65,7 +64,7 @@ unchanged last-success timestamp. [IBM Bob Collection](../bob-collection.md) cov
 
 | Name | Type | Labels | Meaning |
 | --- | --- | --- | --- |
-| `cwo_codex_collector_scan_timestamp_seconds` | untyped | None | Last completed scan, Unix seconds. |
+| `cwo_codex_collector_scan_timestamp_seconds` | untyped | None | Last finished scan pass, Unix seconds. |
 | `cwo_codex_collector_last_event_timestamp_seconds` | untyped | None | Latest observed source event, Unix seconds. |
 | `cwo_codex_collector_sessions` | untyped | None | All indexed sessions, including expired exports. |
 | `cwo_codex_collector_pending_files` | untyped | None | Files still awaiting scan work. |

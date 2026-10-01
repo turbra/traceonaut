@@ -11,11 +11,13 @@ or [IBM Bob Collection](../bob-collection.md#run-the-collector). Run it as the u
 who owns the source profiles, with absolute paths and one collector per state directory.
 
 For a Linux user service, save this as `~/.config/systemd/user/traceonaut.service`.
-Replace the checkout path. This example collects Codex; for Bob or both sources,
-replace `ExecStart` with your chosen collection command, without `--once`.
-Use absolute paths or `%h` for your home directory. Variables exported in your
-terminal, such as `TRACEONAUT_DATA_DIR`, are not set by this service definition.
+Replace `/absolute/path/to/traceonaut` with your checkout path in both places.
+This unit collects Codex only. `%h` expands to the service user's home directory;
+adjust the profile and storage paths if you used different locations during setup.
+Create the metrics token using the collection guide before starting the service.
+These examples do not require variables exported in your terminal.
 
+<!-- codex-only-service -->
 ```ini
 [Unit]
 Description=Traceonaut session collector
@@ -31,6 +33,24 @@ UMask=0077
 [Install]
 WantedBy=default.target
 ```
+
+For **Bob only**, replace the unit's entire `ExecStart` line with:
+
+<!-- bob-only-service -->
+```ini
+ExecStart=/usr/bin/python3 /absolute/path/to/traceonaut/scripts/collect_sessions.py --bob-home %h/.bob --session-state-dir %h/.local/share/traceonaut/session-state --bob-snapshot-file %h/.local/share/traceonaut/bob.json --credential-file %h/.local/share/traceonaut/metrics.token
+```
+
+For **Bob and Codex**, replace it with:
+
+<!-- both-sources-service -->
+```ini
+ExecStart=/usr/bin/python3 /absolute/path/to/traceonaut/scripts/collect_sessions.py --codex-home %h/.codex --bob-home %h/.bob --session-state-dir %h/.local/share/traceonaut/session-state --snapshot-file %h/.local/share/traceonaut/sessions.json --bob-snapshot-file %h/.local/share/traceonaut/bob.json --credential-file %h/.local/share/traceonaut/metrics.token
+```
+
+Keep exactly one `ExecStart` line in the unit. Replace the checkout placeholder in
+the chosen line too. Keep any existing Codex account or CWO options when enabling
+both sources.
 
 Stop the foreground collector before enabling the service:
 

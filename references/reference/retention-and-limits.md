@@ -28,13 +28,15 @@ active within 30 days.
 Chats with no saved messages use their creation time for retention. Source records
 are unchanged. Bob's private index mirrors the current database, including deletions.
 
-Large histories are read over several scans. See [Bob scan and storage bounds](limits-and-internals.md#ibm-bob)
-for the exact limits.
+Large histories are read over bounded slices. See
+[Bob scan and storage bounds](limits-and-internals.md#ibm-bob) for continuation
+timing and the limits that can prevent a full read.
 
 The Bob dashboard shows currently exported chats. A chat's recorded totals can
 include work from before Prometheus first scraped the collector; charts begin at
 that first scrape. The selected time range chooses chats by their last saved
-message, while tokens and responses cover each selected chat's recorded history.
+message; chats with no saved messages stay out of the dashboard. Tokens and
+responses cover each selected chat's recorded history.
 Totals can fall when chats expire from export or the selection changes.
 
 ## Historical Views

@@ -12,7 +12,7 @@ Work Overview and All Sessions have a collector-wide status strip. Project and W
 
 | Signal | Read it as |
 | --- | --- |
-| Scan age | Seconds since `cwo_codex_collector_scan_timestamp_seconds`. Compare it with your polling interval. |
+| Scan age | Seconds since the last finished scan pass, `cwo_codex_collector_scan_timestamp_seconds`. A pass can leave files pending. |
 | Errors | `3600 * rate(cwo_codex_collector_errors_total[1h])`: average errors per hour over the last hour. It needs two samples. |
 | Skipped records | Cumulative `cwo_codex_collector_skipped_records_total`, grouped by reason. |
 | Source available | `1` means the source can be read. |
@@ -35,14 +35,17 @@ Use the [Example Queries](example-queries.md) for checks in Prometheus. Alerting
 ## IBM Bob
 
 Bob health covers the whole enabled Bob source, independent of dashboard filters.
-These signals are gauges showing the latest observed state, not cumulative counters:
+Read the visible **Overview** fields as follows:
 
-| Signal | Read it as |
+| Field | Read it as |
 | --- | --- |
-| `traceonaut_bob_collector_source_available` | `1` after a readable source check; `0` before the first check or after a source read failure. |
-| `traceonaut_bob_collector_pending` | `1` while records remain to be read in later scans. |
-| `traceonaut_bob_collector_collection_complete` | `1` after a full read with no known skipped records or missing values. |
-| `traceonaut_bob_collector_last_success_timestamp_seconds` | Time of the latest successful full source check. |
-| `traceonaut_bob_collector_source_errors` and `traceonaut_bob_collector_skipped_records` | Latest read failures and skipped records, not rates. |
+| Collection | **Available** requires a readable source and a successful full source check less than 90 seconds ago. Otherwise it shows **Unavailable / stale**. |
+| Scan age | Seconds since the last successful full source check; increases while a read is unfinished. Codex measures the last finished scan pass instead. |
+| Coverage | **Complete** means the full read finished without skipped records or missing usage values. **Partial** means the read is unfinished, failed, or contains those gaps. |
 
-The [Metrics reference](metrics.md#ibm-bob) lists all Bob health and chat metrics.
+The raw health metrics are gauges showing the latest observed state.
+`traceonaut_bob_collector_pending` is `1` while a bounded read continues.
+Read failures describe the latest scan; skipped-record counts describe the latest
+completed read.
+See the [Metrics reference](metrics.md#ibm-bob) for all raw health and chat metrics,
+and [Check the Source](../bob-collection.md#check-the-source) for `--once` results.

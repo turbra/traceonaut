@@ -34,11 +34,9 @@ state directory, snapshot paths and token.
 
 ## Check the Source
 
-Choose one command below. The check reads one bounded slice and exits. Expect
-`source_available: 1` under each enabled source in the JSON output. Bob can also
-report `pending: 1`, meaning more records remain to be read. The continuous
-collector resumes pending Bob slices promptly, then
-returns to its normal polling interval after completion or failure. See the
+Choose one command below. Expect `source_available: 1` under each enabled source
+in the JSON output. Bob can also report `pending: 1`, meaning the running collector
+will finish reading the remaining records. See the
 [collector command reference](reference/scripts.md#collection-and-checks) for
 `--once` behavior and exit codes.
 

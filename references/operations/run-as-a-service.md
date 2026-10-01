@@ -11,11 +11,11 @@ or [IBM Bob Collection](../bob-collection.md#run-the-collector). Run it as the u
 who owns the source profiles, with absolute paths and one collector per state directory.
 
 For a Linux user service, save this as `~/.config/systemd/user/traceonaut.service`.
-Replace `/absolute/path/to/traceonaut` with your checkout path in both places.
+Replace `/absolute/path/to/traceonaut` with your checkout path in `WorkingDirectory`
+and your chosen `ExecStart` line.
 This unit collects Codex only. `%h` expands to the service user's home directory;
 adjust the profile and storage paths if you used different locations during setup.
 Create the metrics token using the collection guide before starting the service.
-These examples do not require variables exported in your terminal.
 
 <!-- codex-only-service -->
 ```ini
@@ -48,9 +48,8 @@ For **Bob and Codex**, replace it with:
 ExecStart=/usr/bin/python3 /absolute/path/to/traceonaut/scripts/collect_sessions.py --codex-home %h/.codex --bob-home %h/.bob --session-state-dir %h/.local/share/traceonaut/session-state --snapshot-file %h/.local/share/traceonaut/sessions.json --bob-snapshot-file %h/.local/share/traceonaut/bob.json --credential-file %h/.local/share/traceonaut/metrics.token
 ```
 
-Keep exactly one `ExecStart` line in the unit. Replace the checkout placeholder in
-the chosen line too. Keep any existing Codex account or CWO options when enabling
-both sources.
+Keep exactly one `ExecStart` line in the unit. Keep any existing Codex account or CWO
+options when enabling both sources.
 
 Stop the foreground collector before enabling the service:
 

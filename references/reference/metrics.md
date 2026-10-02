@@ -30,8 +30,8 @@ includes skipped records.
 | --- | --- | --- | --- |
 | `traceonaut_bob_collector_source_available` | gauge | None | One when the source was readable on the latest scan. |
 | `traceonaut_bob_collector_scan_timestamp_seconds` | gauge | None | Latest scan attempt, Unix seconds. |
-| `traceonaut_bob_collector_last_success_timestamp_seconds` | gauge | None | Latest successful full source check, Unix seconds. |
-| `traceonaut_bob_collector_collection_complete` | gauge | None | One when the latest full read has no pending work, skipped records or missing numeric fields. |
+| `traceonaut_bob_collector_last_success_timestamp_seconds` | gauge | None | Latest successful collection check, Unix seconds; includes incremental and unchanged-source checks. See [Bob data freshness](retention-and-limits.md#ibm-bob). |
+| `traceonaut_bob_collector_collection_complete` | gauge | None | One when the latest collection has no pending work, skipped records or missing numeric fields. |
 | `traceonaut_bob_collector_pending` | gauge | None | One while a bounded source read continues over later scans. |
 | `traceonaut_bob_collector_limit_reached` | gauge | None | One when a scan or storage limit prevents completion. |
 | `traceonaut_bob_collector_source_errors` | gauge | None | Source failures in the latest scan. |

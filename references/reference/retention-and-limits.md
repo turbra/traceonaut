@@ -28,6 +28,13 @@ active within 30 days.
 Chats with no saved messages use their creation time for retention. Source records
 are unchanged. Bob's private index mirrors the current database, including deletions.
 
+On each database change, the collector refreshes chat records and token totals,
+checks message identities for deletions or replacements, and reads new messages.
+Changes to older messages that keep the same identity are picked up by a full check
+scheduled every five minutes, or after a collector restart. These changes can
+affect response counts, tool results, durations and the last-message time used to
+select chats.
+
 Large histories are read over bounded slices. See
 [Bob scan and storage bounds](limits-and-internals.md#ibm-bob) for continuation
 timing and the limits that can prevent a full read.

@@ -28,6 +28,19 @@ Session retention uses last observed activity, then creation time. Unknown activ
 
 ## IBM Bob
 
+Each changed database is read in one consistent SQLite transaction. Chat records
+are refreshed, and message row IDs and hashed identities are compared with the
+previous read before fetching new message bodies. A missing or replaced identity
+triggers a full message read in that transaction. Skipped messages participate
+in the identity check. Invalid identities force a full read.
+
+A full read also runs at startup and after reconnecting. It is scheduled every
+five minutes to reconcile older message edits. The schedule uses elapsed time;
+incremental reads do not reset it, and an in-progress check finishes first.
+Published values are replaced only after
+the complete check succeeds. See [Bob data freshness](retention-and-limits.md#ibm-bob)
+for the effect on dashboard values.
+
 Bob reads at most 2,000 rows or 4 MiB of JSON per scan slice, with a 0.5-second read
 budget and a 100 ms SQLite lock timeout. The continuous collector resumes pending
 slices promptly; it waits for the normal polling interval after completion or

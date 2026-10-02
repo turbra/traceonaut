@@ -39,9 +39,13 @@ Read the visible **Overview** fields as follows:
 
 | Field | Read it as |
 | --- | --- |
-| Collection | **Available** requires a readable source and a successful full source check less than 90 seconds ago. Otherwise it shows **Unavailable / stale**. |
-| Scan age | Seconds since the last successful full source check; increases while a read is unfinished. Codex measures the last finished scan pass instead. |
-| Coverage | **Complete** means the full read finished without skipped records or missing usage values. **Partial** means the read is unfinished, failed, or contains those gaps. |
+| Collection | **Available** requires a readable source and a successful collection check less than 90 seconds ago. Otherwise it shows **Unavailable / stale**. |
+| Scan age | Seconds since the last successful collection check; increases while a read is unfinished. Codex measures the last finished scan pass instead. |
+| Coverage | **Complete** means collection finished without skipped records or missing usage values. **Partial** means the read is unfinished, failed, or contains those gaps. |
+
+Collection checks include incremental reads and unchanged-source checks.
+[Bob data freshness](retention-and-limits.md#ibm-bob) explains when older message
+corrections appear.
 
 The raw health metrics are gauges showing the latest observed state.
 `traceonaut_bob_collector_pending` is `1` while a bounded read continues.

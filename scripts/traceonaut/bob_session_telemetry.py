@@ -25,6 +25,7 @@ MAX_ROWS_PER_SCAN = 2_000
 MAX_BYTES_PER_SCAN = 4 * 1024**2
 MAX_SCAN_SECONDS = 0.5
 MAX_TRANSACTION_SECONDS = 60
+FULL_RECONCILE_SECONDS = 300
 MAX_TASKS = 100_000
 MAX_MESSAGES = 1_000_000
 MAX_JSON_BYTES = 1024**2
@@ -151,8 +152,9 @@ class BobCollector:
     """Thread-owned bounded SQLite reader, with a private numeric staging index.
 
     A read transaction supplies a coherent generation across scan slices. Only
-    completed generations replace the published cache. Cursor position, rather
-    than timestamps, handles equal timestamps, imports, edits and deletions.
+    completed generations replace the published cache. Changed sources refresh
+    tasks and reconcile message identities before reading appended bodies.
+    Full reads also reconcile older body edits every five minutes.
     """
 
     def __init__(self, bob_home, state_dir, *, session_retention_seconds=30 * 86400,
@@ -199,12 +201,21 @@ class BobCollector:
             self.value.update(source_available=0, collection_complete=0, pending=1)
             self.fingerprint = self.data_version = None
             self.stage = None
+            self.identity_reader = None
+            self.pending_identity = None
+            self.message_ids = {}
+            self.message_cursor = -(2**63)
+            self.message_skips = dict.fromkeys(SKIP_REASONS, 0)
+            self.identities_valid = True
+            self.reconcile_at = 0
             self.deadline = float('inf')
         except Exception:
             self.close()
             raise
 
     def close(self):
+        self.identity_reader = None
+        self.pending_identity = None
         if self.source is not None:
             self.source.close()
             self.source = None
@@ -224,6 +235,7 @@ class BobCollector:
             raise ValueError("Bob WAL has no shared-memory file")
         fingerprint = (info.st_dev, info.st_ino)
         if self.source is not None and fingerprint != self.fingerprint:
+            self.identity_reader = None
             self.source.close()
             self.source = None
             self.stage = None
@@ -253,18 +265,72 @@ class BobCollector:
         self.source.execute('SELECT rowid FROM tasks LIMIT 1').fetchone()
         with self._index_errors():
             self.db.execute('DELETE FROM tasks')
-            self.db.execute('DELETE FROM messages')
             self.db.commit()
-        self.stage = 'tasks'
-        self.cursor = -(2**63)
         self.started = time.monotonic()
         self.generation_time = now
         self.generation_version = version
         self.counts = {'tasks': 0, 'messages': 0}
-        self.skips = dict.fromkeys(SKIP_REASONS, 0)
+        self.skips = dict(self.message_skips)
+        self.full_read = (self.data_version is None or self.started >= self.reconcile_at
+                          or not self.identities_valid)
+        if self.full_read:
+            self._reset_messages()
+        self.stage = 'tasks'
+        self.cursor = -(2**63)
+        self.identity_reader = None
+        self.pending_identity = None
+        self.checked_ids = self.matched_ids = 0
+
+    def _reset_messages(self):
+        """Fall back within the same source transaction, retaining task results."""
+        with self._index_errors():
+            self.db.execute('DELETE FROM messages')
+        for reason, count in self.message_skips.items():
+            self.skips[reason] -= count
+        self.message_skips = dict.fromkeys(SKIP_REASONS, 0)
+        self.message_ids = {}
+        self.message_cursor = -(2**63)
+        self.identities_valid = True
+        self.full_read = True
+        self.counts['messages'] = 0
+        self.identity_reader = None
+        self.pending_identity = None
+
+    def _read_identity(self):
+        if self.pending_identity is not None:
+            row, self.pending_identity = self.pending_identity, None
+            return row
+        if self.identity_reader is None:
+            # SQLite can use the primary-key covering index: no message bodies.
+            self.identity_reader = self.source.execute(
+                'SELECT rowid AS cursor, substr(id,1,513) AS id FROM messages')
+        return self.identity_reader.fetchone()
+
+    def _check_identity(self, row):
+        self.checked_ids += 1
+        if self.checked_ids > MAX_MESSAGES:
+            raise OverflowError('record limit')
+        try:
+            digest = identity(row['id'])
+        except ValueError:
+            return False
+        if row['cursor'] <= self.message_cursor:
+            if self.message_ids.get(row['cursor']) != digest:
+                return False
+            self.matched_ids += 1
+        return True
+
+    def _begin_messages(self):
+        self.identity_reader = None
+        self.pending_identity = None
+        self.stage, self.cursor = 'messages', self.message_cursor
+        self.counts['messages'] = len(self.message_ids)
 
     def _skip(self, reason):
-        self.skips[reason if reason in SKIP_REASONS else 'invalid_record'] += 1
+        reason = reason if reason in SKIP_REASONS else 'invalid_record'
+        self.skips[reason] += 1
+        if self.stage == 'messages':
+            self.message_skips[reason] += 1
 
     def _read_row(self):
         if self.stage == 'tasks':
@@ -297,6 +363,10 @@ class BobCollector:
         self.stage = None
         with self._index_errors():
             self._publish(now)
+        self.message_cursor = self.cursor
+        if self.full_read:
+            # Appends and unchanged polls must not postpone older body checks.
+            self.reconcile_at = self.started + FULL_RECONCILE_SECONDS
 
     def _publish(self, now):
         self.db.commit()
@@ -332,7 +402,8 @@ class BobCollector:
         try:
             source = self._open()
             version = source.execute('PRAGMA data_version').fetchone()[0]
-            if self.stage is None and self.data_version == version:
+            if (self.stage is None and self.data_version == version
+                    and time.monotonic() < self.reconcile_at):
                 self.value.update(source_available=1, last_success=now, source_errors=0)
                 return self.snapshot(now=now)
             if self.stage is None:
@@ -342,10 +413,30 @@ class BobCollector:
             self.value.update(source_available=1, pending=1, collection_complete=0, source_errors=0)
             read_rows = read_bytes = 0
             while read_rows < self.max_rows and read_bytes < self.max_bytes and time.monotonic() < self.deadline:
+                if self.stage == 'identities':
+                    row = self._read_identity()
+                    if row is None:
+                        if self.matched_ids != len(self.message_ids):
+                            self._reset_messages()
+                        self._begin_messages()
+                    else:
+                        length = len(row['id'].encode()) if isinstance(row['id'], str) else 513
+                        if read_rows and read_bytes + length > self.max_bytes:
+                            self.pending_identity = row
+                            break
+                        read_rows += 1
+                        read_bytes += length
+                        if not self._check_identity(row):
+                            self._reset_messages()
+                            self._begin_messages()
+                    continue
                 row = self._read_row()
                 if row is None:
                     if self.stage == 'tasks':
-                        self.stage, self.cursor = 'messages', -(2**63)
+                        if self.full_read:
+                            self._begin_messages()
+                        else:
+                            self.stage = 'identities'
                         continue
                     self._finish(now)
                     break
@@ -359,6 +450,14 @@ class BobCollector:
                 self.counts[self.stage] += 1
                 if self.counts[self.stage] > (MAX_TASKS if self.stage == 'tasks' else MAX_MESSAGES):
                     raise OverflowError('record limit')
+                if self.stage == 'messages':
+                    try:
+                        self.message_ids[row['cursor']] = identity(row['id'])
+                    except ValueError:
+                        # Invalid IDs still count toward limits. Without a stable
+                        # identity, changed sources must use a complete read.
+                        self.message_ids[row['cursor']] = None
+                        self.identities_valid = False
                 if length > (MAX_TASK_BYTES if self.stage == 'tasks' else MAX_JSON_BYTES):
                     self._skip('oversized_record')
                     continue
@@ -390,6 +489,8 @@ class BobCollector:
             self.value.update(source_available=0, collection_complete=0, pending=0,
                               source_errors=1, limit_reached=int(isinstance(error, OverflowError) or time.monotonic() > self.deadline))
             if self.source is not None:
+                self.identity_reader = None
+                self.pending_identity = None
                 self.source.close()
                 self.source = None
             self.stage = None
@@ -412,8 +513,8 @@ class BobCollector:
 HEALTH = {
     'source_available': 'One when the Bob source was readable on the latest scan.',
     'scan_timestamp_seconds': 'Latest scan attempt, Unix seconds.',
-    'last_success_timestamp_seconds': 'Latest successful full source check, Unix seconds.',
-    'collection_complete': 'One when the latest full scan has no known skipped records or pending work.',
+    'last_success_timestamp_seconds': 'Latest successful collection check, Unix seconds; older message bodies are reconciled every five minutes.',
+    'collection_complete': 'One when the latest collection has no known skipped records or pending work.',
     'pending': 'One while records remain to be read in the current scan.',
     'limit_reached': 'One when a scan or storage limit prevented completion.',
     'source_errors': 'Source failures in the latest scan.',

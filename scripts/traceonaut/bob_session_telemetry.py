@@ -18,6 +18,9 @@ from .collector_paths import checked_path
 SAFE_INTEGER = 2**53 - 1
 TOKEN_FIELDS = {"input": "input", "output": "output", "cacheRead": "cached_input",
                 "cacheWrite": "cache_write_input"}
+TOKEN_STATUS = {"recorded": 0, "not_recorded": 1, "invalid": 2,
+                "reconciliation_unavailable": 3}
+STATUS_KINDS = ("input", "output", "total")
 KINDS = {"normal", "subtask", "subagent"}
 SKIP_REASONS = ("invalid_record", "invalid_json", "invalid_number", "invalid_timestamp",
                 "unsupported_version", "unsupported_kind", "oversized_record", "unknown_tool_outcome")
@@ -82,12 +85,16 @@ def project_task(row, now):
         raise ValueError("unsupported_kind")
     costs = object_json(row["costs"]) if row["costs"] is not None else {}
     usage = {target: number(costs.get(source)) for source, target in TOKEN_FIELDS.items()}
+    usage_status = {target: ("not_recorded" if costs.get(source) is None else
+                            "recorded" if usage[target] is not None else "invalid")
+                    for source, target in TOKEN_FIELDS.items()}
     return {"session_id": identity(row["id"]), "project_id": identity(row["project_id"]),
             "parent_id": identity(row["parent_id"]) if row["parent_id"] is not None else None,
             "title": text(row["title"]), "project_name": text(Path(row["directory"]).name),
             "kind": row["task_type"], "completed_subtask": row["task_type"] == "subtask" and row["status"] == "completed",
             "created_at": timestamp(row["created_at"], now),
             "updated_at": timestamp(row["updated_at"], now), "usage": usage,
+            "usage_status": usage_status,
             "partial": int(any(v is None for v in usage.values()))}
 
 
@@ -121,23 +128,37 @@ def project_message(row, now):
 
 def exclusive_usage(tasks):
     """Remove completed subtasks already included in parent task costs."""
+    return reconcile_usage(tasks)[0]
+
+
+def reconcile_usage(tasks):
+    """Reconcile each token field while retaining its saved-source provenance."""
     children = {}
     for task in tasks:
         if task["completed_subtask"] and task["parent_id"]:
             children.setdefault(task["parent_id"], []).append(task)
-    result = {}
+    result, statuses = {}, {}
     for task in tasks:
         usage = dict(task["usage"])
+        status = dict(task.get("usage_status", {}))
         for key, value in usage.items():
             completed = children.get(task["session_id"], [])
             operands = [child["usage"][key] for child in completed]
             usage[key] = (value - sum(operands) if value is not None and
                           all(child['updated_at'] <= task['updated_at'] for child in completed) and
                           all(v is not None for v in operands) and sum(operands) <= value else None)
+            if value is not None and usage[key] is None:
+                status[key] = "reconciliation_unavailable"
         total = None if usage["input"] is None or usage["output"] is None else usage["input"] + usage["output"]
         usage["total"] = number(total)
+        components = [status.get(key) for key in ("input", "output")]
+        if all(component in TOKEN_STATUS for component in components):
+            status["total"] = next((reason for reason in
+                ("invalid", "reconciliation_unavailable", "not_recorded") if reason in components),
+                "recorded" if usage["total"] is not None else "invalid")
         result[task["session_id"]] = usage
-    return result
+        statuses[task["session_id"]] = status
+    return result, statuses
 
 
 def empty_snapshot():
@@ -371,7 +392,7 @@ class BobCollector:
     def _publish(self, now):
         self.db.commit()
         tasks = [json.loads(r[0]) for r in self.db.execute('SELECT body FROM tasks')]
-        usages = exclusive_usage(tasks)
+        usages, statuses = reconcile_usage(tasks)
         aggregates = {r[0]: r[1:] for r in self.db.execute('''SELECT session_id, max(at),
             sum(responses), sum(tools), sum(errors), sum(unknown), sum(duration), count(duration)
             FROM messages GROUP BY session_id''')}
@@ -381,12 +402,14 @@ class BobCollector:
                 row['session_id'], (None, 0, 0, 0, 0, None, 0))
             usage = usages[row['session_id']]
             partial = int(bool(row['partial'] or unknown or any(v is None for v in usage.values())))
-            sessions.append({**row, 'usage': usage, 'last_event': at,
+            sessions.append({**row, 'usage': usage, 'usage_status': statuses[row['session_id']], 'last_event': at,
                 'responses': responses, 'tool_results': tools, 'tool_errors': errors,
                 'tool_unknown': unknown, 'tool_seconds': duration, 'timed_tools': timed,
                 'partial': partial})
         self.value = {**empty_snapshot(), 'source_available': 1, 'scan_timestamp': now,
-            'last_success': now, 'collection_complete': int(not any(self.skips.values()) and not any(s['partial'] for s in sessions)),
+            'last_success': now, 'collection_complete': int(not any(self.skips.values()) and not any(
+                s['tool_unknown'] or any(reason in ('invalid', 'reconciliation_unavailable')
+                                        for reason in s['usage_status'].values()) for s in sessions)),
             'skipped_records': dict(self.skips), 'sessions': sessions, 'indexed_sessions': len(sessions)}
         self.db.execute('INSERT OR REPLACE INTO publication VALUES (1, ?)',
                         (json.dumps(self.value, separators=(',', ':')),))
@@ -514,7 +537,7 @@ HEALTH = {
     'source_available': 'One when the Bob source was readable on the latest scan.',
     'scan_timestamp_seconds': 'Latest scan attempt, Unix seconds.',
     'last_success_timestamp_seconds': 'Latest successful collection check, Unix seconds; older message bodies are reconciled every five minutes.',
-    'collection_complete': 'One when the latest collection has no known skipped records or pending work.',
+    'collection_complete': 'One when collection completed without source errors, skips, invalid token values, unsafe reconciliation or unknown tool outcomes; omitted token fields alone do not reduce coverage.',
     'pending': 'One while records remain to be read in the current scan.',
     'limit_reached': 'One when a scan or storage limit prevented completion.',
     'source_errors': 'Source failures in the latest scan.',
@@ -556,6 +579,7 @@ def render_bob_metrics(snapshot):
         emit(name, snapshot['skipped_records'].get(reason, 0), {'reason': reason})
     family('traceonaut_bob_session_info', 'Bob chat identity; value one.')
     family('traceonaut_bob_session_usage_tokens', 'Recorded chat tokens after removing completed subtask usage from parents; cache is included in input.')
+    family('traceonaut_bob_session_token_status', 'Token availability by input, output and total: 0 recorded, 1 not recorded by Bob, 2 invalid saved value, 3 reconciliation unavailable.')
     for suffix, (_, description) in SESSION_METRICS.items():
         family('traceonaut_bob_session_' + suffix, description)
     for row in snapshot['sessions']:
@@ -565,4 +589,8 @@ def render_bob_metrics(snapshot):
             emit('traceonaut_bob_session_' + suffix, row.get(key), labels)
         for kind, value in row['usage'].items():
             emit('traceonaut_bob_session_usage_tokens', value, {**labels, 'token_kind': kind})
+        for kind in STATUS_KINDS:
+            reason = row.get('usage_status', {}).get(kind)
+            if reason in TOKEN_STATUS:
+                emit('traceonaut_bob_session_token_status', TOKEN_STATUS[reason], {**labels, 'token_kind': kind})
     return ('\n'.join(lines) + '\n').encode()

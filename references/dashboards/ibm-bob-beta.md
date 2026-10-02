@@ -37,13 +37,13 @@ hours with a 30-second refresh.
 
 | Section | Shows |
 | --- | --- |
-| Overview | Collection status, scan age, selected chats, recorded tokens and coverage. |
+| Overview | Collection status, scan age, selected chats, chats with token counts, recorded tokens and coverage. |
 | Input tokens | Recorded input totals over Prometheus history. |
 | Output tokens | Recorded output totals on a separate scale. |
 | Responses by chat | The eight selected chats with the most saved assistant responses. |
 | Tool activity | Saved tool results, explicit errors and unknown outcomes. |
 | Chat activity | Chats with a saved message in the preceding five minutes. |
-| Chats | Chat, project, last message, tokens, responses, tool errors and coverage. |
+| Chats | Chat, project, last message, tokens, responses, tool errors and token availability. |
 
 A chat is a conversation, subtask or subagent.
 Tool errors reflect Bob's saved outcome, including errors from tools other than
@@ -55,8 +55,23 @@ the shell.
 the selected range, older work and export selection affect totals. **K**, **Mil**
 and **Bil** mean thousand, million and billion.
 
-**Partial** means some records are missing, unsupported or have unknown values.
-Available counts remain visible; missing values appear as **—**.
+**Chats with token counts** counts selected chats with both input and output
+counts, including saved zeros. Compare it with **Chats**: if the counts differ,
+**Recorded tokens** includes only the chats whose totals are available. Input and
+output charts each show their known values independently.
+
+The **Token counts** column explains each chat's total:
+
+| Label | Meaning |
+| --- | --- |
+| Recorded | Bob saved valid input and output counts. |
+| Token counts not recorded by Bob | Bob's saved chat omits an input or output count. Responses and tool activity remain available. |
+| Token counts unavailable | A saved value is invalid, a parent total cannot safely exclude subtasks, or the collector predates token-status reporting. |
+| Collection unavailable / stale | Check Collection and Scan age before using the retained values. |
+
+Missing numeric values appear as **—**; saved zeros appear as **0**. Missing token
+fields alone leave overall Coverage **Complete**. Bob 2.0.5 can save chat costs
+without token counts; Traceonaut leaves those counts absent rather than estimating them.
 [Collector Health](../reference/collector-health.md#ibm-bob) explains Overview's
 **Collection**, **Scan age** and **Coverage**. If collection fails, tables retain
 the last collected values and Overview shows unavailable or stale. Charts leave gaps.

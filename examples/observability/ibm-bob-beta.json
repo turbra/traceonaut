@@ -70,7 +70,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Bob collection health is source-wide. Usage is recorded history, not interval spending. Partial means some source records or fields are missing. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. ",
+      "description": "Collection and Coverage apply to the whole Bob source. Complete means collection finished without source errors, skipped records, invalid values, unsafe subtask reconciliation or unknown tool outcomes. Token fields omitted by Bob do not make coverage Partial. Chats and Chats with token counts use the same Project, Chat and time range; the latter requires recorded input and output, including zero. Recorded tokens sums known chat totals only; compare the two chat counts to see how many contribute. See Chats for missing-token reasons. Cached table values remain subject to Collection and Scan age. Tokens: K = thousand, Mil = million, Bil = billion.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -178,15 +178,15 @@
           ],
           "fields": ""
         },
-        "orientation": "auto",
+        "orientation": "horizontal",
         "textMode": "value_and_name",
         "colorMode": "none",
         "graphMode": "none",
         "justifyMode": "auto",
         "wideLayout": true,
         "text": {
-          "valueSize": 28,
-          "titleSize": 14
+          "titleSize": 12,
+          "valueSize": 24
         }
       },
       "targets": [
@@ -218,8 +218,21 @@
         },
         {
           "refId": "C",
-          "expr": "count(((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)",
+          "expr": "(count(((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
           "legendFormat": "Chats",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "F",
+          "expr": "(count((max by (project_id, session_id) (traceonaut_bob_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"input\"}) and on (project_id, session_id) max by (project_id, session_id) (traceonaut_bob_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"output\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or vector(0)) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
+          "legendFormat": "Chats with token counts",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -244,7 +257,7 @@
         },
         {
           "refId": "E",
-          "expr": "max(traceonaut_bob_collector_collection_complete)",
+          "expr": "max(traceonaut_bob_collector_collection_complete) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
           "legendFormat": "Coverage",
           "datasource": {
             "type": "prometheus",
@@ -271,7 +284,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Charts begin when Prometheus starts scraping. Gaps indicate unavailable collection.",
+      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Charts begin when Prometheus starts scraping. Gaps indicate unavailable collection. Known values remain visible when other chats lack counts; compare Chats with Chats with token counts in Overview and read Token counts in the Chats table.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -368,7 +381,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Charts begin when Prometheus starts scraping. Gaps indicate unavailable collection.",
+      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Charts begin when Prometheus starts scraping. Gaps indicate unavailable collection. Known values remain visible when other chats lack counts; compare Chats with Chats with token counts in Overview and read Token counts in the Chats table.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -677,7 +690,7 @@
       "gridPos": {
         "x": 0,
         "y": 18,
-        "w": 12,
+        "w": 10,
         "h": 10
       },
       "datasource": {
@@ -771,16 +784,16 @@
       "title": "Chats",
       "type": "table",
       "gridPos": {
-        "x": 12,
+        "x": 10,
         "y": 18,
-        "w": 12,
+        "w": 14,
         "h": 10
       },
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Blank values are missing. Partial marks incomplete token fields or tool outcomes. Scan age in Overview also applies to cached table values.",
+      "description": "Recorded history for selected chats. Tokens includes cached input. Token counts: Recorded means input and output are valid; Token counts not recorded by Bob means a saved field is absent or null; Token counts unavailable means an invalid value, unsafe subtask subtraction or an older collector without status. Collection unavailable / stale takes precedence over saved reasons. Numeric cells stay blank for missing values. Source-wide Coverage is separate from token availability. Tokens: K = thousand, Mil = million, Bil = billion. https://turbra.github.io/traceonaut/dashboards/ibm-bob-beta/#read-the-values",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -799,6 +812,13 @@
                 "value": null
               }
             ]
+          },
+          "custom": {
+            "minWidth": 60,
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
           }
         },
         "overrides": [
@@ -842,7 +862,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 96
               }
             ]
           },
@@ -854,19 +874,26 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 92
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Coverage"
+              "options": "Token counts"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 185
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": true
+                }
               },
               {
                 "id": "mappings",
@@ -878,11 +905,31 @@
                         "text": "Recorded"
                       },
                       "1": {
-                        "text": "Partial"
+                        "text": "Token counts not recorded by Bob"
+                      },
+                      "2": {
+                        "text": "Token counts unavailable"
+                      },
+                      "3": {
+                        "text": "Token counts unavailable"
+                      },
+                      "4": {
+                        "text": "Token counts unavailable"
+                      },
+                      "5": {
+                        "text": "Collection unavailable / stale"
                       }
                     }
                   }
                 ]
+              },
+              {
+                "id": "noValue",
+                "value": "Token counts unavailable"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
               }
             ]
           },
@@ -894,7 +941,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 115
+                "value": 90
               }
             ]
           }
@@ -902,7 +949,7 @@
       },
       "options": {
         "showHeader": true,
-        "cellHeight": "sm",
+        "cellHeight": "md",
         "footer": {
           "show": false
         }
@@ -962,7 +1009,7 @@
         },
         {
           "refId": "E",
-          "expr": "(max by (project_id, session_id) (traceonaut_bob_session_partial{project_id=~\"$project\",session_id=~\"$session\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "expr": "(((max by (project_id, session_id) (traceonaut_bob_session_token_status{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\"}) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))) or on (project_id, session_id) (((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)) * 0 + 4)) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))) or ((((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)) * 0 + 5) unless on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90)))",
           "legendFormat": "",
           "datasource": {
             "type": "prometheus",
@@ -1004,7 +1051,7 @@
               "Value #B": "Tokens",
               "Value #C": "Responses",
               "Value #D": "Tool errors",
-              "Value #E": "Coverage"
+              "Value #E": "Token counts"
             }
           }
         },

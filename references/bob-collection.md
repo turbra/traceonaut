@@ -130,6 +130,8 @@ Use your actual job name if it differs from `traceonaut`.
 
 Import [IBM Bob · Beta](dashboards/ibm-bob-beta.md) for Bob. Run the renderer in
 a second terminal while the collector remains running.
+For new and renamed chats to appear without repeating the import, configure
+[Automatic Name Updates](operations/automatic-name-updates.md#run-the-bob-watcher).
 
 ## Disable a Source
 

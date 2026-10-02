@@ -221,8 +221,10 @@ class BobCollectorTests(unittest.TestCase):
         value = self.complete(reader)
         self.assertIsNone(value['sessions'][0]['usage']['total'])
         payload = render_bob_metrics(value).decode()
-        self.assertNotIn('token_kind="input"', payload)
-        self.assertIn('token_kind="output"} 0', payload)
+        usage_lines = '\n'.join(line for line in payload.splitlines()
+                                if line.startswith('traceonaut_bob_session_usage_tokens{'))
+        self.assertNotIn('token_kind="input"', usage_lines)
+        self.assertIn('token_kind="output"} 0', usage_lines)
 
 
 if __name__ == '__main__':

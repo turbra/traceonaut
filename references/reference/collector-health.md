@@ -41,7 +41,7 @@ Read the visible **Overview** fields as follows:
 | --- | --- |
 | Collection | **Available** requires a readable source and a successful collection check less than 90 seconds ago. Otherwise it shows **Unavailable / stale**. |
 | Scan age | Seconds since the last successful collection check; increases while a read is unfinished. Codex measures the last finished scan pass instead. |
-| Coverage | **Complete** means collection finished without skipped records or missing usage values. **Partial** means the read is unfinished, failed, or contains those gaps. |
+| Coverage | **Complete** means collection finished without skips, invalid token values, unsafe subtask reconciliation or unknown tool outcomes. **Partial** marks those problems or an unfinished read. Token fields omitted by Bob leave coverage Complete. Coverage is hidden when Collection is unavailable or stale. |
 
 Collection checks include incremental reads and unchanged-source checks.
 [Bob data freshness](retention-and-limits.md#ibm-bob) explains when older message

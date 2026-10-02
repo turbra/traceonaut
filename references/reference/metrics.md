@@ -31,7 +31,7 @@ includes skipped records.
 | `traceonaut_bob_collector_source_available` | gauge | None | One when the source was readable on the latest scan. |
 | `traceonaut_bob_collector_scan_timestamp_seconds` | gauge | None | Latest scan attempt, Unix seconds. |
 | `traceonaut_bob_collector_last_success_timestamp_seconds` | gauge | None | Latest successful collection check, Unix seconds; includes incremental and unchanged-source checks. See [Bob data freshness](retention-and-limits.md#ibm-bob). |
-| `traceonaut_bob_collector_collection_complete` | gauge | None | One when the latest collection has no pending work, skipped records or missing numeric fields. |
+| `traceonaut_bob_collector_collection_complete` | gauge | None | One when collection finished without source errors, skips, invalid token values, unsafe subtask reconciliation or unknown tool outcomes. Omitted token fields alone leave this at one. |
 | `traceonaut_bob_collector_pending` | gauge | None | One while a bounded source read continues over later scans. |
 | `traceonaut_bob_collector_limit_reached` | gauge | None | One when a scan or storage limit prevents completion. |
 | `traceonaut_bob_collector_source_errors` | gauge | None | Source failures in the latest scan. |
@@ -43,6 +43,7 @@ includes skipped records.
 | `traceonaut_bob_collector_skipped_records` | gauge | `reason` | Skips in the latest completed source read. |
 | `traceonaut_bob_session_info` | gauge | `project_id`, `session_id`, `kind` | Bob chat identity; value 1. |
 | `traceonaut_bob_session_usage_tokens` | gauge | `project_id`, `session_id`, `token_kind` | Recorded tokens by input, output, cached_input, cache_write_input or total. |
+| `traceonaut_bob_session_token_status` | gauge | `project_id`, `session_id`, `token_kind` | Availability of input, output and total: 0 recorded, 1 not recorded by Bob, 2 invalid saved value, 3 reconciliation unavailable. |
 | `traceonaut_bob_session_last_event_timestamp_seconds` | gauge | `project_id`, `session_id` | Latest saved message time, Unix seconds. |
 | `traceonaut_bob_session_response_count` | gauge | `project_id`, `session_id` | Saved assistant responses, excluding local UI messages. |
 | `traceonaut_bob_session_tool_result_count` | gauge | `project_id`, `session_id` | Saved tool results, including unknown outcomes. |
@@ -55,6 +56,14 @@ includes skipped records.
 Chat kinds: `normal`, `subtask`, `subagent`. Skip reasons: `invalid_record`,
 `invalid_json`, `invalid_number`, `invalid_timestamp`, `unsupported_version`,
 `unsupported_kind`, `oversized_record`, `unknown_tool_outcome`.
+
+Token status adds at most three series per exported chat. Absent or null source
+fields have status 1. Invalid values and parent totals withheld during subtask
+reconciliation have statuses 2 and 3. A total requires valid input and output;
+cache details are optional. Each input and output value remains independently
+usable. Older collectors have no status metric; the dashboard uses neutral
+**Token counts unavailable** wording for them. The legacy `session_partial` flag
+continues to include missing token fields, separately from collection coverage.
 
 Missing usage and durations are absent, while known zero values are exported. On
 source failure the last numeric cache remains visible with availability 0 and an

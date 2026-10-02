@@ -49,7 +49,7 @@ def render_dashboard(template, snapshot, datasource_uid=None):
         raise ValueError('expected IBM Bob beta template')
     result = copy.deepcopy(template)
     projects, chats = {}, {}
-    for row in rows:
+    for row in sorted(rows, key=lambda row: row['session_id']):
         projects.setdefault(row['project_id'], row['project_name'] or 'Project')
         chats[row['session_id']] = row['title'] or 'Untitled chat'
     # Disambiguate only collisions, keeping ordinary names short enough for tables.
@@ -61,7 +61,10 @@ def render_dashboard(template, snapshot, datasource_uid=None):
             if counts[name] > 1:
                 names[key] = name + ' · ' + key[:8]
     for variable in result['templating']['list']:
-        _named_variable(variable, projects if variable['name'] == 'project' else chats)
+        if variable['name'] == 'project':
+            _named_variable(variable, projects)
+        elif variable['name'] == 'session':
+            _named_variable(variable, chats)
     for panel in result['panels']:
         if panel['type'] == 'table':
             for name, mapping in (('Chat', chats), ('Project', projects)):
@@ -95,14 +98,36 @@ def main(argv=None):
     if args.watch_seconds is not None:
         for sig in (signal.SIGINT, signal.SIGTERM):
             signal.signal(sig, lambda *_: stopping.set())
+    last_problem = None
     try:
         while True:
             template = json.loads(args.template.read_text())
-            snapshot = json.loads(_read_snapshot_bytes(args.snapshot_file), object_pairs_hook=_object_without_duplicates)
-            dashboard = render_dashboard(template, snapshot, args.datasource_uid)
-            changed = write_dashboard(args.output, dashboard)
-            if changed or args.watch_seconds is None:
-                print(json.dumps({'status': 'rendered', 'changed': changed, 'named_chats': len(snapshot['sessions'])}), flush=True)
+            problem = None
+            try:
+                raw = _read_snapshot_bytes(args.snapshot_file)
+            except FileNotFoundError:
+                if args.watch_seconds is None:
+                    raise
+                problem = 'snapshot missing'
+            else:
+                # Path/permission failures above remain fatal. Only unavailable
+                # snapshot content is retried; template/output failures are fatal.
+                try:
+                    snapshot = json.loads(raw, object_pairs_hook=_object_without_duplicates)
+                    validate_snapshot(snapshot)
+                except (ValueError, KeyError, TypeError, RecursionError):
+                    if args.watch_seconds is None:
+                        raise
+                    problem = 'snapshot invalid'
+            if problem:
+                if problem != last_problem:
+                    print(f'Bob dashboard waiting: {problem}; keeping the last rendered file.', file=sys.stderr, flush=True)
+            else:
+                dashboard = render_dashboard(template, snapshot, args.datasource_uid)
+                changed = write_dashboard(args.output, dashboard)
+                if changed or last_problem or args.watch_seconds is None:
+                    print(json.dumps({'status': 'rendered', 'changed': changed, 'named_chats': len(snapshot['sessions'])}), flush=True)
+            last_problem = problem
             if args.watch_seconds is None or stopping.wait(args.watch_seconds):
                 break
     except FileNotFoundError as error:

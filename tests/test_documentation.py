@@ -82,7 +82,7 @@ class DocumentationTests(unittest.TestCase):
                       '<img src="https://img.shields.io/badge/License-Apache--2.0-2C7A7B?style=flat-square" '
                       'alt="License: Apache-2.0"></a>', readme)
         self.assertEqual(re.findall(r"^## (.+)$", readme, re.M),
-                         ["Install", "Quick Start", "Dashboards at a Glance", "Documentation"])
+                         ["Install", "Quick Start", "Sources", "Dashboards at a Glance", "Documentation"])
         # Canonical, unmodified text from https://www.apache.org/licenses/LICENSE-2.0.txt.
         self.assertEqual(hashlib.sha256((ROOT / "LICENSE").read_bytes()).hexdigest(),
                          "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30")
@@ -103,12 +103,51 @@ class DocumentationTests(unittest.TestCase):
 
     def test_quick_start_blocks_match_readme_and_home(self):
         guide = (ROOT / "references/getting-started.mdx").read_text()
-        for name in ("setup-paths", "credential-create", "run-collector", "prometheus-scrape", "render-beta"):
+        for name in ("setup-paths", "credential-create", "run-collector", "bob-only-serve",
+                     "both-sources-serve", "prometheus-scrape", "render-beta", "render-bob"):
             pattern = r"<!-- " + name + r" -->(?:\s*\*/})?\s*```\w+\n(.*?)\n```"
             expected = re.search(pattern, guide, re.S)[1]
             for file in ("README.md", "website/docs/home.mdx"):
                 with self.subTest(marker=name, file=file):
                     self.assertEqual(re.search(pattern, (ROOT / file).read_text(), re.S)[1], expected)
+
+    def test_quick_start_bob_renderer_matches_dashboard_guide(self):
+        pattern = r"<!-- render-bob -->(?:\s*\*/})?\s*```bash\n(.*?)\n```"
+        quick_start = (ROOT / "references/getting-started.mdx").read_text()
+        dashboard = (ROOT / "references/dashboards/ibm-bob-beta.md").read_text()
+        self.assertEqual(re.search(pattern, quick_start, re.S)[1],
+                         re.search(pattern, dashboard, re.S)[1])
+
+    def test_source_pages_share_headings_and_link_their_optional_features(self):
+        headings = ["What it reads", "Enable", "Check", "Optional features", "Limits", "Disable"]
+        features = {
+            "codex": ("../optional/account-allowance.md", "../integrations/cwo.md"),
+            "ibm-bob": ("../optional/bob-token-capture.md",),
+        }
+        for source, links in features.items():
+            with self.subTest(source=source):
+                text = (ROOT / "references/sources" / (source + ".md")).read_text()
+                self.assertEqual(re.findall(r"^## (.+)$", text, re.M), headings)
+                optional = text.split("\n## Optional features\n", 1)[1].split("\n## ", 1)[0]
+                for link in links:
+                    self.assertIn("](" + link + ")", optional)
+
+    def test_reference_pages_order_collection_sources_consistently(self):
+        pages = sorted((ROOT / "references/reference").glob("*.md"))
+        self.assertEqual(len(pages), 8)
+        for page in pages:
+            with self.subTest(page=page.name):
+                headings = re.findall(r"^## (.+)$", page.read_text(), re.M)
+                self.assertEqual([heading for heading in headings if heading in ("Codex", "IBM Bob")],
+                                 ["Codex", "IBM Bob"])
+
+    def test_standalone_bob_collection_page_and_links_are_removed(self):
+        self.assertFalse((ROOT / "references/bob-collection.md").exists())
+        files = [*DOCS, ROOT / "website/docs/home.mdx", ROOT / "website/docusaurus.config.js",
+                 ROOT / "website/sidebars.js", ROOT / "website/docs-manifest.json"]
+        for file in files:
+            with self.subTest(file=file.relative_to(ROOT)):
+                self.assertNotIn("bob-collection", file.read_text())
 
     def test_network_scrape_examples_change_only_target_and_token_path(self):
         guide = (ROOT / "references/getting-started.mdx").read_text()

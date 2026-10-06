@@ -511,10 +511,10 @@ class SessionSourceTests(unittest.TestCase):
         self.setup_sources(['codex', 'bob'])
         env = {**os.environ, 'TRACEONAUT_BOB_HOME': str(self.bob),
                'TRACEONAUT_CODEX_HOME': str(self.codex), 'TRACEONAUT_DATA_DIR': str(self.output)}
-        guide = (ROOT / 'references/bob-collection.md').read_text()
-        self.assertNotIn('<!-- codex-only-once -->', guide)
+        guide = (ROOT / 'references/getting-started.mdx').read_text()
+        self.assertIn('<!-- collect-once -->', guide)
         for marker, sources in (('bob-only-once', {'bob'}), ('both-sources-once', {'codex', 'bob'})):
-            block = re.search(r'<!-- ' + marker + r' -->\s*```bash\n(.*?)\n```', guide, re.S)[1]
+            block = re.search(r'<!-- ' + marker + r' -->(?:\s*\*/})?\s*```bash\n(.*?)\n```', guide, re.S)[1]
             result = subprocess.run(['bash', '-eu', '-c', block], cwd=ROOT, env=env,
                                     capture_output=True, text=True, timeout=15)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -544,13 +544,13 @@ class SessionSourceTests(unittest.TestCase):
                'TRACEONAUT_BOB_HOME': str(self.bob), 'TRACEONAUT_CODEX_HOME': str(self.codex),
                'TRACEONAUT_DATA_DIR': str(data_dir), 'TRACEONAUT_METRICS_CREDENTIAL': str(credential),
                'TRACEONAUT_LISTEN_ADDRESS': '127.0.0.1'}
-        guide = (ROOT / 'references/bob-collection.md').read_text()
+        guide = (ROOT / 'references/getting-started.mdx').read_text()
         health = {'codex': 'cwo_codex_collector_source_available',
                   'bob': 'traceonaut_bob_collector_source_available'}
         for marker, sources in (('bob-only-serve', {'bob'}),
                                 ('both-sources-serve', {'bob', 'codex'})):
             with self.subTest(marker=marker):
-                block = re.search(r'<!-- ' + marker + r' -->\s*```bash\n(.*?)\n```', guide, re.S)[1]
+                block = re.search(r'<!-- ' + marker + r' -->(?:\s*\*/})?\s*```bash\n(.*?)\n```', guide, re.S)[1]
                 self.assertEqual(block.count('--port 9464'), 1)
                 with socket.socket() as reserved:
                     reserved.bind(('127.0.0.1', 0))

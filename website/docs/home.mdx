@@ -7,6 +7,8 @@ hide_title: true
 
 import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <h1 className="traceonaut-hero">
   <img src={useBaseUrl('/traceonaut.png')} alt="Traceonaut: Explore every run" />
@@ -29,32 +31,36 @@ Grafana queries Prometheus.
 
 ## Quick Start
 
-The example below collects Codex. For Bob alone or alongside Codex, use
-[IBM Bob Collection](/bob-collection/).
-
-Complete [Install](/install/), then run these steps from the checkout root.
-This example uses Prometheus on the same machine. See [Quick Start](/getting-started/)
-for remote and container setups.
+Complete [Install](/install/), then choose Codex, IBM Bob or both.
+Run these commands from the checkout root as the user who owns the profiles.
+This example uses Prometheus on the same machine. See [Quick Start](/getting-started/) for remote and container setups.
 
 ### 1. Run the Collector
 
-Choose your Codex profile and a private data directory:
+Set your profile paths and create private collector storage:
 
 {/* <!-- setup-paths --> */}
 ```bash
 export TRACEONAUT_SOURCE_HOME="$HOME/.codex"
+export TRACEONAUT_CODEX_HOME="$TRACEONAUT_SOURCE_HOME"
+export TRACEONAUT_BOB_HOME="$HOME/.bob"
 export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 export TRACEONAUT_METRICS_CREDENTIAL="$TRACEONAUT_DATA_DIR/metrics.token"
 export TRACEONAUT_LISTEN_ADDRESS="127.0.0.1"
 install -d -m 700 "$TRACEONAUT_DATA_DIR"
 ```
 
-Create the token once; reuse it on restart:
+Create the endpoint token once; reuse it on restart:
 
 {/* <!-- credential-create --> */}
 ```bash
 python3 scripts/create_metrics_token.py --credential-file "$TRACEONAUT_METRICS_CREDENTIAL"
 ```
+
+Choose one source configuration:
+
+<Tabs groupId="source">
+<TabItem value="codex" label="Codex" default>
 
 {/* <!-- run-collector --> */}
 ```bash
@@ -66,12 +72,45 @@ python3 scripts/collect_sessions.py \
   --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
 ```
 
-Leave the collector running. Use a second terminal for rendering.
+</TabItem>
+<TabItem value="bob" label="IBM Bob">
+
+{/* <!-- bob-only-serve --> */}
+```bash
+python3 scripts/collect_sessions.py \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+
+</TabItem>
+<TabItem value="both" label="Both">
+
+{/* <!-- both-sources-serve --> */}
+```bash
+python3 scripts/collect_sessions.py \
+  --codex-home "$TRACEONAUT_CODEX_HOME" \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+
+</TabItem>
+</Tabs>
+
+Leave the collector running; **Ctrl+C** stops it. Use a second terminal for rendering.
+For persistent collection, use [Run as a Service](https://turbra.github.io/traceonaut/operations/run-as-a-service/).
 
 ### 2. Add the Prometheus Scrape Job
 
-Merge this job into your Prometheus configuration. Replace the credential path
-with the token's absolute path as seen by Prometheus, then validate and reload:
+Give Prometheus a protected copy of the endpoint token, readable by its service
+user. Set `credentials_file` to its absolute path as seen by Prometheus.
+Add this job to your existing configuration:
 
 {/* <!-- prometheus-scrape --> */}
 ```yaml
@@ -86,9 +125,19 @@ scrape_configs:
       - targets: ['127.0.0.1:9464']
 ```
 
+Validate and reload Prometheus:
+
+```bash
+promtool check config /path/to/prometheus.yml
+```
+
+Check `up{job="traceonaut"}` in Prometheus; expect `1`.
+
 ### 3. Import a Dashboard into Grafana
 
-Run in a second terminal from the checkout root:
+Run the renderer for each source you selected, from the checkout root in a second terminal.
+
+**Codex**
 
 {/* <!-- render-beta --> */}
 ```bash
@@ -99,61 +148,63 @@ python3 scripts/render_codex_beta_dashboard.py \
   --output "$TRACEONAUT_DATA_DIR/work-overview.json"
 ```
 
-Open **Dashboards → New → Import**, upload `work-overview.json`, and select your Prometheus
-datasource. The dashboard title is **Work Overview**.
+**IBM Bob**
 
+{/* <!-- render-bob --> */}
+```bash
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+python3 scripts/render_bob_dashboard.py \
+  --template examples/observability/ibm-bob-beta.json \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --output "$TRACEONAUT_DATA_DIR/ibm-bob-beta.json"
+```
+
+In Grafana, open **Dashboards → New → Import**, upload the rendered file, and
+select your Prometheus datasource. Use `work-overview.json` for Codex and
+`ibm-bob-beta.json` for IBM Bob. When collecting both, import both dashboards.
+
+See [Automatic Name Updates](https://turbra.github.io/traceonaut/operations/automatic-name-updates/) to refresh Project and Chat names as you work.
+
+## Sources
+
+- [Codex](/sources/codex/): saved sessions, tokens and commands; optional account allowance and CWO activity.
+- [IBM Bob](/sources/ibm-bob/): saved chats, responses and tool results; optional token capture.
 
 ## Dashboards
 
+### Codex
+
 <div className="traceonaut-cards traceonaut-cards--explore">
   <Link className="traceonaut-card" to="/dashboards/work-overview/">
-    <strong>Work Overview</strong>
-    <span>Start here for Codex session and subagent activity, command outcomes, tokens and collector health.</span>
+    <strong>Work Overview</strong><span>Session activity, command outcomes, tokens and collector health.</span>
   </Link>
   <Link className="traceonaut-card" to="/dashboards/all-sessions/">
-    <strong>All Sessions</strong>
-    <span>A compact session inventory and usage summary.</span>
-  </Link>
-  <Link className="traceonaut-card" to="/dashboards/cwo/">
-    <strong>CWO Overview</strong>
-    <span>CWO sessions, agents, usage and workflow activity.</span>
+    <strong>All Sessions</strong><span>A compact session inventory and usage summary.</span>
   </Link>
   <Link className="traceonaut-card" to="/dashboards/tui-beta/">
-    <strong>Codex TUI · Beta</strong>
-    <span>Minimal Grafana version of the Codex CLI Usage screen in Dashboard view.</span>
+    <strong>Codex TUI · Beta</strong><span>The Codex CLI Usage screen in Grafana.</span>
   </Link>
+  <Link className="traceonaut-card" to="/dashboards/cwo/">
+    <strong>CWO Overview</strong><span>CWO sessions, agents, usage and workflow activity.</span>
+  </Link>
+</div>
+
+### IBM Bob
+
+<div className="traceonaut-cards traceonaut-cards--explore">
   <Link className="traceonaut-card" to="/dashboards/ibm-bob-beta/">
-    <strong>IBM Bob · Beta</strong>
-    <span>Bob chats, recorded tokens and tool results in a compact layout.</span>
+    <strong>IBM Bob · Beta</strong><span>Chats, saved and captured tokens, responses and tool results.</span>
   </Link>
 </div>
 
 ## Explore
 
-<div className="traceonaut-cards traceonaut-cards--explore">
-  <Link className="traceonaut-card" to="/dashboards/reading-values/">
-    <strong>Reading the Values</strong><span>Understand counts, session states and time ranges.</span>
-  </Link>
-  <Link className="traceonaut-card" to="/operations/">
-    <strong>Operations</strong><span>Run a service, upgrade and troubleshoot collection.</span>
-  </Link>
-  <Link className="traceonaut-card" to="/reference/scripts/">
-    <strong>Scripts</strong><span>Find arguments, defaults and supported entry points.</span>
-  </Link>
-  <Link className="traceonaut-card" to="/reference/metrics/">
-    <strong>Metrics</strong><span>Look up metric names, types, labels and meanings.</span>
-  </Link>
-  <Link className="traceonaut-card" to="/reference/example-queries/">
-    <strong>Example Queries</strong><span>Query usage and collector health in Prometheus.</span>
-  </Link>
-  <Link className="traceonaut-card" to="/reference/data-sources-and-privacy/">
-    <strong>Data Sources and Privacy</strong><span>See which files are read and which data leaves the workstation.</span>
-  </Link>
-</div>
+- [Operations](/operations/): run a service, upgrade and troubleshoot collection.
+- [Scripts](/reference/scripts/): arguments, defaults and supported tools.
+- [Metrics](/reference/metrics/): names, types, labels and meanings.
+- [Data Sources and Privacy](/reference/data-sources-and-privacy/): what is read, stored and exposed.
 
 ## Related
 
 [Complex Work Orchestration (CWO)](https://github.com/gprocunier/complex-work-orchestration)
-is a Codex skill for planning tasks, coordinating agents and tracking work across
-sessions. The optional [CWO Integration](/integrations/cwo/) adds session association, workflow audits and contractor reviews
-for [CWO Overview](/dashboards/cwo/).
+is a Codex skill for coordinating agents and tracking work. See [CWO Integration](/integrations/cwo/) to display its activity.

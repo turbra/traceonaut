@@ -51,6 +51,8 @@ class OnboardingTests(unittest.TestCase):
                                   env=self.env, cwd=ROOT, capture_output=True, text=True, timeout=10)
         self.assertEqual(prepared.returncode, 0, prepared.stderr)
         self.assertEqual(self.presentation.stat().st_mode & 0o777, 0o700)
+        # Source choice shares preparation; an unselected Bob profile stays untouched.
+        self.assertFalse((self.root / ".bob").exists())
         self.sid = str(uuid4())
         stamp = datetime.now(timezone.utc).isoformat()
         records = [

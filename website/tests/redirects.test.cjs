@@ -58,8 +58,24 @@ test('Quick Start step headings match across all three documents', () => {
 
 test('sequential home setup stays visible and networking choices synchronize', () => {
   const home = fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8');
-  assert(!home.includes('<Tabs'));
   const guide = fs.readFileSync(path.join(root, 'references/getting-started.mdx'), 'utf8');
+  const choices = ['Codex', 'IBM Bob', 'Both'];
+  for (const [file, text] of [['references/getting-started.mdx', guide], ['website/docs/home.mdx', home]]) {
+    const firstStep = text.split(/^#{2,3} 1\. .+$/m)[1].split(/^#{2,3} 2\. .+$/m)[0];
+    const groups = [...firstStep.matchAll(/<Tabs\b[^>]*>([\s\S]*?)<\/Tabs>/g)];
+    const sourceGroups = groups.filter(group => {
+      const labels = [...group[1].matchAll(/<TabItem\b[^>]*\blabel="([^"]+)"/g)].map(match => match[1]);
+      return labels.some(label => choices.includes(label));
+    });
+    assert.equal(sourceGroups.length, 1, file);
+    assert.deepEqual([...sourceGroups[0][1].matchAll(/<TabItem\b[^>]*\blabel="([^"]+)"/g)]
+      .map(match => match[1]), choices, file);
+    for (const label of choices) {
+      const tab = [...sourceGroups[0][1].matchAll(/<TabItem\b[^>]*\blabel="([^"]+)"[^>]*>([\s\S]*?)<\/TabItem>/g)]
+        .find(match => match[1] === label);
+      assert(tab[2].includes('scripts/collect_sessions.py'), `${file}: ${label}`);
+    }
+  }
   const tabs = [...guide.matchAll(/<Tabs groupId="network">([\s\S]*?)<\/Tabs>/g)];
   assert.equal(tabs.length, 2);
   for (const group of tabs) {
@@ -69,5 +85,10 @@ test('sequential home setup stays visible and networking choices synchronize', (
   assert.deepEqual(operations.link, {type: 'doc', id: 'references/operations'});
   assert(!operations.items.some(item => item.id === 'references/operations'));
   const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const firstStep = readme.split(/^### 1\. .+$/m)[1].split(/^### 2\. .+$/m)[0];
+  assert.deepEqual([...firstStep.matchAll(/^#### (Codex|IBM Bob|Both)$/gm)].map(match => match[1]), choices);
+  for (const text of [readme, guide, home]) {
+    assert(!/This guide collects Codex|For Bob alone or alongside Codex/.test(text));
+  }
   assert.match(readme, /<a href="https:\/\/turbra.github.io\/traceonaut\/">\s*<img src="assets\/traceonaut.png"/);
 });

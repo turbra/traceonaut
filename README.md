@@ -43,31 +43,34 @@ python3 scripts/collect_sessions.py --help
 
 ## Quick Start
 
-The commands below collect Codex. For Bob alone or alongside Codex, use
-[IBM Bob Collection](https://turbra.github.io/traceonaut/bob-collection/).
-
-These commands use Prometheus on the same machine. For remote or container
-Prometheus, use the [Quick Start network tabs](https://turbra.github.io/traceonaut/getting-started/#1-run-the-collector).
+Choose Codex, IBM Bob or both. These commands use Prometheus on the same machine.
+For remote and container setups, use the [Quick Start network tabs](https://turbra.github.io/traceonaut/getting-started/#1-run-the-collector).
 
 ### 1. Run the Collector
 
-From the checkout root, choose your Codex profile and create a private data directory:
+Set your profile paths and create private collector storage:
 
 <!-- setup-paths -->
 ```bash
 export TRACEONAUT_SOURCE_HOME="$HOME/.codex"
+export TRACEONAUT_CODEX_HOME="$TRACEONAUT_SOURCE_HOME"
+export TRACEONAUT_BOB_HOME="$HOME/.bob"
 export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 export TRACEONAUT_METRICS_CREDENTIAL="$TRACEONAUT_DATA_DIR/metrics.token"
 export TRACEONAUT_LISTEN_ADDRESS="127.0.0.1"
 install -d -m 700 "$TRACEONAUT_DATA_DIR"
 ```
 
-Create the token once; reuse it on restart:
+Create the endpoint token once; reuse it on restart:
 
 <!-- credential-create -->
 ```bash
 python3 scripts/create_metrics_token.py --credential-file "$TRACEONAUT_METRICS_CREDENTIAL"
 ```
+
+Choose one source configuration:
+
+#### Codex
 
 <!-- run-collector -->
 ```bash
@@ -78,14 +81,39 @@ python3 scripts/collect_sessions.py \
   --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
   --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
 ```
+#### IBM Bob
 
-Leave this terminal running. The full [Quick Start](https://turbra.github.io/traceonaut/getting-started/)
-also includes a one-pass source check.
+<!-- bob-only-serve -->
+```bash
+python3 scripts/collect_sessions.py \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+#### Both
+
+<!-- both-sources-serve -->
+```bash
+python3 scripts/collect_sessions.py \
+  --codex-home "$TRACEONAUT_CODEX_HOME" \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+
+Leave the collector running; **Ctrl+C** stops it. Use a second terminal for rendering.
+For persistent collection, use [Run as a Service](https://turbra.github.io/traceonaut/operations/run-as-a-service/).
 
 ### 2. Add the Prometheus Scrape Job
 
-Merge this job into your Prometheus configuration. Set `credentials_file` to the
-absolute token path readable by Prometheus, then validate and reload its configuration:
+Give Prometheus a protected copy of the endpoint token, readable by its service
+user. Set `credentials_file` to its absolute path as seen by Prometheus.
+Add this job to your existing configuration:
 
 <!-- prometheus-scrape -->
 ```yaml
@@ -100,9 +128,19 @@ scrape_configs:
       - targets: ['127.0.0.1:9464']
 ```
 
+Validate and reload Prometheus:
+
+```bash
+promtool check config /path/to/prometheus.yml
+```
+
+Check `up{job="traceonaut"}` in Prometheus; expect `1`.
+
 ### 3. Import a Dashboard into Grafana
 
-In a second terminal, from the checkout root:
+Run the renderer for each source you selected, from the checkout root in a second terminal.
+
+**Codex**
 
 <!-- render-beta -->
 ```bash
@@ -113,27 +151,52 @@ python3 scripts/render_codex_beta_dashboard.py \
   --output "$TRACEONAUT_DATA_DIR/work-overview.json"
 ```
 
-In Grafana, open **Dashboards → New → Import**, upload `work-overview.json`, and select
-your Prometheus datasource. The dashboard opens as **Work Overview**.
+**IBM Bob**
+
+<!-- render-bob -->
+```bash
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+python3 scripts/render_bob_dashboard.py \
+  --template examples/observability/ibm-bob-beta.json \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --output "$TRACEONAUT_DATA_DIR/ibm-bob-beta.json"
+```
+
+In Grafana, open **Dashboards → New → Import**, upload the rendered file, and
+select your Prometheus datasource. Use `work-overview.json` for Codex and
+`ibm-bob-beta.json` for IBM Bob. When collecting both, import both dashboards.
+
+See [Automatic Name Updates](https://turbra.github.io/traceonaut/operations/automatic-name-updates/) to refresh Project and Chat names as you work.
+
+## Sources
+
+- [Codex](https://turbra.github.io/traceonaut/sources/codex/): saved sessions, tokens and commands; optional account allowance and CWO activity.
+- [IBM Bob](https://turbra.github.io/traceonaut/sources/ibm-bob/): saved chats, responses and tool results; optional token capture.
 
 ## Dashboards at a Glance
 
+### Codex
+
 | Dashboard | Use it for |
 | --- | --- |
-| [Work Overview](https://turbra.github.io/traceonaut/dashboards/work-overview/) | Session activity, command outcomes, token totals and collector health. Start here. |
+| [Work Overview](https://turbra.github.io/traceonaut/dashboards/work-overview/) | Session activity, command outcomes, token totals and collector health. |
 | [All Sessions](https://turbra.github.io/traceonaut/dashboards/all-sessions/) | A compact session inventory and usage summary. |
-| [CWO Overview](https://turbra.github.io/traceonaut/dashboards/cwo/) | CWO sessions, agents, usage and workflow activity from [CWO](https://github.com/gprocunier/complex-work-orchestration), a Codex skill for coordinating agents. |
-| [Codex TUI · Beta](https://turbra.github.io/traceonaut/dashboards/tui-beta/) | Minimal Grafana version of the Codex CLI Usage screen in Dashboard view. |
-| [IBM Bob · Beta](https://turbra.github.io/traceonaut/dashboards/ibm-bob-beta/) | Bob chats, recorded tokens and tool results in a compact terminal-style layout. |
+| [Codex TUI · Beta](https://turbra.github.io/traceonaut/dashboards/tui-beta/) | The Codex CLI Usage screen in Grafana. |
+| [CWO Overview](https://turbra.github.io/traceonaut/dashboards/cwo/) | CWO sessions, agents, usage and workflow activity. |
+
+### IBM Bob
+
+| Dashboard | Use it for |
+| --- | --- |
+| [IBM Bob · Beta](https://turbra.github.io/traceonaut/dashboards/ibm-bob-beta/) | Chats, saved and captured tokens, responses and tool results. |
 
 ## Documentation
 
 | Guide | Covers |
 | --- | --- |
-| [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/) | Counts, session states, time ranges and missing data. |
-| [Operations](https://turbra.github.io/traceonaut/operations/) | Services, upgrades, name updates, networking and troubleshooting. |
+| [Choosing a Dashboard](https://turbra.github.io/traceonaut/dashboards/) | Views grouped by source. |
+| [Operations](https://turbra.github.io/traceonaut/operations/) | Services, upgrades, names, networking and troubleshooting. |
 | [Scripts](https://turbra.github.io/traceonaut/reference/scripts/) | Arguments and defaults. |
 | [Metrics](https://turbra.github.io/traceonaut/reference/metrics/) | Names, types, labels and meanings. |
-| [Example Queries](https://turbra.github.io/traceonaut/reference/example-queries/) | PromQL for usage and collector health. |
 | [Data Sources and Privacy](https://turbra.github.io/traceonaut/reference/data-sources-and-privacy/) | Files read, data stored and endpoint contents. |
-| [Retention and Limits](https://turbra.github.io/traceonaut/reference/retention-and-limits/) | Export windows and historical views. |
+| [Retention and Limits](https://turbra.github.io/traceonaut/reference/retention-and-limits/) | Visible history and accounting limits. |

@@ -60,6 +60,117 @@ class JournalTests(unittest.TestCase):
         self.reader.scan(rows, now or self.now + 5)
         return rows, self.reader.snapshot(rows)
 
+    def completed_rotations(self):
+        paths = []
+        for sequence in range(1, 7):
+            path = self.journal / f'bob-usage-{sequence}.json'
+            path.write_bytes(json.dumps(packet(sequence=sequence, now=self.now)).encode() + b'\n')
+            os.utime(path, (self.now - 100 + sequence, self.now - 100 + sequence))
+            paths.append(path)
+        rows, health = self.scan()
+        self.assertEqual(rows[0]['captured_usage']['total'], 720)
+        self.assertEqual(health['backlog_bytes'], 0)
+        return paths
+
+    def test_completed_rotations_cannot_starve_new_usage_across_restart_and_replay(self):
+        paths = self.completed_rotations()
+        limit = 2 * paths[0].stat().st_size
+        new = packet(sequence=7, input_value=7, output=3, now=self.now)
+        self.write(new)
+        for _ in range(8):
+            self.reader = JournalReader(self.journal, self.db, self.state, max_bytes=limit)
+            rows, health = self.scan()
+        self.assertEqual(rows[0]['captured_usage']['total'], 730)
+        self.assertEqual(health['backlog_bytes'], 0)
+        self.assertEqual(health['losses'], 0)
+        self.assertTrue(all(path.exists() for path in paths))
+        self.write(new)
+        for _ in range(8):
+            self.reader = JournalReader(self.journal, self.db, self.state, max_bytes=limit)
+            rows, health = self.scan()
+        self.assertEqual(rows[0]['captured_usage']['total'], 730)
+        self.assertEqual(health['backlog_bytes'], 0)
+        self.assertEqual(health['losses'], 0)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM bob_capture_events').fetchone()[0], 7)
+        # A same-inode, same-size rewrite must still be verified after rotating.
+        old = paths[0].stat()
+        paths[0].write_bytes(json.dumps(packet(sequence=8, now=self.now)).encode() + b'\n')
+        os.utime(paths[0], ns=(old.st_atime_ns, old.st_mtime_ns))
+        for _ in range(8):
+            self.reader = JournalReader(self.journal, self.db, self.state, max_bytes=limit)
+            rows, health = self.scan()
+        self.assertEqual(rows[0]['captured_usage']['total'], 850)
+        self.assertEqual(health['losses'], 1)
+
+    def test_time_budget_resumes_past_completed_rotations_after_restart(self):
+        self.completed_rotations()
+        self.write(packet(sequence=7, input_value=7, output=3, now=self.now))
+        for _ in range(8):
+            self.reader = JournalReader(self.journal, self.db, self.state)
+            ticks = iter([0, 0, 0])
+            with patch('traceonaut.bob_otel_journal.time.monotonic', side_effect=lambda: next(ticks, 1)):
+                rows, health = self.scan()
+        self.assertEqual(rows[0]['captured_usage']['total'], 730)
+        self.assertEqual(health['backlog_bytes'], 0)
+        self.assertEqual(health['errors'], 0)
+        self.assertEqual(health['losses'], 0)
+
+    def test_unread_record_gets_next_budget_when_head_verification_used_the_remainder(self):
+        old = self.journal / 'bob-usage-old.json'
+        old.write_bytes(json.dumps(packet(now=self.now)).encode() + b'\n')
+        os.utime(old, (self.now - 100, self.now - 100))
+        self.scan()
+        self.write(packet(sequence=2, now=self.now))
+        limit = 2 * old.stat().st_size
+        self.reader = JournalReader(self.journal, self.db, self.state, max_bytes=limit)
+        self.assertEqual(self.scan()[0][0]['captured_usage']['total'], 120)
+        self.reader = JournalReader(self.journal, self.db, self.state, max_bytes=limit)
+        rows, health = self.scan()
+        self.assertEqual(rows[0]['captured_usage']['total'], 240)
+        self.assertEqual(health['backlog_bytes'], 0)
+
+    def test_partial_tail_cannot_starve_another_file(self):
+        old = self.journal / 'bob-usage-old.json'
+        raw = json.dumps(packet(now=self.now)).encode() + b'\n'
+        old.write_bytes(raw[:len(raw) * 4 // 5])
+        os.utime(old, (self.now - 100, self.now - 100))
+        self.write(packet(sequence=2, now=self.now))
+        limit = 2 * len(raw)
+        for _ in range(4):
+            self.reader = JournalReader(self.journal, self.db, self.state, max_bytes=limit)
+            rows, health = self.scan()
+        self.assertEqual(rows[0]['captured_usage'].get('total'), 120)
+        self.assertEqual(health['backlog_bytes'], old.stat().st_size)
+        info = old.stat()
+        self.assertEqual(self.db.execute('SELECT offset FROM bob_capture_files WHERE id=?',
+                         (f'{info.st_dev}:{info.st_ino}',)).fetchone()[0], 0)
+        self.assertEqual(health['losses'], 0)
+
+    def test_row_budget_resumes_and_a_removed_cursor_file_falls_back_safely(self):
+        paths = []
+        for sequence in range(1, 4):
+            path = self.journal / f'bob-usage-{sequence}.json'
+            path.write_bytes(json.dumps(packet(sequence=sequence, now=self.now)).encode() + b'\n')
+            os.utime(path, (self.now - 100 + sequence, self.now - 100 + sequence))
+            paths.append(path)
+        for expected in (120, 240):
+            self.reader = JournalReader(self.journal, self.db, self.state, max_rows=1)
+            rows, health = self.scan()
+            self.assertEqual(rows[0]['captured_usage']['total'], expected)
+            self.assertGreater(health['backlog_bytes'], 0)
+        info = paths[2].stat()
+        self.assertEqual(self.db.execute('SELECT next_file FROM bob_capture_scan WHERE id=1').fetchone()[0],
+                         f'{info.st_dev}:{info.st_ino}')
+        paths[2].unlink()
+        self.write(packet(sequence=4, now=self.now))
+        self.reader = JournalReader(self.journal, self.db, self.state, max_rows=1)
+        rows, health = self.scan()
+        self.assertEqual(rows[0]['captured_usage']['total'], 360)
+        self.assertEqual(health['backlog_bytes'], 0)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM bob_capture_events').fetchone()[0], 3)
+        self.reader = JournalReader(self.journal, self.db, self.state, max_rows=1)
+        self.assertEqual(self.scan()[0][0]['captured_usage']['total'], 360)
+
     def test_real_cache_detail_is_not_added_and_replay_restart_is_idempotent(self):
         value = packet(input_value=1864, output=5, total=1869, now=self.now,
                        extra={'gen_ai.usage.cache_creation.input_tokens': {'intValue': '1861'}})

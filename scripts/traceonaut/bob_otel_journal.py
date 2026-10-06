@@ -166,6 +166,7 @@ class JournalReader:
                 body TEXT, first_seen REAL, state INTEGER, conflict INTEGER DEFAULT 0);
             CREATE INDEX IF NOT EXISTS bob_capture_pending ON bob_capture_events(state);
             CREATE TABLE IF NOT EXISTS bob_capture_totals (conversation TEXT PRIMARY KEY, body TEXT);
+            CREATE TABLE IF NOT EXISTS bob_capture_scan (id INTEGER PRIMARY KEY CHECK(id=1), next_file TEXT);
         ''')
         meta = db.execute('SELECT version,reset_pending,replay_floor FROM bob_capture_meta WHERE id=1').fetchone()
         if meta and meta[0] != 1:
@@ -259,6 +260,14 @@ class JournalReader:
             if len(files) > MAX_FILES:
                 raise ValueError('journal file bound exceeded')
             self.db.execute('BEGIN')
+            cursor = self.db.execute('SELECT next_file FROM bob_capture_scan WHERE id=1').fetchone()
+            if cursor and cursor[0]:
+                for at, path in enumerate(files):
+                    info = path.lstat()
+                    if cursor[0] == f'{info.st_dev}:{info.st_ino}':
+                        files = files[at:] + files[:at]
+                        break
+            next_file = None
             seen = set()
             for path in files:
                 fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -269,11 +278,15 @@ class JournalReader:
                     key = f'{info.st_dev}:{info.st_ino}'
                     seen.add(key)
                     old = self.db.execute('SELECT head,offset,size,discard FROM bob_capture_files WHERE id=?', (key,)).fetchone()
-                    if (consumed >= self.max_bytes or time.monotonic() >= deadline) and not self.reset:
+                    if (rows >= self.max_rows or consumed >= self.max_bytes or time.monotonic() >= deadline) and not self.reset:
                         self.backlog += max(0, info.st_size - (old[1] if old else 0))
+                        if next_file is None:
+                            next_file = key
                         continue
                     first = stream.readline(min(MAX_LINE_BYTES + 1, max(1, self.max_bytes - consumed))) if not self.reset else b''
                     consumed += len(first)
+                    head_limited = (bool(first) and len(first) <= MAX_LINE_BYTES and
+                                    not first.endswith(b'\n') and stream.tell() < info.st_size)
                     try:
                         # Hash only projected numeric/identity fields, never raw payloads.
                         head = hashlib.sha256(json.dumps(project(first, now), sort_keys=True).encode()).hexdigest() if first.endswith(b'\n') else ''
@@ -288,6 +301,7 @@ class JournalReader:
                     elif old and (info.st_size < offset or old[0] and head and head != old[0]):
                         self._loss()
                         offset, discard = 0, 0
+                    start_offset = offset
                     stream.seek(offset)
                     while rows < self.max_rows and consumed < self.max_bytes and time.monotonic() < deadline:
                         raw = stream.readline(min(MAX_LINE_BYTES + 1, self.max_bytes - consumed + 1))
@@ -314,6 +328,11 @@ class JournalReader:
                             self._event(event, known, now)
                         rows += max(1, len(events))
                         offset += len(raw)
+                    if ((head_limited or offset == start_offset and offset < info.st_size) and
+                            (rows >= self.max_rows or consumed >= self.max_bytes or time.monotonic() >= deadline)):
+                        # Retry incomplete verification or an unread record with
+                        # a full budget; otherwise rotate past completed work.
+                        next_file = key
                     self.backlog += max(0, info.st_size - offset)
                     self.db.execute('INSERT OR REPLACE INTO bob_capture_files VALUES (?,?,?,?,?)',
                                     (key, head or (old[0] if old else ''), offset, info.st_size, discard))
@@ -323,6 +342,7 @@ class JournalReader:
                         self._loss()
                     self.db.execute('DELETE FROM bob_capture_files WHERE id=?', (key,))
             self._resolve(known, now)
+            self.db.execute('INSERT OR REPLACE INTO bob_capture_scan VALUES (1,?)', (next_file,))
             self.db.execute('UPDATE bob_capture_meta SET last_success=?,reset_pending=0 WHERE id=1', (now,))
             self.db.commit()
             self.reset, self.available = False, 1

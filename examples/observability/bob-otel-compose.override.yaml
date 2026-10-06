@@ -1,0 +1,7 @@
+# Merge with the existing OTel Compose deployment after separate approval.
+services:
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.161.0
+    volumes:
+      - ./bob-otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro,Z
+      - ${BOB_OTEL_JOURNAL_DIR:?set a dedicated private journal directory}:/var/lib/traceonaut/bob-journal:rw,Z

@@ -39,6 +39,12 @@
       "id": "table",
       "name": "Table",
       "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "bargauge",
+      "name": "Bar gauge",
+      "version": ""
     }
   ],
   "annotations": {
@@ -63,8 +69,8 @@
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 12,
-        "h": 8
+        "w": 16,
+        "h": 4
       },
       "datasource": {
         "type": "prometheus",
@@ -75,10 +81,10 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "text"
+            "fixedColor": "light-blue"
           },
           "unit": "locale",
-          "noValue": "—",
+          "noValue": "Unavailable",
           "decimals": 0,
           "mappings": [],
           "thresholds": {
@@ -105,10 +111,12 @@
                     "type": "value",
                     "options": {
                       "0": {
-                        "text": "Unavailable / stale"
+                        "text": "Unavailable / stale",
+                        "color": "red"
                       },
                       "1": {
-                        "text": "Available"
+                        "text": "Available",
+                        "color": "green"
                       }
                     }
                   }
@@ -129,6 +137,28 @@
               {
                 "id": "decimals",
                 "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "value": null,
+                      "color": "green"
+                    },
+                    {
+                      "value": 90,
+                      "color": "red"
+                    }
+                  ]
+                }
               }
             ]
           },
@@ -147,7 +177,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Coverage"
+              "options": "File collection coverage"
             },
             "properties": [
               {
@@ -157,10 +187,12 @@
                     "type": "value",
                     "options": {
                       "0": {
-                        "text": "Partial"
+                        "text": "Partial",
+                        "color": "orange"
                       },
                       "1": {
-                        "text": "Complete"
+                        "text": "Complete",
+                        "color": "green"
                       }
                     }
                   }
@@ -178,12 +210,12 @@
           ],
           "fields": ""
         },
-        "orientation": "horizontal",
+        "orientation": "vertical",
         "textMode": "value_and_name",
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
-        "justifyMode": "auto",
-        "wideLayout": true,
+        "justifyMode": "center",
+        "wideLayout": false,
         "text": {
           "titleSize": 12,
           "valueSize": 24
@@ -258,7 +290,7 @@
         {
           "refId": "E",
           "expr": "max(traceonaut_bob_collector_collection_complete) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
-          "legendFormat": "Coverage",
+          "legendFormat": "File collection coverage",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -275,23 +307,23 @@
       "title": "Input tokens",
       "type": "timeseries",
       "gridPos": {
-        "x": 12,
-        "y": 0,
-        "w": 6,
-        "h": 8
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 7
       },
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Charts begin when Prometheus starts scraping. Gaps indicate unavailable collection. Known values remain visible when other chats lack counts; compare Chats with Chats with token counts in Overview and read Token counts in the Chats table.",
+      "description": "Saved history and captured generation counts are separate series for the selected Project/Chat; never added together. Saved values require a saved message in the selected range. Captured values are cumulative ledger counts within the capture epoch, shown over Prometheus scrape history, not tokens spent within the range. Capture is always partial and excludes uncaptured calls, summaries, auxiliary calls, compaction and missing usage. Missing saved fields do not hide available captured values. Disabled, unavailable or stale capture leaves gaps; recorded zero remains zero. Tokens: K = thousand, Mil = million, Bil = billion.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "unit": "short",
-          "noValue": "—",
+          "noValue": "Token counts unavailable",
           "decimals": 1,
           "mappings": [],
           "thresholds": {
@@ -310,7 +342,7 @@
             "fillOpacity": 15,
             "showPoints": "never",
             "spanNulls": false,
-            "axisLabel": "Recorded tokens",
+            "axisLabel": "Tokens by source",
             "axisCenteredZero": false,
             "scaleDistribution": {
               "type": "linear"
@@ -340,10 +372,12 @@
       },
       "options": {
         "legend": {
-          "calcs": [],
+          "calcs": [
+            "lastNotNull"
+          ],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
@@ -355,7 +389,20 @@
         {
           "refId": "A",
           "expr": "(sum((max by (project_id, session_id) (traceonaut_bob_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"input\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
-          "legendFormat": "input",
+          "legendFormat": "Saved history",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        },
+        {
+          "refId": "B",
+          "expr": "(sum(max by (project_id, session_id) (traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"input\",event_kind=\"generation\"}))) and on () ((max(traceonaut_bob_capture_enabled) == 1) and on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90)))",
+          "legendFormat": "Captured generation · partial",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -372,23 +419,23 @@
       "title": "Output tokens",
       "type": "timeseries",
       "gridPos": {
-        "x": 18,
-        "y": 0,
-        "w": 6,
-        "h": 8
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 7
       },
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Tokens: K = thousand, Mil = million, Bil = billion. Input already includes cached tokens. Charts begin when Prometheus starts scraping. Gaps indicate unavailable collection. Known values remain visible when other chats lack counts; compare Chats with Chats with token counts in Overview and read Token counts in the Chats table.",
+      "description": "Saved history and captured generation counts are separate series for the selected Project/Chat; never added together. Saved values require a saved message in the selected range. Captured values are cumulative ledger counts within the capture epoch, shown over Prometheus scrape history, not tokens spent within the range. Capture is always partial and excludes uncaptured calls, summaries, auxiliary calls, compaction and missing usage. Missing saved fields do not hide available captured values. Disabled, unavailable or stale capture leaves gaps; recorded zero remains zero. Tokens: K = thousand, Mil = million, Bil = billion.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "unit": "short",
-          "noValue": "—",
+          "noValue": "Token counts unavailable",
           "decimals": 1,
           "mappings": [],
           "thresholds": {
@@ -407,7 +454,7 @@
             "fillOpacity": 15,
             "showPoints": "never",
             "spanNulls": false,
-            "axisLabel": "Recorded tokens",
+            "axisLabel": "Tokens by source",
             "axisCenteredZero": false,
             "scaleDistribution": {
               "type": "linear"
@@ -437,10 +484,12 @@
       },
       "options": {
         "legend": {
-          "calcs": [],
+          "calcs": [
+            "lastNotNull"
+          ],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
@@ -452,7 +501,20 @@
         {
           "refId": "A",
           "expr": "(sum((max by (project_id, session_id) (traceonaut_bob_session_usage_tokens{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"output\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
-          "legendFormat": "output",
+          "legendFormat": "Saved history",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series"
+        },
+        {
+          "refId": "B",
+          "expr": "(sum(max by (project_id, session_id) (traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"output\",event_kind=\"generation\"}))) and on () ((max(traceonaut_bob_capture_enabled) == 1) and on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90)))",
+          "legendFormat": "Captured generation · partial",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -470,9 +532,9 @@
       "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 8,
+        "y": 11,
         "w": 12,
-        "h": 10
+        "h": 7
       },
       "datasource": {
         "type": "prometheus",
@@ -588,26 +650,26 @@
     {
       "id": 4,
       "title": "Tool activity",
-      "type": "stat",
+      "type": "bargauge",
       "gridPos": {
-        "x": 12,
-        "y": 8,
-        "w": 12,
-        "h": 10
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 4
       },
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Counts are saved tool results, not tool requests or shell exit codes. Unknown outcomes make the totals partial. Duration covers results with duration metadata.",
+      "description": "Recorded history for chats with a saved message in the selected range. Project and Chat filter these values. Counts are saved tool results, not tool requests or shell exit codes. Unknown outcomes make the totals partial. Duration covers results with duration metadata. Bars share an automatic count scale; lengths are not percentages. Errors and unknown outcomes are subsets of Results, not separate slices of a total.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "text"
+            "fixedColor": "blue"
           },
           "unit": "locale",
-          "noValue": "—",
+          "noValue": "Unavailable",
           "decimals": 0,
           "mappings": [],
           "thresholds": {
@@ -618,9 +680,56 @@
                 "value": null
               }
             ]
-          }
+          },
+          "min": 0
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Results"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Errors"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unknown outcomes"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "reduceOptions": {
@@ -630,15 +739,21 @@
           ],
           "fields": ""
         },
-        "orientation": "auto",
-        "textMode": "value_and_name",
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "wideLayout": true,
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "text",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
         "text": {
-          "valueSize": 28,
-          "titleSize": 14
+          "titleSize": 12,
+          "valueSize": 18
+        },
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
         }
       },
       "targets": [
@@ -688,10 +803,10 @@
       "title": "Chat activity",
       "type": "timeseries",
       "gridPos": {
-        "x": 0,
-        "y": 18,
-        "w": 10,
-        "h": 10
+        "x": 12,
+        "y": 11,
+        "w": 12,
+        "h": 7
       },
       "datasource": {
         "type": "prometheus",
@@ -784,16 +899,16 @@
       "title": "Chats",
       "type": "table",
       "gridPos": {
-        "x": 10,
+        "x": 0,
         "y": 18,
-        "w": 14,
-        "h": 10
+        "w": 24,
+        "h": 8
       },
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Recorded history for selected chats. Tokens includes cached input. Token counts: Recorded means input and output are valid; Token counts not recorded by Bob means a saved field is absent or null; Token counts unavailable means an invalid value, unsafe subtask subtraction or an older collector without status. Collection unavailable / stale takes precedence over saved reasons. Numeric cells stay blank for missing values. Source-wide Coverage is separate from token availability. Tokens: K = thousand, Mil = million, Bil = billion. https://turbra.github.io/traceonaut/dashboards/ibm-bob-beta/#read-the-values",
+      "description": "Saved tokens are database history for the selected chats. Token counts: Recorded means valid input/output; Not recorded by Bob means an absent saved field; Unavailable means invalid usage, unsafe subtask subtraction or an older collector. Unavailable / stale takes precedence when collection fails. Missing numeric cells show explicit text. File collection coverage is separate from token availability. Captured tokens are generation-only ledger totals, independent of saved totals. Capture is always partial: auxiliary calls, compaction, missing generation fields and uncaptured history are excluded. Recorded zero, missing, disabled and stale capture have separate states. https://turbra.github.io/traceonaut/dashboards/ibm-bob-beta/#read-the-values",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -801,7 +916,7 @@
             "fixedColor": "text"
           },
           "unit": "locale",
-          "noValue": "—",
+          "noValue": "Not recorded",
           "decimals": 0,
           "mappings": [],
           "thresholds": {
@@ -841,7 +956,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Tokens"
+              "options": "Saved tokens"
             },
             "properties": [
               {
@@ -850,7 +965,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 80
+                "value": 100
               }
             ]
           },
@@ -862,7 +977,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 96
+                "value": 80
               }
             ]
           },
@@ -874,7 +989,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 92
+                "value": 90
               }
             ]
           },
@@ -886,7 +1001,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 185
+                "value": 115
               },
               {
                 "id": "custom.cellOptions",
@@ -905,19 +1020,19 @@
                         "text": "Recorded"
                       },
                       "1": {
-                        "text": "Token counts not recorded by Bob"
+                        "text": "Not recorded by Bob"
                       },
                       "2": {
-                        "text": "Token counts unavailable"
+                        "text": "Unavailable"
                       },
                       "3": {
-                        "text": "Token counts unavailable"
+                        "text": "Unavailable"
                       },
                       "4": {
-                        "text": "Token counts unavailable"
+                        "text": "Unavailable"
                       },
                       "5": {
-                        "text": "Collection unavailable / stale"
+                        "text": "Unavailable / stale"
                       }
                     }
                   }
@@ -925,7 +1040,7 @@
               },
               {
                 "id": "noValue",
-                "value": "Token counts unavailable"
+                "value": "Unavailable"
               },
               {
                 "id": "custom.align",
@@ -941,7 +1056,78 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 85
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Captured tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "custom.width",
+                "value": 125
+              },
+              {
+                "id": "noValue",
+                "value": "No captured count"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Capture"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Capture disabled"
+                      },
+                      "1": {
+                        "text": "No activity"
+                      },
+                      "2": {
+                        "text": "Recorded zero · partial"
+                      },
+                      "3": {
+                        "text": "Missing counts"
+                      },
+                      "4": {
+                        "text": "Partial capture"
+                      },
+                      "5": {
+                        "text": "Capture unavailable / stale"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 145
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": true
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "Capture unavailable"
               }
             ]
           }
@@ -949,7 +1135,7 @@
       },
       "options": {
         "showHeader": true,
-        "cellHeight": "md",
+        "cellHeight": "lg",
         "footer": {
           "show": false
         }
@@ -1019,6 +1205,32 @@
           "instant": true,
           "range": false,
           "format": "table"
+        },
+        {
+          "refId": "F",
+          "expr": "(max by (project_id, session_id) (traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\",event_kind=\"generation\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "G",
+          "expr": "(((max by (project_id, session_id) (traceonaut_bob_session_capture_status{project_id=~\"$project\",session_id=~\"$session\"}) or on (project_id, session_id) (((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)) * 0)) unless on () ((max(traceonaut_bob_capture_enabled) == 1) unless on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90)))) or ((((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)) * 0 + 5) and on () ((max(traceonaut_bob_capture_enabled) == 1) unless on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90))))) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
         }
       ],
       "transformations": [
@@ -1042,16 +1254,20 @@
               "Value #B": 3,
               "Value #C": 4,
               "Value #D": 5,
-              "Value #E": 6
+              "Value #E": 6,
+              "Value #F": 7,
+              "Value #G": 8
             },
             "renameByName": {
               "session_id": "Chat",
               "project_id": "Project",
               "Value #A": "Last activity",
-              "Value #B": "Tokens",
+              "Value #B": "Saved tokens",
               "Value #C": "Responses",
               "Value #D": "Tool errors",
-              "Value #E": "Token counts"
+              "Value #E": "Token counts",
+              "Value #F": "Captured tokens",
+              "Value #G": "Capture"
             }
           }
         },
@@ -1065,6 +1281,210 @@
               }
             ]
           }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Captured generation tokens · partial",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Optional Bob 2.0.5 generation capture. Project/Chat filters apply. Ledger totals are cumulative within the capture epoch and do not follow the selected time range; interval tokens use Prometheus increase over scrape/commit time and are approximate. Saved history is separate. Excludes auxiliary calls, summaries, compaction and missing usage. Receiver health never proves Complete. Zero means explicitly recorded zero; unavailable samples stay unknown.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "unit": "locale",
+          "noValue": "No captured samples",
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Capture"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Capture disabled",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "No activity",
+                        "color": "blue"
+                      },
+                      "2": {
+                        "text": "Recorded zero · partial",
+                        "color": "orange"
+                      },
+                      "3": {
+                        "text": "Missing counts",
+                        "color": "orange"
+                      },
+                      "4": {
+                        "text": "Partial capture",
+                        "color": "orange"
+                      },
+                      "5": {
+                        "text": "Capture unavailable / stale",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ledger epoch"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "No capture epoch"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Interval tokens · approximate"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "vertical",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": false,
+        "text": {
+          "titleSize": 11,
+          "valueSize": 18
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(((max(max by (project_id, session_id) (traceonaut_bob_session_capture_status{project_id=~\"$project\",session_id=~\"$session\"})) or vector(1)) and on () (max(traceonaut_bob_capture_enabled) == 1)) and on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90))) or (vector(5) and on () ((max(traceonaut_bob_capture_enabled) == 1) unless on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90)))) or (vector(0) unless on () (max(traceonaut_bob_capture_enabled) == 1))",
+          "legendFormat": "Capture",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "B",
+          "expr": "(sum(max by (project_id, session_id) (traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\",event_kind=\"generation\"}))) and on () (max(traceonaut_bob_capture_enabled) == 1)",
+          "legendFormat": "Captured ledger tokens",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "C",
+          "expr": "(sum(max by (project_id, session_id) (increase(traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\",event_kind=\"generation\"}[$__range])))) and on () (max(traceonaut_bob_capture_enabled) == 1)",
+          "legendFormat": "Interval tokens · approximate",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "D",
+          "expr": "(1000 * (max(traceonaut_bob_capture_epoch_timestamp_seconds) > 0) and on () (max(traceonaut_bob_capture_enabled) == 1)) or vector(0)",
+          "legendFormat": "Ledger epoch",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        },
+        {
+          "refId": "E",
+          "expr": "(sum(max by (project_id, session_id) (traceonaut_bob_session_capture_missing_events_total{project_id=~\"$project\",session_id=~\"$session\"}))) and on () (max(traceonaut_bob_capture_enabled) == 1)",
+          "legendFormat": "Generation records missing counts",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
         }
       ]
     }

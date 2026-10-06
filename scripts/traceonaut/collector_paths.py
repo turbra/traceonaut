@@ -42,7 +42,7 @@ def validate_outputs(sources, state, snapshots):
             if output.is_relative_to(source) or source.is_relative_to(output):
                 raise ValueError("collector output must be separate from source homes")
     reserved = {"sessions.sqlite3", "writer.lock", "cwo-sessions.sqlite3", "cwo-writer.lock",
-                "bob.sqlite3", "bob-writer.lock"}
+                "bob.sqlite3", "bob-writer.lock", "bob-otel-epoch.json"}
     for path in snapshots:
         if path == state or state.is_relative_to(path):
             raise ValueError("snapshot must be separate from the state directory")

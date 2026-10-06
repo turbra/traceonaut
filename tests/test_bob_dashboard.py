@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from render_bob_dashboard import main, render_dashboard, validate_snapshot
 from build_release import build_release
-from traceonaut.bob_session_telemetry import project_task, HEALTH, SESSION_METRICS
+from traceonaut.bob_session_telemetry import project_task, HEALTH, SESSION_METRICS, CAPTURE_HEALTH
 from bob_fixtures import task
 
 
@@ -27,7 +27,7 @@ class BobDashboardTests(unittest.TestCase):
         self.assertEqual(self.template['title'], 'IBM Bob · Beta')
         self.assertEqual(self.template['uid'], 'traceonaut-ibm-bob-beta')
         self.assertEqual(self.template['refresh'], '30s')
-        self.assertEqual(len(self.template['panels']), 7)
+        self.assertEqual(len(self.template['panels']), 8)
         self.assertEqual({v['name'] for v in self.template['templating']['list']}, {'project', 'session'})
         text = json.dumps(self.template)
         self.assertNotIn('cwo_codex_', text)
@@ -38,7 +38,7 @@ class BobDashboardTests(unittest.TestCase):
                 if 'traceonaut_bob_session_' in expr:
                     self.assertIn('project_id=~"$project"', expr)
                     self.assertIn('session_id=~"$session"', expr)
-        self.assertEqual(self.template['panels'][-1]['transformations'][0]['id'], 'merge')
+        self.assertEqual(next(p for p in self.template['panels'] if p['id']==6)['transformations'][0]['id'], 'merge')
 
     def test_metric_reference_covers_every_bob_family(self):
         reference = (ROOT / 'references/reference/metrics.md').read_text()
@@ -46,24 +46,40 @@ class BobDashboardTests(unittest.TestCase):
         expected = {'traceonaut_bob_collector_' + k for k in HEALTH}
         expected.update('traceonaut_bob_session_' + k for k in SESSION_METRICS)
         expected.update(('traceonaut_bob_collector_skipped_records', 'traceonaut_bob_session_info',
-                         'traceonaut_bob_session_usage_tokens', 'traceonaut_bob_session_token_status'))
+                         'traceonaut_bob_session_usage_tokens', 'traceonaut_bob_session_token_status',
+                         'traceonaut_bob_session_capture_status'))
+        expected.update('traceonaut_bob_capture_'+key for key in CAPTURE_HEALTH if key!='loss_total')
         self.assertEqual(actual, expected)
 
     def test_token_status_wording_and_native_adjacent_counts(self):
         overview = next(p for p in self.template['panels'] if p['id'] == 1)
         names = [t['legendFormat'] for t in overview['targets']]
         self.assertEqual(names[names.index('Chats') + 1], 'Chats with token counts')
-        self.assertEqual(overview['options']['orientation'], 'horizontal')
+        self.assertEqual(overview['options']['orientation'], 'vertical')
         table = next(p for p in self.template['panels'] if p['id'] == 6)
         status = next(o for o in table['fieldConfig']['overrides'] if o['matcher']['options'] == 'Token counts')
         mappings = next(p['value'][0]['options'] for p in status['properties'] if p['id'] == 'mappings')
-        self.assertEqual(mappings['1']['text'], 'Token counts not recorded by Bob')
+        self.assertEqual(mappings['1']['text'], 'Not recorded by Bob')
         for code in ('2', '3', '4'):
-            self.assertEqual(mappings[code]['text'], 'Token counts unavailable')
-        self.assertEqual(mappings['5']['text'], 'Collection unavailable / stale')
-        self.assertEqual(table['fieldConfig']['defaults']['noValue'], '—')
+            self.assertEqual(mappings[code]['text'], 'Unavailable')
+        self.assertEqual(mappings['5']['text'], 'Unavailable / stale')
+        self.assertEqual(table['fieldConfig']['defaults']['noValue'], 'Not recorded')
         self.assertLessEqual(sum(p['value'] for o in table['fieldConfig']['overrides']
-                                for p in o['properties'] if p['id'] == 'custom.width'), 660)
+                                for p in o['properties'] if p['id'] == 'custom.width'), 980)
+
+    def test_capture_is_explicitly_partial_separate_from_saved_and_has_no_dash(self):
+        capture = next(panel for panel in self.template['panels'] if panel['id']==8)
+        self.assertIn('partial',capture['title'])
+        self.assertNotIn('traceonaut_bob_session_usage_tokens',json.dumps(capture))
+        self.assertIn('increase(',capture['targets'][2]['expr'])
+        mappings=capture['fieldConfig']['overrides'][0]['properties'][0]['value'][0]['options']
+        self.assertEqual(set(mappings),set('012345'))
+        self.assertNotIn('Complete',json.dumps(mappings))
+        table=next(panel for panel in self.template['panels'] if panel['id']==6)
+        names=table['transformations'][1]['options']['renameByName']
+        self.assertEqual((names['Value #B'],names['Value #F'],names['Value #G']),
+                         ('Saved tokens','Captured tokens','Capture'))
+        self.assertNotIn('—',json.dumps(capture))
 
     def test_names_only_map_exported_rows_and_do_not_change_queries(self):
         rendered = render_dashboard(self.template, self.snapshot, 'demo')
@@ -74,6 +90,24 @@ class BobDashboardTests(unittest.TestCase):
         self.assertEqual(len(rendered['templating']['list'][1]['options']), 2)
         empty = render_dashboard(self.template, {**self.snapshot, 'sessions': []})
         self.assertEqual(len(empty['templating']['list'][1]['options']), 1)
+
+    def test_input_output_charts_show_separate_saved_and_partial_capture(self):
+        for panel_id, kind in ((2, 'input'), (7, 'output')):
+            with self.subTest(kind=kind):
+                panel = next(p for p in self.template['panels'] if p['id'] == panel_id)
+                self.assertEqual(panel['title'], kind.capitalize() + ' tokens')
+                saved, captured = panel['targets']
+                self.assertEqual(saved['legendFormat'], 'Saved history')
+                self.assertEqual(captured['legendFormat'], 'Captured generation · partial')
+                self.assertIn('traceonaut_bob_session_usage_tokens', saved['expr'])
+                self.assertNotIn('captured_tokens_total', saved['expr'])
+                self.assertIn('traceonaut_bob_session_captured_tokens_total', captured['expr'])
+                self.assertIn('token_kind="' + kind + '"', captured['expr'])
+                self.assertNotIn('traceonaut_bob_session_usage_tokens', captured['expr'])
+                self.assertTrue(panel['options']['legend']['showLegend'])
+                self.assertEqual(panel['fieldConfig']['defaults']['noValue'], 'Token counts unavailable')
+                self.assertTrue(captured['range'])
+                self.assertFalse(captured['instant'])
 
     def test_duplicate_wrong_source_and_untrusted_names(self):
         with self.assertRaises(ValueError):

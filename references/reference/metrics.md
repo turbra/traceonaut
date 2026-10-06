@@ -62,12 +62,54 @@ fields have status 1. Invalid values and parent totals withheld during subtask
 reconciliation have statuses 2 and 3. A total requires valid input and output;
 cache details are optional. Each input and output value remains independently
 usable. Older collectors have no status metric; the dashboard uses neutral
-**Token counts unavailable** wording for them. The legacy `session_partial` flag
+**Unavailable** wording for them. The legacy `session_partial` flag
 continues to include missing token fields, separately from collection coverage.
 
 Missing usage and durations are absent, while known zero values are exported. On
 source failure the last numeric cache remains visible with availability 0 and an
 unchanged last-success timestamp. [IBM Bob Collection](../bob-collection.md) covers setup.
+
+### Optional Generation Capture
+
+Capture defaults off and does not change saved metrics. With
+`--bob-otel-journal-dir`, valid Bob 2.0.5 integer generation counts are durable
+counters within a ledger epoch. They are separate from saved history; cache and
+reasoning details are not extra tokens. Parent and child generation events stay
+exclusive under their own chat IDs. Unknown versions, missing usage, summaries,
+compaction and auxiliary calls are not counted. The supported scope is always partial.
+
+| Name | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `traceonaut_bob_capture_enabled` | gauge | None | One when the optional journal reader is enabled. |
+| `traceonaut_bob_capture_source_available` | gauge | None | Latest journal access succeeded; not producer delivery or completeness. |
+| `traceonaut_bob_capture_last_success_timestamp_seconds` | gauge | None | Latest successful journal check, Unix seconds. |
+| `traceonaut_bob_capture_epoch_timestamp_seconds` | gauge | None | Start of the durable capture ledger epoch, Unix seconds. |
+| `traceonaut_bob_capture_backlog_bytes` | gauge | None | Unread bytes, including incomplete trailing records. |
+| `traceonaut_bob_capture_pending_joins` | gauge | None | Events withheld pending a known chat identity. |
+| `traceonaut_bob_capture_scope_partial` | gauge | None | One for the enabled generation-only scope; never whole-Bob completeness. |
+| `traceonaut_bob_capture_errors` | gauge | None | Latest journal read failed independently of database collection. |
+| `traceonaut_bob_capture_loss_total` | counter | None | Detected lost/rejected/conflicting/expired records, not lost token estimates. |
+| `traceonaut_bob_session_captured_tokens_total` | counter | `project_id`, `session_id`, `token_kind`, `event_kind` | Accepted generation tokens within the epoch. |
+| `traceonaut_bob_session_capture_status` | gauge | `project_id`, `session_id` | 0 disabled, 1 no activity, 2 recorded zero with partial scope, 3 missing counts, 4 partial capture, 5 unavailable/stale. |
+| `traceonaut_bob_session_capture_missing_events_total` | counter | `project_id`, `session_id` | Joined generation records without valid counts; excludes invisible undelivered calls. |
+
+Capture token kinds are `input`, `output`, `total`, `cached_input`,
+`cache_write_input` and `reasoning`; event kind is `generation`. Optional detail
+totals are absent if any counted event lacks that detail. No trace/span ID,
+producer/model name, title, user or path appears as a metric label. Identity
+selection remains subject to the existing per-source retention and export cap.
+
+Transport replay and reader restart do not increase totals. Conflicting replay
+keeps the first event and reports loss. Dedup identities cover all readable replay;
+after the 100,000-event bound, new records are rejected instead of recounting
+evicted events. Pending identity expiry is reported as loss. Source state loss
+starts a new epoch at EOF when the private epoch marker remains.
+
+Use `increase()` for approximate interval consumption over scrape/commit time.
+Do not interpret saved gauges as interval counters, sum saved/captured totals,
+sample-scale token counts, or derive a whole-Bob coverage percentage from the
+journal. [Capture setup and limits](../bob-collection.md#optional-generation-token-capture)
+and [dashboard states](../dashboards/ibm-bob-beta.md#optional-captured-tokens) explain use.
 
 ## Session Collector
 

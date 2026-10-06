@@ -12,7 +12,7 @@ Run `python3 scripts/<name> --help` from the checkout root for argument syntax. 
 
 | Script | Required arguments | Behavior and defaults |
 | --- | --- | --- |
-| `collect_sessions.py` | `--session-state-dir`; at least one of `--codex-home` + `--snapshot-file` or `--bob-home` + `--bob-snapshot-file`; `--credential-file` when serving | Independently enables each source on one endpoint. Defaults: `--host 127.0.0.1`, `--port 9464`, `--poll-seconds 5` (1–60). `--once` reports enabled sources under `codex` / `bob` keys and exits without a listener. |
+| `collect_sessions.py` | `--session-state-dir`; at least one of `--codex-home` + `--snapshot-file` or `--bob-home` + `--bob-snapshot-file`; `--credential-file` when serving | Independently enables each source on one endpoint. Optional `--bob-otel-journal-dir` requires Bob and reads only a private sanitized generation journal. Defaults: `--host 127.0.0.1`, `--port 9464`, `--poll-seconds 5` (1–60). `--once` reports enabled sources under `codex` / `bob` keys and exits without a listener. |
 | `collect_codex_sessions.py` | `--codex-home`, `--session-state-dir`, `--snapshot-file`; `--credential-file` when serving | Compatibility entry point for existing Codex-only commands, including `--once`. |
 | `collect_codex_account.py` | `--codex-bin`, `--codex-home`, `--snapshot-file` | Account reads about once per minute; `--once` performs one read. Makes upstream requests. |
 | `create_metrics_token.py` | `--credential-file` | Creates a new `0600` token file in an existing trusted directory; refuses replacement. Prints no token. |

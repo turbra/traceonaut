@@ -180,7 +180,8 @@ class BobCollector:
 
     def __init__(self, bob_home, state_dir, *, session_retention_seconds=30 * 86400,
                  session_export_cap=1000, max_rows=MAX_ROWS_PER_SCAN,
-                 max_bytes=MAX_BYTES_PER_SCAN, scan_seconds=MAX_SCAN_SECONDS):
+                 max_bytes=MAX_BYTES_PER_SCAN, scan_seconds=MAX_SCAN_SECONDS,
+                 otel_journal_dir=None):
         self.home = checked_path(bob_home, missing=True)
         self.path = self.home / "db/bob.db"
         self.state = checked_path(state_dir, missing=True, private=True)
@@ -196,7 +197,7 @@ class BobCollector:
         self.max_rows, self.max_bytes, self.scan_seconds = max_rows, max_bytes, scan_seconds
         lock_path = checked_path(self.state / "bob-writer.lock", missing=True, private=True)
         self.lock = os.open(lock_path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-        self.db = self.source = None
+        self.db = self.source = self.capture = None
         try:
             fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             for suffix in ("", "-wal", "-shm", "-journal"):
@@ -230,6 +231,14 @@ class BobCollector:
             self.identities_valid = True
             self.reconcile_at = 0
             self.deadline = float('inf')
+            if otel_journal_dir is not None:
+                from .bob_otel_journal import JournalReader
+                directory = Path(os.path.abspath(otel_journal_dir))
+                if any(directory.is_relative_to(path) or path.is_relative_to(directory)
+                       for path in (self.home, self.state)):
+                    raise ValueError('Bob journal must be separate from source and state')
+                self.capture = JournalReader(directory, self.db, self.state, retention=self.retention,
+                                             max_rows=max_rows, max_bytes=max_bytes, scan_seconds=scan_seconds)
         except Exception:
             self.close()
             raise
@@ -527,9 +536,12 @@ class BobCollector:
         eligible = [s for s in self.value['sessions'] if not self.retention or
                     now - (s['last_event'] if s['last_event'] is not None else s['created_at']) <= self.retention]
         eligible.sort(key=lambda s: (-(s['last_event'] or s['created_at']), s['session_id']))
-        result.update(sessions=eligible[:self.cap], expired_sessions=len(self.value['sessions']) - len(eligible),
+        result.update(sessions=[dict(row) for row in eligible[:self.cap]], expired_sessions=len(self.value['sessions']) - len(eligible),
                       cap_omitted_sessions=max(0, len(eligible) - self.cap),
                       retention_seconds=self.retention, export_cap=self.cap)
+        if self.capture is not None:
+            self.capture.scan(self.value['sessions'], now)
+            result['capture'] = self.capture.snapshot(result['sessions'])
         return result
 
 
@@ -558,11 +570,23 @@ SESSION_METRICS = {
     'partial': ('partial', 'One when chat usage or tool outcomes have missing or inconsistent fields.'),
 }
 
+CAPTURE_HEALTH = {
+    'enabled': ('enabled', 'One when the optional Bob journal reader is enabled.'),
+    'source_available': ('source_available', 'One when the private journal was readable on the latest scan; not completeness.'),
+    'last_success_timestamp_seconds': ('last_success', 'Latest successful journal check, Unix seconds.'),
+    'epoch_timestamp_seconds': ('epoch', 'Start of this durable captured ledger epoch, Unix seconds.'),
+    'backlog_bytes': ('backlog_bytes', 'Unread journal bytes, including incomplete trailing records.'),
+    'pending_joins': ('pending_joins', 'Captured events withheld until their chat identity is known.'),
+    'scope_partial': ('scope_partial', 'One for the qualified generation-only scope; whole-Bob capture is incomplete.'),
+    'errors': ('errors', 'One when the latest journal read failed; database activity collection is independent.'),
+    'loss_total': ('losses', 'Detected rejected, conflicting, expired or lost journal records; not an estimate of lost tokens.'),
+}
+
 
 def render_bob_metrics(snapshot):
     lines = []
-    def family(name, help_text):
-        lines.extend([f'# HELP {name} {help_text}', f'# TYPE {name} gauge'])
+    def family(name, help_text, kind='gauge'):
+        lines.extend([f'# HELP {name} {help_text}', f'# TYPE {name} {kind}'])
     def emit(name, value, labels=None):
         if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= SAFE_INTEGER:
             return
@@ -593,4 +617,23 @@ def render_bob_metrics(snapshot):
             reason = row.get('usage_status', {}).get(kind)
             if reason in TOKEN_STATUS:
                 emit('traceonaut_bob_session_token_status', TOKEN_STATUS[reason], {**labels, 'token_kind': kind})
+    capture = snapshot.get('capture', {})
+    for suffix, (key, description) in CAPTURE_HEALTH.items():
+        name = 'traceonaut_bob_capture_' + suffix
+        family(name, description, 'counter' if suffix == 'loss_total' else 'gauge')
+        emit(name, capture.get(key, 0))
+    family('traceonaut_bob_session_captured_tokens_total',
+           'Qualified integer generation tokens within a durable epoch; excludes saved history, summaries, auxiliary calls and compaction.', 'counter')
+    family('traceonaut_bob_session_capture_status',
+           'Capture state: 0 disabled, 1 no activity, 2 recorded zero (partial scope), 3 missing counts, 4 partial capture, 5 unavailable or stale.')
+    family('traceonaut_bob_session_capture_missing_events_total',
+           'Joined generation records without valid qualified counts; not a token estimate.', 'counter')
+    for row in snapshot['sessions']:
+        labels = {key: row[key] for key in ('project_id', 'session_id')}
+        emit('traceonaut_bob_session_capture_status', row.get('capture_status', 0), labels)
+        emit('traceonaut_bob_session_capture_missing_events_total', row.get('capture_missing_events', 0), labels)
+        for kind in ('input', 'output', 'total', 'cached_input', 'cache_write_input', 'reasoning'):
+            value = row.get('captured_usage', {}).get(kind)
+            emit('traceonaut_bob_session_captured_tokens_total', value,
+                 {**labels, 'token_kind': kind, 'event_kind': 'generation'})
     return ('\n'.join(lines) + '\n').encode()

@@ -12,6 +12,93 @@ BINARY = os.environ.get('CWO_TEST_PROMETHEUS_BINARY')
 
 @unittest.skipUnless(BINARY, 'separately verified Prometheus binary not supplied')
 class BobQueryTests(unittest.TestCase):
+    def test_input_output_charts_capture_without_saved_counts_and_health(self):
+        dashboard = json.loads((ROOT / 'examples/observability/ibm-bob-beta.json').read_text())
+        expressions = {(p['id'], t['refId']): t['expr'] for p in dashboard['panels'] for t in p['targets']}
+
+        def series(name, value):
+            return {'series': name, 'values': f'{value}x120'}
+
+        def check(panel, ref, value, project='.*', chat='.*'):
+            expression = expressions[panel, ref].replace('$project', project).replace('$session', chat)
+            expression = expression.replace('$__from', '3600000').replace('$__to', '7200000')
+            return {'expr': expression, 'eval_time': '2h',
+                    'exp_samples': [] if value is None else [{'labels': '{}', 'value': value}]}
+
+        base = []
+        for chat, project, counts in [('parent', 'one', (1864, 5)), ('child', 'one', (1037, 5)),
+                                       ('zero', 'two', (0, 0)), ('missing', 'two', None)]:
+            labels = f'project_id="{project}",session_id="{chat}"'
+            base.append(series(f'traceonaut_bob_session_last_event_timestamp_seconds{{{labels}}}', 7100))
+            if counts is not None:
+                for kind, amount in zip(('input', 'output'), counts):
+                    base.append(series(f'traceonaut_bob_session_captured_tokens_total{{{labels},token_kind="{kind}",event_kind="generation"}}', amount))
+        # Duplicate scrape labels must not double the same chat's capture.
+        base.append(series('traceonaut_bob_session_captured_tokens_total{project_id="one",session_id="parent",token_kind="input",event_kind="generation",instance="duplicate"}', 1864))
+        fixtures = []
+        for enabled, available, success in ((1, 1, 7200), (0, 1, 7200), (1, 0, 7200), (1, 1, 7100)):
+            healthy = enabled == available == 1 and success == 7200
+            health = [series('traceonaut_bob_capture_enabled', enabled),
+                      series('traceonaut_bob_capture_source_available', available),
+                      series('traceonaut_bob_capture_last_success_timestamp_seconds', success)]
+            tests = []
+            for panel, amount, parent, child in ((2, 2901, 1864, 1037), (7, 10, 5, 5)):
+                tests.extend([check(panel, 'A', None), check(panel, 'B', amount if healthy else None),
+                              check(panel, 'B', parent if healthy else None, 'one', 'parent'),
+                              check(panel, 'B', child if healthy else None, 'one', 'child'),
+                              check(panel, 'B', 0 if healthy else None, 'two', 'zero'),
+                              check(panel, 'B', None, 'two', 'missing'),
+                              check(panel, 'B', None, 'absent')])
+            fixtures.append({'interval': '1m', 'input_series': base + health, 'promql_expr_test': tests})
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / 'bob-token-charts.json'
+            path.write_text(json.dumps({'rule_files': [], 'evaluation_interval': '1m', 'tests': fixtures}))
+            result = subprocess.run([str(Path(BINARY).with_name('promtool')), 'test', 'rules', str(path)],
+                                    capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_captured_totals_states_and_filters_are_separate_from_saved_history(self):
+        dashboard=json.loads((ROOT/'examples/observability/ibm-bob-beta.json').read_text())
+        expressions={(panel['id'],target['refId']):target['expr'] for panel in dashboard['panels'] for target in panel['targets']}
+        def expr(key,chat='.*',project='.*'):
+            return expressions[key].replace('$project',project).replace('$session',chat).replace('$__from','3600000').replace('$__to','7200000').replace('$__range','5m')
+        def series(name,value):return {'series':name,'values':f'{value}x120'}
+        base=[]
+        for project,chat,status,amount in [('one','parent',4,1869),('one','child',4,1042),
+                                         ('two','zero',2,0),('two','missing',3,None),('two','inactive',1,None)]:
+            labels=f'project_id="{project}",session_id="{chat}"'
+            base.extend([series(f'traceonaut_bob_session_capture_status{{{labels}}}',status),
+                         series(f'traceonaut_bob_session_last_event_timestamp_seconds{{{labels}}}',7100)])
+            if amount is not None:
+                base.append(series(f'traceonaut_bob_session_captured_tokens_total{{{labels},token_kind="total",event_kind="generation"}}',amount))
+        def check(key,values,chat='.*',project='.*'):
+            return {'expr':expr(key,chat,project),'eval_time':'2h',
+                    'exp_samples':[{'labels':label,'value':value} for label,value in values]}
+        fixtures=[]
+        for enabled,available,success,state in [(1,1,7200,4),(0,0,0,0),(1,0,7200,5),(1,1,7000,5)]:
+            health=[series('traceonaut_bob_capture_enabled',enabled),
+                    series('traceonaut_bob_capture_source_available',available),
+                    series('traceonaut_bob_capture_last_success_timestamp_seconds',success),
+                    series('traceonaut_bob_capture_epoch_timestamp_seconds',7200 if enabled else 0)]
+            tests=[check((8,'A'),[('{}',state)]),check((8,'B'),[('{}',2911)] if enabled else []),
+                   check((8,'B'),[('{}',1869)] if enabled else [],'parent','one'),
+                   check((8,'B'),[('{}',0)] if enabled else [],'zero','two'),
+                   check((8,'B'),[],'missing','two'),check((8,'C'),[('{}',0)] if enabled else []),
+                   check((8,'D'),[('{}',7200000 if enabled else 0)])]
+            if state==4:
+                for chat,expected in [('parent',4),('child',4),('zero',2),('missing',3),('inactive',1)]:
+                    tests.append(check((8,'A'),[('{}',expected)],chat))
+                tests.extend([check((6,'F'),[('{project_id="one",session_id="parent"}',1869)],'parent'),
+                              check((6,'F'),[],'missing'),check((6,'G'),[('{project_id="two",session_id="zero"}',2)],'zero')])
+            elif enabled:
+                tests.append(check((6,'G'),[('{project_id="one",session_id="parent"}',5)],'parent'))
+            fixtures.append({'interval':'1m','input_series':base+health,'promql_expr_test':tests})
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'capture-rules.json'
+            path.write_text(json.dumps({'rule_files':[],'evaluation_interval':'1m','tests':fixtures}))
+            result=subprocess.run([str(Path(BINARY).with_name('promtool')),'test','rules',str(path)],capture_output=True,text=True,timeout=30)
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
     def test_populated_partial_empty_stale_filters_and_time_boundaries(self):
         dashboard = json.loads((ROOT / 'examples/observability/ibm-bob-beta.json').read_text())
         expressions = {(p['id'], t['refId']): t['expr'] for p in dashboard['panels'] for t in p['targets']}

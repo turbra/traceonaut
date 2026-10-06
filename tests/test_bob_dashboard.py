@@ -98,7 +98,7 @@ class BobDashboardTests(unittest.TestCase):
                 self.assertEqual(panel['title'], kind.capitalize() + ' tokens')
                 saved, captured = panel['targets']
                 self.assertEqual(saved['legendFormat'], 'Saved history')
-                self.assertEqual(captured['legendFormat'], 'Captured generation · partial')
+                self.assertEqual(captured['legendFormat'], 'Captured tokens · partial')
                 self.assertIn('traceonaut_bob_session_usage_tokens', saved['expr'])
                 self.assertNotIn('captured_tokens_total', saved['expr'])
                 self.assertIn('traceonaut_bob_session_captured_tokens_total', captured['expr'])
@@ -108,6 +108,32 @@ class BobDashboardTests(unittest.TestCase):
                 self.assertEqual(panel['fieldConfig']['defaults']['noValue'], 'Token counts unavailable')
                 self.assertTrue(captured['range'])
                 self.assertFalse(captured['instant'])
+
+    def test_capture_labels_use_plain_setup_language(self):
+        text = json.dumps(self.template, ensure_ascii=False)
+        for previous in ('Ledger epoch', 'Interval tokens · approximate',
+                         'Generation records missing counts', 'File collection coverage',
+                         'Captured generation · partial'):
+            with self.subTest(previous=previous):
+                self.assertNotIn(previous, text)
+        for label in ('Capture started', 'Estimated tokens in range',
+                      'Generations without token counts', 'Chat data coverage',
+                      'Captured tokens · partial'):
+            with self.subTest(label=label):
+                self.assertIn(label, text)
+
+    def test_chats_table_preserves_heading_widths_and_viewport_budget(self):
+        table = next(panel for panel in self.template['panels'] if panel['id'] == 6)
+        widths = {override['matcher']['options']: property['value']
+                  for override in table['fieldConfig']['overrides']
+                  for property in override['properties'] if property['id'] == 'custom.width'}
+        # These minimums are maintained alongside the 1800px rendered acceptance.
+        # Width checks alone do not establish that a browser rendered a heading.
+        for heading, minimum in (('Saved tokens', 120), ('Responses', 105), ('Captured tokens', 145)):
+            with self.subTest(heading=heading):
+                self.assertGreaterEqual(widths[heading], minimum)
+        self.assertLessEqual(sum(widths.values()), 980)
+        self.assertEqual(table['gridPos']['w'], 24)
 
     def test_duplicate_wrong_source_and_untrusted_names(self):
         with self.assertRaises(ValueError):

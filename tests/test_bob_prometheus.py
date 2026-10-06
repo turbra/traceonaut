@@ -12,6 +12,76 @@ BINARY = os.environ.get('CWO_TEST_PROMETHEUS_BINARY')
 
 @unittest.skipUnless(BINARY, 'separately verified Prometheus binary not supplied')
 class BobQueryTests(unittest.TestCase):
+    def test_input_output_charts_select_same_chat_population_and_inclusive_range(self):
+        dashboard = json.loads((ROOT / 'examples/observability/ibm-bob-beta.json').read_text())
+        expressions = {(p['id'], t['refId']): t['expr'] for p in dashboard['panels'] for t in p['targets']}
+
+        def series(name, value):
+            return {'series': name, 'values': f'{value}x120'}
+
+        rows = [
+            ('one', 'inside', 5400, 100, 1000),
+            ('one', 'from', 3600, 200, 2000),
+            ('two', 'to', 7200, 400, 4000),
+            ('one', 'old', 3599, 800, 8000),
+            ('two', 'future', 7201, 1600, 16000),
+            ('one', 'captured-only', 5400, None, 50),
+            ('two', 'zero', 5400, 0, 0),
+            ('two', 'missing', 5400, None, None),
+            ('one', 'no-saved-activity', None, None, 40000),
+        ]
+        base = []
+        for project, chat, at, saved, captured in rows:
+            labels = f'project_id="{project}",session_id="{chat}"'
+            if at is not None:
+                base.append(series(f'traceonaut_bob_session_last_event_timestamp_seconds{{{labels}}}', at))
+            for kind, divisor in (('input', 1), ('output', 10)):
+                if saved is not None:
+                    base.append(series(f'traceonaut_bob_session_usage_tokens{{{labels},token_kind="{kind}"}}', saved / divisor))
+                if captured is not None:
+                    base.append(series(f'traceonaut_bob_session_captured_tokens_total{{{labels},token_kind="{kind}",event_kind="generation"}}', captured / divisor))
+        # Repeated scrape labels identify one chat; they do not add another chat.
+        duplicate = 'project_id="one",session_id="inside",instance="duplicate"'
+        base.append(series(f'traceonaut_bob_session_last_event_timestamp_seconds{{{duplicate}}}', 3500))
+        for kind, divisor in (('input', 1), ('output', 10)):
+            base.append(series(f'traceonaut_bob_session_usage_tokens{{{duplicate},token_kind="{kind}"}}', 100 / divisor))
+            base.append(series(f'traceonaut_bob_session_captured_tokens_total{{{duplicate},token_kind="{kind}",event_kind="generation"}}', 1000 / divisor))
+        base.extend(series(name, value) for name, value in (
+            ('traceonaut_bob_collector_source_available', 1),
+            ('traceonaut_bob_collector_last_success_timestamp_seconds', 7200),
+            ('traceonaut_bob_capture_enabled', 1),
+            ('traceonaut_bob_capture_source_available', 1),
+            ('traceonaut_bob_capture_last_success_timestamp_seconds', 7200),
+        ))
+
+        tests = []
+
+        def check(project, chat, saved, captured, start=3600000, end=7200000):
+            for panel, divisor in ((2, 1), (7, 10)):
+                for ref, amount in (('A', saved), ('B', captured)):
+                    expression = expressions[panel, ref].replace('$project', project).replace('$session', chat)
+                    expression = expression.replace('$__from', str(start)).replace('$__to', str(end))
+                    tests.append({'expr': expression, 'eval_time': '2h',
+                                  'exp_samples': [] if amount is None else [{'labels': '{}', 'value': amount / divisor}]})
+
+        check('.*', '.*', 700, 7050)
+        check('one', '.*', 300, 3050)
+        check('two', '.*', 400, 4000)
+        for project, chat, at, saved, captured in rows:
+            eligible = at is not None and 3600 <= at <= 7200
+            check(project, chat, saved if eligible else None, captured if eligible else None)
+        check('absent', '.*', None, None)
+        check('.*', 'absent', None, None)
+        check('.*', '.*', 400, 4000, start=7200000, end=7200000)
+        check('.*', '.*', 100, 1050, start=3600001, end=7199999)
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / 'bob-chart-population.json'
+            path.write_text(json.dumps({'rule_files': [], 'evaluation_interval': '1m', 'tests': [
+                {'interval': '1m', 'input_series': base, 'promql_expr_test': tests}]}))
+            result = subprocess.run([str(Path(BINARY).with_name('promtool')), 'test', 'rules', str(path)],
+                                    capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_input_output_charts_capture_without_saved_counts_and_health(self):
         dashboard = json.loads((ROOT / 'examples/observability/ibm-bob-beta.json').read_text())
         expressions = {(p['id'], t['refId']): t['expr'] for p in dashboard['panels'] for t in p['targets']}

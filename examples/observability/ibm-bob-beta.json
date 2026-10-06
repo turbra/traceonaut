@@ -177,7 +177,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "File collection coverage"
+              "options": "Chat data coverage"
             },
             "properties": [
               {
@@ -290,7 +290,7 @@
         {
           "refId": "E",
           "expr": "max(traceonaut_bob_collector_collection_complete) and on () ((max(traceonaut_bob_collector_source_available) == 1) and on () ((time() - max(traceonaut_bob_collector_last_success_timestamp_seconds)) < 90))",
-          "legendFormat": "File collection coverage",
+          "legendFormat": "Chat data coverage",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -316,7 +316,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Saved history and captured generation counts are separate series for the selected Project/Chat; never added together. Saved values require a saved message in the selected range. Captured values are cumulative ledger counts within the capture epoch, shown over Prometheus scrape history, not tokens spent within the range. Capture is always partial and excludes uncaptured calls, summaries, auxiliary calls, compaction and missing usage. Missing saved fields do not hide available captured values. Disabled, unavailable or stale capture leaves gaps; recorded zero remains zero. Tokens: K = thousand, Mil = million, Bil = billion.",
+      "description": "Saved and captured tokens for chats active in the selected Project, Chat and time range. Each line shows its own accumulated counts. Tokens: K = thousand, Mil = million, Bil = billion.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -401,8 +401,8 @@
         },
         {
           "refId": "B",
-          "expr": "(sum(max by (project_id, session_id) (traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"input\",event_kind=\"generation\"}))) and on () ((max(traceonaut_bob_capture_enabled) == 1) and on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90)))",
-          "legendFormat": "Captured generation · partial",
+          "expr": "(sum((max by (project_id, session_id) (traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"input\",event_kind=\"generation\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) and on () ((max(traceonaut_bob_capture_enabled) == 1) and on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90)))",
+          "legendFormat": "Captured tokens \u00b7 partial",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -428,7 +428,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Saved history and captured generation counts are separate series for the selected Project/Chat; never added together. Saved values require a saved message in the selected range. Captured values are cumulative ledger counts within the capture epoch, shown over Prometheus scrape history, not tokens spent within the range. Capture is always partial and excludes uncaptured calls, summaries, auxiliary calls, compaction and missing usage. Missing saved fields do not hide available captured values. Disabled, unavailable or stale capture leaves gaps; recorded zero remains zero. Tokens: K = thousand, Mil = million, Bil = billion.",
+      "description": "Saved and captured tokens for chats active in the selected Project, Chat and time range. Each line shows its own accumulated counts. Tokens: K = thousand, Mil = million, Bil = billion.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -513,8 +513,8 @@
         },
         {
           "refId": "B",
-          "expr": "(sum(max by (project_id, session_id) (traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"output\",event_kind=\"generation\"}))) and on () ((max(traceonaut_bob_capture_enabled) == 1) and on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90)))",
-          "legendFormat": "Captured generation · partial",
+          "expr": "(sum((max by (project_id, session_id) (traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"output\",event_kind=\"generation\"})) and on (project_id, session_id) ((max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) >= $__from / 1000) and (max by (project_id, session_id) (traceonaut_bob_session_last_event_timestamp_seconds{project_id=~\"$project\",session_id=~\"$session\"}) <= $__to / 1000)))) and on () ((max(traceonaut_bob_capture_enabled) == 1) and on () ((max(traceonaut_bob_capture_source_available) == 1) and on () ((time() - max(traceonaut_bob_capture_last_success_timestamp_seconds)) < 90)))",
+          "legendFormat": "Captured tokens \u00b7 partial",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -548,7 +548,7 @@
             "fixedColor": "text"
           },
           "unit": "locale",
-          "noValue": "—",
+          "noValue": "\u2014",
           "decimals": 0,
           "mappings": [],
           "thresholds": {
@@ -819,7 +819,7 @@
             "mode": "palette-classic"
           },
           "unit": "locale",
-          "noValue": "—",
+          "noValue": "\u2014",
           "decimals": 0,
           "mappings": [],
           "thresholds": {
@@ -908,7 +908,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Saved tokens are database history for the selected chats. Token counts: Recorded means valid input/output; Not recorded by Bob means an absent saved field; Unavailable means invalid usage, unsafe subtask subtraction or an older collector. Unavailable / stale takes precedence when collection fails. Missing numeric cells show explicit text. File collection coverage is separate from token availability. Captured tokens are generation-only ledger totals, independent of saved totals. Capture is always partial: auxiliary calls, compaction, missing generation fields and uncaptured history are excluded. Recorded zero, missing, disabled and stale capture have separate states. https://turbra.github.io/traceonaut/dashboards/ibm-bob-beta/#read-the-values",
+      "description": "Saved and captured totals, responses, tool errors and count availability for the selected chats. Recorded zero and unavailable counts have separate states.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -949,7 +949,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 125
               }
             ]
           },
@@ -965,7 +965,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 100
+                "value": 125
               }
             ]
           },
@@ -977,7 +977,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 80
+                "value": 110
               }
             ]
           },
@@ -989,7 +989,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 105
               }
             ]
           },
@@ -1001,7 +1001,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 115
+                "value": 130
               },
               {
                 "id": "custom.cellOptions",
@@ -1056,7 +1056,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 85
+                "value": 90
               }
             ]
           },
@@ -1072,7 +1072,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 125
+                "value": 150
               },
               {
                 "id": "noValue",
@@ -1099,7 +1099,7 @@
                         "text": "No activity"
                       },
                       "2": {
-                        "text": "Recorded zero · partial"
+                        "text": "Recorded zero \u00b7 partial"
                       },
                       "3": {
                         "text": "Missing counts"
@@ -1286,7 +1286,7 @@
     },
     {
       "id": 8,
-      "title": "Captured generation tokens · partial",
+      "title": "Captured tokens \u00b7 partial",
       "type": "stat",
       "gridPos": {
         "x": 0,
@@ -1298,7 +1298,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Optional Bob 2.0.5 generation capture. Project/Chat filters apply. Ledger totals are cumulative within the capture epoch and do not follow the selected time range; interval tokens use Prometheus increase over scrape/commit time and are approximate. Saved history is separate. Excludes auxiliary calls, summaries, compaction and missing usage. Receiver health never proves Complete. Zero means explicitly recorded zero; unavailable samples stay unknown.",
+      "description": "Captured tokens accumulated since capture started. Estimated tokens in range use Prometheus scrape times. Saved tokens are shown separately.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1341,7 +1341,7 @@
                         "color": "blue"
                       },
                       "2": {
-                        "text": "Recorded zero · partial",
+                        "text": "Recorded zero \u00b7 partial",
                         "color": "orange"
                       },
                       "3": {
@@ -1365,7 +1365,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Ledger epoch"
+              "options": "Capture started"
             },
             "properties": [
               {
@@ -1390,7 +1390,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Interval tokens · approximate"
+              "options": "Estimated tokens in range"
             },
             "properties": [
               {
@@ -1450,7 +1450,7 @@
         {
           "refId": "C",
           "expr": "(sum(max by (project_id, session_id) (increase(traceonaut_bob_session_captured_tokens_total{project_id=~\"$project\",session_id=~\"$session\",token_kind=\"total\",event_kind=\"generation\"}[$__range])))) and on () (max(traceonaut_bob_capture_enabled) == 1)",
-          "legendFormat": "Interval tokens · approximate",
+          "legendFormat": "Estimated tokens in range",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -1463,7 +1463,7 @@
         {
           "refId": "D",
           "expr": "(1000 * (max(traceonaut_bob_capture_epoch_timestamp_seconds) > 0) and on () (max(traceonaut_bob_capture_enabled) == 1)) or vector(0)",
-          "legendFormat": "Ledger epoch",
+          "legendFormat": "Capture started",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -1476,7 +1476,7 @@
         {
           "refId": "E",
           "expr": "(sum(max by (project_id, session_id) (traceonaut_bob_session_capture_missing_events_total{project_id=~\"$project\",session_id=~\"$session\"}))) and on () (max(traceonaut_bob_capture_enabled) == 1)",
-          "legendFormat": "Generation records missing counts",
+          "legendFormat": "Generations without token counts",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -1554,7 +1554,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "IBM Bob · Beta",
+  "title": "IBM Bob \u00b7 Beta",
   "uid": "traceonaut-ibm-bob-beta",
   "version": 1
 }

@@ -1,0 +1,93 @@
+# Optional Bob generation journal for contrib Collector 0.161.0.
+# Keep the existing metrics pipeline. Apply only after deployment approval.
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+  filter/bob:
+    error_mode: propagate
+    traces:
+      span:
+        - 'attributes["bob.event.type"] != "LLM Generation"'
+        - 'Len(events) > 0 or Len(links) > 0'
+        - 'not IsString(attributes["gen_ai.conversation.id"])'
+        - 'Len(attributes["gen_ai.conversation.id"]) == 0 or Len(attributes["gen_ai.conversation.id"]) > 512'
+  transform/bob_private:
+    error_mode: propagate
+    trace_statements:
+      - context: span
+        statements:
+          - 'set(span.attributes["bob.producer.version"], "unsupported")'
+          - 'set(span.attributes["bob.producer.version"], "2.0.5") where span.attributes["langfuse.release"] == "2.0.5"'
+          - 'keep_keys(resource.attributes, [])'
+          - 'keep_keys(scope.attributes, [])'
+          - 'set(resource.schema_url, "")'
+          - 'set(scope.schema_url, "")'
+          - 'set(scope.name, "")'
+          - 'set(scope.version, "")'
+          - 'set(span.name, "LLM Generation")'
+          - 'set(span.trace_state, "")'
+          - 'set(span.status.message, "")'
+          - 'set(span.attributes["gen_ai.conversation.id"], SHA256(span.attributes["gen_ai.conversation.id"]))'
+          - 'delete_key(span.attributes, "gen_ai.usage.input_tokens") where not IsInt(span.attributes["gen_ai.usage.input_tokens"])'
+          - 'delete_key(span.attributes, "gen_ai.usage.output_tokens") where not IsInt(span.attributes["gen_ai.usage.output_tokens"])'
+          - 'delete_key(span.attributes, "gen_ai.usage.cache_read.input_tokens") where not IsInt(span.attributes["gen_ai.usage.cache_read.input_tokens"])'
+          - 'delete_key(span.attributes, "gen_ai.usage.cache_creation.input_tokens") where not IsInt(span.attributes["gen_ai.usage.cache_creation.input_tokens"])'
+          - 'delete_key(span.attributes, "gen_ai.usage.reasoning.output_tokens") where not IsInt(span.attributes["gen_ai.usage.reasoning.output_tokens"])'
+          - 'delete_key(span.attributes, "gen_ai.usage.total_tokens") where not IsInt(span.attributes["gen_ai.usage.total_tokens"])'
+          - 'keep_keys(span.attributes, ["bob.event.type", "gen_ai.conversation.id", "bob.producer.version", "gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens", "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.cache_creation.input_tokens", "gen_ai.usage.reasoning.output_tokens", "gen_ai.usage.total_tokens"])'
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    enable_open_metrics: true
+    resource_constant_labels:
+      included:
+        - service.name
+        - service.namespace
+        - service.version
+        - deployment.environment.name
+  file/bob_private:
+    path: /var/lib/traceonaut/bob-journal/bob-usage.json
+    format: json
+    rotation:
+      max_megabytes: 16
+      max_backups: 8
+service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: ERROR
+      encoding: json
+    metrics:
+      level: normal
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+                without_type_suffix: true
+                without_units: true
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+    traces/bob:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/bob, transform/bob_private]
+      exporters: [file/bob_private]

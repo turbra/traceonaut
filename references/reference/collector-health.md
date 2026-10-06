@@ -35,13 +35,26 @@ Use the [Example Queries](example-queries.md) for checks in Prometheus. Alerting
 ## IBM Bob
 
 Bob health covers the whole enabled Bob source, independent of dashboard filters.
+
+Optional generation capture has independent health. A journal outage does not
+make the database source unavailable. `traceonaut_bob_capture_source_available`
+and its last-success timestamp describe journal access, not producer delivery or
+complete Bob coverage. The supported capture scope is always partial.
+
+Check `traceonaut_bob_capture_backlog_bytes`, `pending_joins` and `loss_total` for
+unread data, unresolved chat identities and detected loss/rejection. Loss counts
+are records, not token estimates; undelivered traces cannot be measured from the
+journal. A new `epoch_timestamp_seconds` indicates ledger reset. Staleness is a
+failed journal check or at least 90 seconds since the last successful check;
+an idle producer alone is not stale collection. See
+[generation setup and rollback](../bob-collection.md#optional-generation-token-capture).
 Read the visible **Overview** fields as follows:
 
 | Field | Read it as |
 | --- | --- |
 | Collection | **Available** requires a readable source and a successful collection check less than 90 seconds ago. Otherwise it shows **Unavailable / stale**. |
 | Scan age | Seconds since the last successful collection check; increases while a read is unfinished. Codex measures the last finished scan pass instead. |
-| Coverage | **Complete** means collection finished without skips, invalid token values, unsafe subtask reconciliation or unknown tool outcomes. **Partial** marks those problems or an unfinished read. Token fields omitted by Bob leave coverage Complete. Coverage is hidden when Collection is unavailable or stale. |
+| File collection coverage | **Complete** means collection finished without skips, invalid token values, unsafe subtask reconciliation or unknown tool outcomes. **Partial** marks those problems or an unfinished read. Token fields omitted by Bob leave file coverage Complete. File coverage is hidden when Collection is unavailable or stale. It does not describe token capture completeness. |
 
 Collection checks include incremental reads and unchanged-source checks.
 [Bob data freshness](retention-and-limits.md#ibm-bob) explains when older message

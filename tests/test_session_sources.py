@@ -78,6 +78,23 @@ class SessionSourceTests(unittest.TestCase):
         self.assertFalse((self.output / 'state/sessions.sqlite3').exists())
         self.assertFalse((self.output / 'codex.json').exists())
 
+    def test_optional_capture_requires_bob_and_cannot_alias_state(self):
+        self.setup_sources(['codex','bob'])
+        result=self.run_command(self.command(['codex'])+['--bob-otel-journal-dir',str(self.root/'journal')])
+        self.assertEqual(result.returncode,2)
+        self.assertIn('requires --bob-home',result.stderr)
+        for path in (self.output/'state',self.bob,self.output/'bob.json'):
+            with self.subTest(path=path):
+                result=self.run_command(self.command(['bob'])+['--bob-otel-journal-dir',str(path)])
+                self.assertEqual(result.returncode,2)
+        journal=self.root/'journal';journal.mkdir(mode=0o700)
+        for sources in (['bob'],['bob','codex']):
+            result=self.run_command(self.command(sources)+['--bob-otel-journal-dir',str(journal)])
+            self.assertEqual(result.returncode,0,result.stderr)
+            snapshot=json.loads((self.output/'bob.json').read_text())
+            self.assertEqual(snapshot['capture']['enabled'],1)
+            self.assertEqual(snapshot['sessions'][0]['capture_status'],3)
+
     def test_both_and_missing_source_do_not_block_each_other(self):
         self.setup_sources(['bob'])
         result = self.run_command(self.command(['codex', 'bob']))

@@ -141,7 +141,8 @@ class SourceWorker:
                     if source is None:
                         source = (BobCollector(self.args.bob_home, self.args.session_state_dir,
                             session_retention_seconds=self.args.session_retention_seconds,
-                            session_export_cap=self.args.session_export_cap) if self.name == 'bob' else
+                            session_export_cap=self.args.session_export_cap,
+                            otel_journal_dir=getattr(self.args, 'bob_otel_journal_dir', None)) if self.name == 'bob' else
                             CodexSource(self.args, self.audit, self.reviews))
                     if self.name == 'bob':
                         snapshot = source.scan()
@@ -186,6 +187,8 @@ def main(argv=None, *, require_codex=True):
     parser.add_argument("--codex-home", type=Path, required=require_codex)
     parser.add_argument("--bob-home", type=Path, help="enable Bob collection from db/bob.db inside this home")
     parser.add_argument("--bob-snapshot-file", type=Path, help="private Bob presentation snapshot")
+    parser.add_argument("--bob-otel-journal-dir", type=Path,
+                        help="optional private sanitized Bob generation journal; requires --bob-home")
     parser.add_argument("--session-state-dir", type=Path, required=True)
     parser.add_argument("--snapshot-file", type=Path, required=require_codex)
     parser.add_argument("--state-dir", type=Path, help="optional directory containing an existing controller task database; read-only")
@@ -216,6 +219,8 @@ def main(argv=None, *, require_codex=True):
         parser.error("--codex-home and --snapshot-file must be supplied together")
     if bool(args.bob_home) != bool(args.bob_snapshot_file):
         parser.error("--bob-home and --bob-snapshot-file must be supplied together")
+    if args.bob_otel_journal_dir and not args.bob_home:
+        parser.error('--bob-otel-journal-dir requires --bob-home')
     if not args.codex_home and any((args.cwo_sessions, args.cwo_audit_file, args.cwo_audit_dir,
                                    args.cwo_review_dir, args.account_snapshot_file, args.state_dir)):
         parser.error("CWO and account options require --codex-home")
@@ -232,7 +237,7 @@ def main(argv=None, *, require_codex=True):
     except ValueError as error:
         parser.error(str(error))
     if any(not p.is_absolute() for p in (args.codex_home, args.bob_home, args.session_state_dir,
-                                        args.snapshot_file, args.bob_snapshot_file) if p):
+                                        args.snapshot_file, args.bob_snapshot_file, args.bob_otel_journal_dir) if p):
         parser.error("source, state, and snapshot paths must be absolute")
     source = Path(os.path.abspath(args.codex_home)) if args.codex_home else None
     snapshot = Path(os.path.abspath(args.snapshot_file)) if args.snapshot_file else None
@@ -244,6 +249,13 @@ def main(argv=None, *, require_codex=True):
                          [p for p in (snapshot, args.bob_snapshot_file) if p])
         if args.credential_file and Path(os.path.abspath(args.credential_file)) in (snapshot, args.bob_snapshot_file):
             raise ValueError("snapshot must be separate from the metrics credential")
+        if args.bob_otel_journal_dir:
+            journal = args.bob_otel_journal_dir = Path(os.path.abspath(args.bob_otel_journal_dir))
+            for path in (args.codex_home, args.bob_home, state, snapshot, args.bob_snapshot_file,
+                         args.credential_file, args.state_dir, *args.cwo_audit_dir, *args.cwo_review_dir):
+                normalized = Path(os.path.abspath(path)) if path else None
+                if normalized and (journal.is_relative_to(normalized) or normalized.is_relative_to(journal)):
+                    raise ValueError('Bob journal must be separate from sources, state, snapshots and credentials')
     except (OSError, ValueError) as error:
         parser.error(str(error))
     if args.account_snapshot_file:

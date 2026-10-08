@@ -1,7 +1,7 @@
 ---
 slug: /getting-started
 title: Quick Start
-description: Run the collector, connect Prometheus and import Work Overview.
+description: Choose Codex, IBM Bob or both, connect Prometheus and import a dashboard.
 ---
 
 # Quick Start
@@ -9,21 +9,30 @@ description: Run the collector, connect Prometheus and import Work Overview.
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Complete [Install](install.md), then run these commands from the checkout root.
-This guide collects Codex. For Bob alone or alongside Codex, use
-[IBM Bob Collection](bob-collection.md).
+Complete [Install](install.md), then run these commands from the checkout root
+as the user who owns the source profiles. If replacing a running collector, stop
+it first and reuse its private storage and endpoint token.
 
 ## 1. Run the Collector
 
-Point `TRACEONAUT_SOURCE_HOME` at the profile containing `sessions/`.
+Set your profile paths and create private collector storage:
 
 {/* <!-- setup-paths --> */}
 ```bash
 export TRACEONAUT_SOURCE_HOME="$HOME/.codex"
+export TRACEONAUT_CODEX_HOME="$TRACEONAUT_SOURCE_HOME"
+export TRACEONAUT_BOB_HOME="$HOME/.bob"
 export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 export TRACEONAUT_METRICS_CREDENTIAL="$TRACEONAUT_DATA_DIR/metrics.token"
 export TRACEONAUT_LISTEN_ADDRESS="127.0.0.1"
 install -d -m 700 "$TRACEONAUT_DATA_DIR"
+```
+
+Create the endpoint token once; reuse it on restart:
+
+{/* <!-- credential-create --> */}
+```bash
+python3 scripts/create_metrics_token.py --credential-file "$TRACEONAUT_METRICS_CREDENTIAL"
 ```
 
 Choose the network layout:
@@ -36,42 +45,39 @@ Keep `127.0.0.1` when Prometheus runs directly on this workstation.
 </TabItem>
 <TabItem value="remote" label="Remote Server">
 
-Set the collector's bind address to its numeric LAN/VPN address:
+Use your workstation's numeric LAN/VPN address:
 
 ```bash
 export TRACEONAUT_LISTEN_ADDRESS="192.0.2.10"
 ```
 
-Replace this documentation address with one assigned to your workstation. Use that address or its DNS name as the scrape target.
+Replace the example address with one assigned to your workstation.
 
 </TabItem>
 <TabItem value="container" label="Container Prometheus">
 
-Use a workstation LAN/VPN address reachable from the Prometheus container:
+Use a workstation LAN/VPN address reachable from the container:
 
 ```bash
 export TRACEONAUT_LISTEN_ADDRESS="192.0.2.10"
 ```
 
-Replace this documentation address with one assigned to your workstation. Mount the token into the container read-only; step 2 uses `/etc/prometheus/traceonaut/metrics.token` as the container path.
-
-A container's loopback points to the container itself. Host networking is an alternative when both processes share the host network.
+Mount the token read-only inside Prometheus at `/etc/prometheus/traceonaut/metrics.token`.
+A container's loopback points to itself. Host networking also works when both processes share it.
 
 </TabItem>
 </Tabs>
 
-:::warning Remote HTTP
-Bearer authentication leaves HTTP traffic unencrypted. Use a trusted private LAN, an encrypted VPN, or an HTTPS proxy. Allow only Prometheus through the workstation firewall. See [Network and Security](operations/network-and-security.md).
-:::
+For remote HTTP, use a trusted private LAN, encrypted VPN or HTTPS proxy and
+allow only Prometheus through the firewall. See [Network and Security](operations/network-and-security.md).
 
-Create the token once. On restart, reuse the existing file.
+Choose one source configuration:
 
-{/* <!-- credential-create --> */}
-```bash
-python3 scripts/create_metrics_token.py --credential-file "$TRACEONAUT_METRICS_CREDENTIAL"
-```
+<Tabs groupId="source">
+<TabItem value="codex" label="Codex" default>
 
-Check the source before starting the server:
+<details>
+<summary>Check the source before serving</summary>
 
 {/* <!-- collect-once --> */}
 ```bash
@@ -81,8 +87,9 @@ python3 scripts/collect_sessions.py \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" --once
 ```
 
-Expect `source_available: 1` under `codex` in the JSON output. `pending_files`
-counts files still to scan. The continuous collector finishes that work.
+Expect `source_available: 1` for each enabled source. The running collector finishes pending reads.
+
+</details>
 
 {/* <!-- run-collector --> */}
 ```bash
@@ -94,16 +101,82 @@ python3 scripts/collect_sessions.py \
   --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
 ```
 
-Leave it running; **Ctrl+C** stops it. For persistent collection, use [Run as a Service](operations/run-as-a-service.md).
+</TabItem>
+<TabItem value="bob" label="IBM Bob">
+
+<details>
+<summary>Check the source before serving</summary>
+
+{/* <!-- bob-only-once --> */}
+```bash
+python3 scripts/collect_sessions.py \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --once
+```
+
+Expect `source_available: 1` for each enabled source. The running collector finishes pending reads.
+
+</details>
+
+{/* <!-- bob-only-serve --> */}
+```bash
+python3 scripts/collect_sessions.py \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+
+</TabItem>
+<TabItem value="both" label="Both">
+
+<details>
+<summary>Check the source before serving</summary>
+
+{/* <!-- both-sources-once --> */}
+```bash
+python3 scripts/collect_sessions.py \
+  --codex-home "$TRACEONAUT_CODEX_HOME" \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --once
+```
+
+Expect `source_available: 1` for each enabled source. The running collector finishes pending reads.
+
+</details>
+
+{/* <!-- both-sources-serve --> */}
+```bash
+python3 scripts/collect_sessions.py \
+  --codex-home "$TRACEONAUT_CODEX_HOME" \
+  --bob-home "$TRACEONAUT_BOB_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --bob-snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464
+```
+
+</TabItem>
+</Tabs>
+
+Leave the collector running; **Ctrl+C** stops it. Use a second terminal for rendering.
+For persistent collection, use [Run as a Service](operations/run-as-a-service.md).
 
 ## 2. Add the Prometheus Scrape Job
 
-Give Prometheus a protected copy of the token, readable by its service user. Use its absolute path as seen by Prometheus. Add this job to your existing configuration:
+Give Prometheus a protected copy of the endpoint token, readable by its service
+user. Set `credentials_file` to its absolute path as seen by Prometheus.
+Add this job to your existing configuration:
 
 <Tabs groupId="network">
 <TabItem value="local" label="Same Machine" default>
-
-Use the token's absolute path on this workstation:
 
 {/* <!-- prometheus-scrape --> */}
 ```yaml
@@ -121,7 +194,7 @@ scrape_configs:
 </TabItem>
 <TabItem value="remote" label="Remote Server">
 
-Copy the token securely to the Prometheus server. In this example, its protected copy is `/etc/prometheus/traceonaut/metrics.token`. Replace `192.0.2.10` with the workstation address selected in step 1.
+Copy the token securely to the Prometheus server and use the workstation address chosen in step 1.
 
 {/* <!-- prometheus-scrape-remote --> */}
 ```yaml
@@ -139,7 +212,7 @@ scrape_configs:
 </TabItem>
 <TabItem value="container" label="Container Prometheus">
 
-Mount the token read-only at `/etc/prometheus/traceonaut/metrics.token` inside the Prometheus container. Replace `192.0.2.10` with the reachable workstation address selected in step 1.
+Use the mounted token path and the workstation address chosen in step 1.
 
 {/* <!-- prometheus-scrape-container --> */}
 ```yaml
@@ -157,24 +230,19 @@ scrape_configs:
 </TabItem>
 </Tabs>
 
-The [scrape example](../examples/observability/prometheus-scrape.yaml) also includes a separate optional dispatch job.
+Validate and reload Prometheus:
 
 ```bash
 promtool check config /path/to/prometheus.yml
 ```
 
-Reload Prometheus, then check these queries. Both should return `1` after the first scan:
-
-```promql
-up{job="traceonaut"}
-cwo_codex_collector_source_available
-```
-
-Metric names retain the `cwo_codex_` prefix for compatibility with existing queries and dashboards.
+Check `up{job="traceonaut"}` in Prometheus; expect `1`.
 
 ## 3. Import a Dashboard into Grafana
 
-In a second terminal, from the checkout root:
+Run the renderer for each source you selected, from the checkout root in a second terminal.
+
+**Codex**
 
 {/* <!-- render-beta --> */}
 ```bash
@@ -185,8 +253,21 @@ python3 scripts/render_codex_beta_dashboard.py \
   --output "$TRACEONAUT_DATA_DIR/work-overview.json"
 ```
 
-Open **Dashboards → New → Import**, upload `work-overview.json`, and select your Prometheus datasource. The dashboard title is **Work Overview**.
+**IBM Bob**
 
-Metrics refresh automatically. See [Automatic Name Updates](operations/automatic-name-updates.md) when new sessions need to appear in the selectors.
+{/* <!-- render-bob --> */}
+```bash
+export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
+python3 scripts/render_bob_dashboard.py \
+  --template examples/observability/ibm-bob-beta.json \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/bob.json" \
+  --output "$TRACEONAUT_DATA_DIR/ibm-bob-beta.json"
+```
 
-Next: [Reading the Values](dashboards/reading-values.md) or [Choosing a Dashboard](dashboards/index.md).
+In Grafana, open **Dashboards → New → Import**, upload the rendered file, and
+select your Prometheus datasource. Use `work-overview.json` for Codex and
+`ibm-bob-beta.json` for IBM Bob. When collecting both, import both dashboards.
+
+See [Automatic Name Updates](operations/automatic-name-updates.md) to refresh Project and Chat names as you work.
+
+Next: [Codex](sources/codex.md), [IBM Bob](sources/ibm-bob.md) or [Choosing a Dashboard](dashboards/index.md).

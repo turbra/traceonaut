@@ -167,10 +167,24 @@ class JournalReader:
             CREATE INDEX IF NOT EXISTS bob_capture_pending ON bob_capture_events(state);
             CREATE TABLE IF NOT EXISTS bob_capture_totals (conversation TEXT PRIMARY KEY, body TEXT);
             CREATE TABLE IF NOT EXISTS bob_capture_scan (id INTEGER PRIMARY KEY CHECK(id=1), next_file TEXT);
+            CREATE TABLE IF NOT EXISTS bob_capture_window (id INTEGER PRIMARY KEY CHECK(id=1),
+                event_count INTEGER, source_floor REAL);
+            CREATE TABLE IF NOT EXISTS bob_capture_dedup (id TEXT PRIMARY KEY,
+                signature TEXT, at REAL, conflict INTEGER);
+            CREATE INDEX IF NOT EXISTS bob_capture_dedup_time ON bob_capture_dedup(at);
+            CREATE INDEX IF NOT EXISTS bob_capture_event_age ON bob_capture_events(first_seen);
+            CREATE TABLE IF NOT EXISTS bob_capture_inventory (file TEXT PRIMARY KEY,
+                generation INTEGER, oldest REAL, complete INTEGER, size INTEGER, changed INTEGER);
+            CREATE TABLE IF NOT EXISTS bob_capture_refs (file TEXT, generation INTEGER, id TEXT,
+                PRIMARY KEY(file,generation,id));
+            CREATE INDEX IF NOT EXISTS bob_capture_ref_event ON bob_capture_refs(id);
         ''')
         meta = db.execute('SELECT version,reset_pending,replay_floor FROM bob_capture_meta WHERE id=1').fetchone()
         if meta and meta[0] != 1:
             raise ValueError('unsupported capture state')
+        if not meta:
+            for table in ('bob_capture_window', 'bob_capture_dedup', 'bob_capture_inventory', 'bob_capture_refs'):
+                db.execute('DELETE FROM ' + table)
         self.reset = bool(meta[1]) if meta else self.marker.exists()
         self.replay_floor = meta[2] if meta else 0
         if not meta:
@@ -184,6 +198,17 @@ class JournalReader:
             fd = os.open(self.marker, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
             with os.fdopen(fd, 'w') as stream:
                 json.dump({'version': 1}, stream)
+        # Reconcile once at startup, including a return from an older reader.
+        self.event_count = db.execute('SELECT count(*) FROM bob_capture_events').fetchone()[0]
+        window = db.execute('SELECT source_floor FROM bob_capture_window WHERE id=1').fetchone()
+        self.source_floor = window[0] if window else 0
+        for key, body, conflict in db.execute('SELECT id,body,conflict FROM bob_capture_events'):
+            event = json.loads(body)
+            db.execute('INSERT OR IGNORE INTO bob_capture_dedup VALUES (?,?,?,?)',
+                       (key, hashlib.sha256(body.encode()).hexdigest(), event['at'], conflict))
+        db.execute('INSERT OR REPLACE INTO bob_capture_window VALUES (1,?,?)',
+                   (self.event_count, self.source_floor))
+        db.commit()
 
     def _loss(self):
         self.db.execute('UPDATE bob_capture_meta SET losses=min(losses+1,?) WHERE id=1', (SAFE_INTEGER,))
@@ -214,23 +239,59 @@ class JournalReader:
             return  # Lost dedup state cannot authorize older replay in the new epoch.
         key = event['trace'] + ':' + event['span']
         body = json.dumps(event, sort_keys=True, separators=(',', ':'))
-        previous = self.db.execute('SELECT body,conflict FROM bob_capture_events WHERE id=?', (key,)).fetchone()
+        signature = hashlib.sha256(body.encode()).hexdigest()
+        previous = self.db.execute('SELECT signature,conflict FROM bob_capture_dedup WHERE id=?', (key,)).fetchone()
         if previous:
-            if previous[0] != body and not previous[1]:
+            if previous[0] != signature and not previous[1]:
+                self.db.execute('UPDATE bob_capture_dedup SET conflict=1 WHERE id=?', (key,))
                 self.db.execute('UPDATE bob_capture_events SET conflict=1 WHERE id=?', (key,))
                 self._loss()
             return
+        if event['at'] < self.source_floor:
+            self._loss()
+            return  # This source history has left the rolling dedup window.
         allocated = (self.db.execute('PRAGMA page_count').fetchone()[0]
                      * self.db.execute('PRAGMA page_size').fetchone()[0])
-        if (self.db.execute('SELECT count(*) FROM bob_capture_events').fetchone()[0] >= self.max_events
+        if (self.event_count >= self.max_events
                 or allocated > MAX_INDEX_BYTES - 64 * 1024):
             self._loss()
             return
         joined = event['conversation'] in known
         self.db.execute('INSERT INTO bob_capture_events VALUES (?,?,?,?,?,0)',
                         (key, event['conversation'], body, now, int(joined)))
+        self.db.execute('INSERT INTO bob_capture_dedup VALUES (?,?,?,0)', (key, signature, event['at']))
+        self.event_count += 1
         if joined:
             self._add(event)
+
+    def _prune(self, now):
+        expired = {}
+        if self.retention:
+            expired.update(self.db.execute('SELECT id,state FROM bob_capture_events '
+                                          'WHERE first_seen<?', (now - self.retention,)))
+        expired.update(self.db.execute('SELECT e.id,e.state FROM bob_capture_dedup d '
+                                      'JOIN bob_capture_events e ON e.id=d.id WHERE d.at<?',
+                                      (self.source_floor,)))
+        for key, state in expired.items():
+            if state == 0:
+                self._loss()  # Expired unresolved joins are still withheld.
+            self.event_count -= self.db.execute('DELETE FROM bob_capture_events WHERE id=?', (key,)).rowcount
+
+    def _source_window(self, now):
+        if self.db.execute('SELECT 1 FROM bob_capture_inventory WHERE complete<>1 LIMIT 1').fetchone():
+            return
+        for key, size, changed in self.db.execute('SELECT file,size,changed FROM bob_capture_inventory').fetchall():
+            info = self.inventory_paths[key].lstat()
+            if (key != f'{info.st_dev}:{info.st_ino}' or size != info.st_size or changed != info.st_ctime_ns):
+                self.db.execute('UPDATE bob_capture_inventory SET complete=0 WHERE file=?', (key,))
+                return
+        oldest = self.db.execute('SELECT min(oldest) FROM bob_capture_inventory').fetchone()[0]
+        if oldest is not None:
+            self.source_floor = max(self.source_floor, oldest)
+            self._prune(now)
+        # Retain only signatures still backed by a body or a retained source.
+        self.db.execute('DELETE FROM bob_capture_dedup WHERE id NOT IN (SELECT id FROM bob_capture_events) '
+                        'AND id NOT IN (SELECT id FROM bob_capture_refs)')
 
     def _resolve(self, known, now):
         cursor = self.db.execute('SELECT resolve_cursor FROM bob_capture_meta WHERE id=1').fetchone()[0]
@@ -254,12 +315,26 @@ class JournalReader:
         self.available = self.errors = self.backlog = 0
         deadline = time.monotonic() + self.scan_seconds
         rows = consumed = 0
+        count_before, floor_before = self.event_count, self.source_floor
         try:
             directory, owners = journal_directory(self.directory)
             files = sorted(directory.glob('bob-usage*.json'), key=lambda path: path.lstat().st_mtime_ns)
             if len(files) > MAX_FILES:
                 raise ValueError('journal file bound exceeded')
             self.db.execute('BEGIN')
+            if not self.db.execute('SELECT 1 FROM bob_capture_inventory WHERE complete<>1 LIMIT 1').fetchone():
+                # Verify a whole inventory round before advancing its floor.
+                # The round may span bounded scans of large rotated files.
+                self.db.execute('UPDATE bob_capture_inventory SET complete=0')
+            self.inventory_paths = {f'{info.st_dev}:{info.st_ino}': path for path in files for info in (path.lstat(),)}
+            present = set(self.inventory_paths)
+            for (key,) in self.db.execute('SELECT file FROM bob_capture_inventory').fetchall():
+                if key not in present:
+                    self.db.execute('DELETE FROM bob_capture_inventory WHERE file=?', (key,))
+                    self.db.execute('DELETE FROM bob_capture_refs WHERE file=?', (key,))
+            for key in present:
+                self.db.execute('INSERT OR IGNORE INTO bob_capture_inventory VALUES (?,0,NULL,0,0,0)', (key,))
+            self._prune(now)
             cursor = self.db.execute('SELECT next_file FROM bob_capture_scan WHERE id=1').fetchone()
             if cursor and cursor[0]:
                 for at, path in enumerate(files):
@@ -278,6 +353,11 @@ class JournalReader:
                     key = f'{info.st_dev}:{info.st_ino}'
                     seen.add(key)
                     old = self.db.execute('SELECT head,offset,size,discard FROM bob_capture_files WHERE id=?', (key,)).fetchone()
+                    generation, oldest, complete = self.db.execute('SELECT generation,oldest,complete '
+                                                                  'FROM bob_capture_inventory WHERE file=?', (key,)).fetchone()
+                    if not old or info.st_size != old[2]:
+                        self.db.execute('UPDATE bob_capture_inventory SET complete=? WHERE file=?',
+                                        (-1 if complete == -1 else 0, key))
                     if (rows >= self.max_rows or consumed >= self.max_bytes or time.monotonic() >= deadline) and not self.reset:
                         self.backlog += max(0, info.st_size - (old[1] if old else 0))
                         if next_file is None:
@@ -293,6 +373,9 @@ class JournalReader:
                     except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
                         head = ''
                     offset, discard = (old[1], old[3]) if old else (0, 0)
+                    # Existing offsets predate source-reference inventory.
+                    if complete == 0 and oldest is None and not self.reset:
+                        offset, discard = 0, 0
                     if self.reset:
                         offset, discard = info.st_size, int(bool(info.st_size and not first.endswith(b'\n')))
                         if info.st_size:
@@ -301,6 +384,9 @@ class JournalReader:
                     elif old and (info.st_size < offset or old[0] and head and head != old[0]):
                         self._loss()
                         offset, discard = 0, 0
+                        generation, oldest, complete = generation + 1, None, 0
+                        self.db.execute('UPDATE bob_capture_inventory SET generation=?,oldest=NULL,complete=0 '
+                                        'WHERE file=?', (generation, key))
                     start_offset = offset
                     stream.seek(offset)
                     while rows < self.max_rows and consumed < self.max_bytes and time.monotonic() < deadline:
@@ -325,6 +411,18 @@ class JournalReader:
                             self._loss()
                             events = []
                         for event in events:
+                            oldest = min(oldest, event['at']) if oldest is not None else event['at']
+                            self.db.execute('INSERT OR IGNORE INTO bob_capture_refs VALUES (?,?,?)',
+                                            (key, generation, event['trace'] + ':' + event['span']))
+                        final_record = stream.tell() == info.st_size
+                        self.db.execute('UPDATE bob_capture_inventory SET oldest=?,complete=? WHERE file=?',
+                                        (oldest, -1 if complete == -1 else int(final_record), key))
+                        if final_record:
+                            self.db.execute('UPDATE bob_capture_inventory SET size=?,changed=? WHERE file=?',
+                                            (info.st_size, info.st_ctime_ns, key))
+                            self.db.execute('DELETE FROM bob_capture_refs WHERE file=? AND generation<>?', (key, generation))
+                            self._source_window(now)
+                        for event in events:
                             self._event(event, known, now)
                         rows += max(1, len(events))
                         offset += len(raw)
@@ -336,18 +434,29 @@ class JournalReader:
                     self.backlog += max(0, info.st_size - offset)
                     self.db.execute('INSERT OR REPLACE INTO bob_capture_files VALUES (?,?,?,?,?)',
                                     (key, head or (old[0] if old else ''), offset, info.st_size, discard))
+                    if not self.reset and complete != -1 and offset >= info.st_size and not discard:
+                        self.db.execute('UPDATE bob_capture_inventory SET complete=1,size=?,changed=? WHERE file=?',
+                                        (info.st_size, info.st_ctime_ns, key))
+                        self.db.execute('DELETE FROM bob_capture_refs WHERE file=? AND generation<>?', (key, generation))
+                    if self.reset:
+                        # The skipped prefix has unknown source timestamps.
+                        self.db.execute('UPDATE bob_capture_inventory SET complete=-1 WHERE file=?', (key,))
             for key, offset, size in self.db.execute('SELECT id,offset,size FROM bob_capture_files').fetchall():
                 if key not in seen:
                     if offset < size:
                         self._loss()
                     self.db.execute('DELETE FROM bob_capture_files WHERE id=?', (key,))
             self._resolve(known, now)
+            self._source_window(now)
+            self.db.execute('UPDATE bob_capture_window SET event_count=?,source_floor=? WHERE id=1',
+                            (self.event_count, self.source_floor))
             self.db.execute('INSERT OR REPLACE INTO bob_capture_scan VALUES (1,?)', (next_file,))
             self.db.execute('UPDATE bob_capture_meta SET last_success=?,reset_pending=0 WHERE id=1', (now,))
             self.db.commit()
             self.reset, self.available = False, 1
         except (OSError, ValueError, TypeError):
             self.db.rollback()
+            self.event_count, self.source_floor = count_before, floor_before
             self.errors = 1
 
     def snapshot(self, sessions):

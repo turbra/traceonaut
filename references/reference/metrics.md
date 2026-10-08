@@ -6,112 +6,18 @@ description: Metric names, wire types, labels and meanings for all collection so
 
 # Metrics
 
-Metric names are stable public identifiers. The `cwo_codex_` prefix belongs to session/account collection and optional CWO session association; `cwo_audit_` belongs to optional workflow audit collection. The remaining families describe optional dispatch observation.
+Metric names are stable public identifiers. `cwo_codex_` identifies Codex collection,
+`traceonaut_bob_` identifies IBM Bob collection, and `cwo_audit_` identifies optional
+CWO workflow audits. Dispatch families describe optional controller observation.
 
-`untyped` below means the endpoint omits a Prometheus TYPE declaration. Those values are absolute snapshots, read like gauges. Apply `rate()` only to the counters identified here.
+`untyped` means the endpoint omits a Prometheus TYPE declaration. Read those
+absolute snapshots as gauges. Use `rate()` and `increase()` with the counters
+listed below. Labels contain opaque identities and bounded categories; readable
+names stay in rendered dashboards.
 
-Labels use opaque identities and bounded categories. Display names stay in rendered dashboards.
+## Codex
 
-## IBM Bob
-
-These gauges come from the explicitly enabled Bob source. A dashboard Chat maps to
-a saved Bob task. Its hashed task ID uses the existing `session_id` metric label;
-the hashed Bob project ID uses `project_id`.
-
-Chat token values remove completed subtask costs from their parent when Bob's
-recorded values and times support the subtraction; subagent costs remain separate.
-Uncertain parent values remain unavailable. `total` is `input + output`;
-`cached_input` and `cache_write_input` are input breakdowns already included in
-input. Saved response and tool counts cover rows Bob currently retains. These
-are recorded history totals, not `rate()` counters. Source-wide coverage also
-includes skipped records.
-
-| Name | Type | Labels | Meaning |
-| --- | --- | --- | --- |
-| `traceonaut_bob_collector_source_available` | gauge | None | One when the source was readable on the latest scan. |
-| `traceonaut_bob_collector_scan_timestamp_seconds` | gauge | None | Latest scan attempt, Unix seconds. |
-| `traceonaut_bob_collector_last_success_timestamp_seconds` | gauge | None | Latest successful collection check, Unix seconds; includes incremental and unchanged-source checks. See [Bob data freshness](retention-and-limits.md#ibm-bob). |
-| `traceonaut_bob_collector_collection_complete` | gauge | None | One when collection finished without source errors, skips, invalid token values, unsafe subtask reconciliation or unknown tool outcomes. Omitted token fields alone leave this at one. |
-| `traceonaut_bob_collector_pending` | gauge | None | One while a bounded source read continues over later scans. |
-| `traceonaut_bob_collector_limit_reached` | gauge | None | One when a scan or storage limit prevents completion. |
-| `traceonaut_bob_collector_source_errors` | gauge | None | Source failures in the latest scan. |
-| `traceonaut_bob_collector_indexed_sessions` | gauge | None | Chats in the last completed source read. |
-| `traceonaut_bob_collector_expired_sessions` | gauge | None | Chats excluded by inactivity retention. |
-| `traceonaut_bob_collector_cap_omitted_sessions` | gauge | None | Eligible chats omitted by the export cap. |
-| `traceonaut_bob_collector_retention_seconds` | gauge | None | Per-source export inactivity window; zero disables expiry. |
-| `traceonaut_bob_collector_export_cap` | gauge | None | Maximum exported Bob chats. |
-| `traceonaut_bob_collector_skipped_records` | gauge | `reason` | Skips in the latest completed source read. |
-| `traceonaut_bob_session_info` | gauge | `project_id`, `session_id`, `kind` | Bob chat identity; value 1. |
-| `traceonaut_bob_session_usage_tokens` | gauge | `project_id`, `session_id`, `token_kind` | Recorded tokens by input, output, cached_input, cache_write_input or total. |
-| `traceonaut_bob_session_token_status` | gauge | `project_id`, `session_id`, `token_kind` | Availability of input, output and total: 0 recorded, 1 not recorded by Bob, 2 invalid saved value, 3 reconciliation unavailable. |
-| `traceonaut_bob_session_last_event_timestamp_seconds` | gauge | `project_id`, `session_id` | Latest saved message time, Unix seconds. |
-| `traceonaut_bob_session_response_count` | gauge | `project_id`, `session_id` | Saved assistant responses, excluding local UI messages. |
-| `traceonaut_bob_session_tool_result_count` | gauge | `project_id`, `session_id` | Saved tool results, including unknown outcomes. |
-| `traceonaut_bob_session_tool_error_count` | gauge | `project_id`, `session_id` | Saved tool results explicitly marked as errors. |
-| `traceonaut_bob_session_tool_unknown_count` | gauge | `project_id`, `session_id` | Saved tool results with unknown outcomes. |
-| `traceonaut_bob_session_tool_duration_seconds` | gauge | `project_id`, `session_id` | Sum of recorded tool durations in seconds. |
-| `traceonaut_bob_session_timed_tool_count` | gauge | `project_id`, `session_id` | Tool results with recorded durations. |
-| `traceonaut_bob_session_partial` | gauge | `project_id`, `session_id` | One when chat usage or tool outcomes have missing or inconsistent fields. |
-
-Chat kinds: `normal`, `subtask`, `subagent`. Skip reasons: `invalid_record`,
-`invalid_json`, `invalid_number`, `invalid_timestamp`, `unsupported_version`,
-`unsupported_kind`, `oversized_record`, `unknown_tool_outcome`.
-
-Token status adds at most three series per exported chat. Absent or null source
-fields have status 1. Invalid values and parent totals withheld during subtask
-reconciliation have statuses 2 and 3. A total requires valid input and output;
-cache details are optional. Each input and output value remains independently
-usable. Older collectors have no status metric; the dashboard uses neutral
-**Unavailable** wording for them. The legacy `session_partial` flag
-continues to include missing token fields, separately from collection coverage.
-
-Missing usage and durations are absent, while known zero values are exported. On
-source failure the last numeric cache remains visible with availability 0 and an
-unchanged last-success timestamp. [IBM Bob Collection](../bob-collection.md) covers setup.
-
-### Optional Generation Capture
-
-Capture defaults off and does not change saved metrics. With
-`--bob-otel-journal-dir`, valid Bob 2.0.5 integer generation counts are durable
-counters within a ledger epoch. They are separate from saved history; cache and
-reasoning details are not extra tokens. Parent and child generation events stay
-exclusive under their own chat IDs. Unknown versions, missing usage, summaries,
-compaction and auxiliary calls are not counted. The supported scope is always partial.
-
-| Name | Type | Labels | Meaning |
-| --- | --- | --- | --- |
-| `traceonaut_bob_capture_enabled` | gauge | None | One when the optional journal reader is enabled. |
-| `traceonaut_bob_capture_source_available` | gauge | None | Latest journal access succeeded; not producer delivery or completeness. |
-| `traceonaut_bob_capture_last_success_timestamp_seconds` | gauge | None | Latest successful journal check, Unix seconds. |
-| `traceonaut_bob_capture_epoch_timestamp_seconds` | gauge | None | Start of the durable capture ledger epoch, Unix seconds. |
-| `traceonaut_bob_capture_backlog_bytes` | gauge | None | Unread bytes, including incomplete trailing records. |
-| `traceonaut_bob_capture_pending_joins` | gauge | None | Events withheld pending a known chat identity. |
-| `traceonaut_bob_capture_scope_partial` | gauge | None | One for the enabled generation-only scope; never whole-Bob completeness. |
-| `traceonaut_bob_capture_errors` | gauge | None | Latest journal read failed independently of database collection. |
-| `traceonaut_bob_capture_loss_total` | counter | None | Detected lost/rejected/conflicting/expired records, not lost token estimates. |
-| `traceonaut_bob_session_captured_tokens_total` | counter | `project_id`, `session_id`, `token_kind`, `event_kind` | Accepted generation tokens within the epoch. |
-| `traceonaut_bob_session_capture_status` | gauge | `project_id`, `session_id` | 0 disabled, 1 no activity, 2 recorded zero with partial scope, 3 missing counts, 4 partial capture, 5 unavailable/stale. |
-| `traceonaut_bob_session_capture_missing_events_total` | counter | `project_id`, `session_id` | Joined generation records without valid counts; excludes invisible undelivered calls. |
-
-Capture token kinds are `input`, `output`, `total`, `cached_input`,
-`cache_write_input` and `reasoning`; event kind is `generation`. Optional detail
-totals are absent if any counted event lacks that detail. No trace/span ID,
-producer/model name, title, user or path appears as a metric label. Identity
-selection remains subject to the existing per-source retention and export cap.
-
-Transport replay and reader restart do not increase totals. Conflicting replay
-keeps the first event and reports loss. Dedup identities cover all readable replay;
-after the 100,000-event bound, new records are rejected instead of recounting
-evicted events. Pending identity expiry is reported as loss. Source state loss
-starts a new epoch at EOF when the private epoch marker remains.
-
-Use `increase()` for approximate interval consumption over scrape/commit time.
-Do not interpret saved gauges as interval counters, sum saved/captured totals,
-sample-scale token counts, or derive a whole-Bob coverage percentage from the
-journal. [Capture setup and limits](../bob-collection.md#optional-generation-token-capture)
-and [dashboard states](../dashboards/ibm-bob-beta.md#optional-captured-tokens) explain use.
-
-## Session Collector
+### Session Collector
 
 | Name | Type | Labels | Meaning |
 | --- | --- | --- | --- |
@@ -129,7 +35,7 @@ and [dashboard states](../dashboards/ibm-bob-beta.md#optional-captured-tokens) e
 | `cwo_codex_collector_session_export_cap_omitted_sessions` | gauge | None | Eligible sessions excluded by the cap. |
 | `cwo_codex_collector_session_export_cap_truncated` | gauge | None | 1 when the cap excludes eligible sessions. |
 
-## Command and Compaction Detail
+### Command and Compaction Detail
 
 | Name | Type | Labels | Meaning |
 | --- | --- | --- | --- |
@@ -159,7 +65,7 @@ and [dashboard states](../dashboards/ibm-bob-beta.md#optional-captured-tokens) e
 | `cwo_codex_command_event_duration_seconds` | untyped | `project_id`, `session_id`, `observation_id`, `outcome` | Reported whole-command duration in seconds. |
 | `cwo_codex_compaction_observation_timestamp_seconds` | untyped | `project_id`, `session_id`, `observation_id` | Compaction completion time, Unix seconds. |
 
-## Sessions
+### Sessions
 
 | Name | Type | Labels | Meaning |
 | --- | --- | --- | --- |
@@ -174,7 +80,7 @@ and [dashboard states](../dashboards/ibm-bob-beta.md#optional-captured-tokens) e
 | `cwo_codex_session_usage_state` | untyped | `project_id`, `session_id` | Recorded-usage coverage code. |
 | `cwo_codex_session_usage_tokens` | untyped | `project_id`, `session_id`, `token_kind` | Deduplicated recorded tokens by category. |
 
-## Account Allowance
+### Account Allowance
 
 | Name | Type | Labels | Meaning |
 | --- | --- | --- | --- |
@@ -186,7 +92,7 @@ and [dashboard states](../dashboards/ibm-bob-beta.md#optional-captured-tokens) e
 | `cwo_codex_account_window_minutes` | gauge | `window` | Reported account-window duration, minutes. |
 | `cwo_codex_account_window_reset_timestamp_seconds` | gauge | `window` | Scheduled reset, Unix seconds. |
 
-## CWO Dispatches
+### CWO Dispatches
 
 These metrics come from an existing controller database supplied through `--state-dir`. They remain available for custom integrations and queries; CWO Overview uses session, audit and review metrics instead.
 
@@ -228,7 +134,7 @@ These metrics come from an existing controller database supplied through `--stat
 | `cwo_telemetry_publication_pending_dispatches` | gauge | `project_id` | Dispatches awaiting final-sample confirmation. |
 | `cwo_dispatch_coverage_state` | gauge | `project_id`, `dispatch_id` | Known-gap/accounting-conflict coverage code. |
 
-## State Codes
+### State Codes
 
 Session activity: `0` Unknown, `1` Working, `2` Waiting, `3` Stopped / failed, `4` No recent signal.
 Session usage: `0` unknown, `1` recorded, `2` runtime-only, `3` conflicted, `4` partial.
@@ -238,9 +144,9 @@ CWO coverage: `0` unknown, `1` observed with no known gap, `2` known gap, `3` ac
 
 See [Reading the Values](../dashboards/reading-values.md), [Collector Health](collector-health.md), and the [dispatch contract](../../scripts/traceonaut/observability_contract.py) for scope and remaining enumerations.
 
-## CWO Workflow Audits
+### CWO Workflow Audits
 
-These optional gauges come from configured CWO audit JSONL, independently of the observed-dispatch ledger. Event timestamps describe when the source recorded an event. `skipped_records` and `source_errors` describe the latest scan, rather than cumulative failures.
+These optional gauges come from configured CWO audit JSONL, independently of the observed-dispatch ledger. Event timestamps describe when the source recorded an event. `skipped_records` and `source_errors` describe the latest scan.
 
 | Metric | Type | Labels | Meaning |
 | --- | --- | --- | --- |
@@ -268,13 +174,13 @@ Recognized event types in the `event_type` label:
 | `native_pool_interrupt_requested` | An interrupt request for a native agent group was recorded. |
 | `native_pool_terminal` | A native agent group reached a recorded terminal state. |
 
-Here, a native agent group is a set of Codex native subagents supervised together. These events describe the group-level report or state; they are not per-agent task totals.
+Here, a native agent group is a set of Codex native subagents supervised together. These events describe the group-level report or state; they describe the supervised group as a whole.
 
-Audit events record logged activity only. They do not establish task completion, token usage, or worker capacity.
+Audit events record logged workflow activity.
 
-## CWO-Associated Sessions
+### CWO-Associated Sessions
 
-These optional gauges come from Codex rollout records with `--cwo-sessions`. The dashboard joins association with the existing session metrics; no second token ledger is created.
+These optional gauges come from Codex rollout records with `--cwo-sessions`. The dashboard joins association with the existing session metrics.
 
 | Name | Type | Labels | Meaning |
 | --- | --- | --- | --- |
@@ -284,28 +190,116 @@ These optional gauges come from Codex rollout records with `--cwo-sessions`. The
 | `cwo_codex_cwo_source_errors` | gauge | None | CWO source access failures in the latest scan. |
 | `cwo_codex_cwo_source_gaps` | gauge | None | Persisted malformed or oversized candidate records and command conflicts. |
 | `cwo_codex_cwo_limit_reached` | gauge | None | Source-file or completed-command export cap reached. |
-| `cwo_codex_session_cwo_association_timestamp_seconds` | gauge | `project_id`, `session_id`, `source` | First CWO association: structured skill block, direct helper command, or parent session; not exclusive token attribution. |
+| `cwo_codex_session_cwo_association_timestamp_seconds` | gauge | `project_id`, `session_id`, `source` | First CWO association: structured skill block, direct helper command, or parent session; identifies associated sessions. |
 | `cwo_codex_cwo_command_timestamp_seconds` | gauge | `project_id`, `session_id`, `observation_id`, `tool`, `outcome` | Source completion time of a supported CWO helper invocation. |
 | `cwo_codex_cwo_command_duration_seconds` | gauge | `project_id`, `session_id`, `observation_id`, `tool`, `outcome` | Reported duration when the CWO helper is the sole command. |
 
 Association sources: `skill_block`, `tool_execution`, `parent_session`. Command outcomes: `completed`, `failed`, `unknown`. Supported helper names: `build_contractor_packet`, `close_bead_with_summary`, `coach_prompt`, `dispatch_work`, `evaluate_return`, `normalize_contractor_return`, `render_execution_status_report`, `route_work`, `run_checked_command`, `supervise_native_pool`, `supervise_native_worker`, `validate_operator_handoff`, `validate_run_readiness_plan`.
 
-## CLI Review Results
+### CLI Review Results
 
-Optional paired-artifact collection uses gauges. Review usage is separate from Codex session and observed-dispatch accounting.
+Optional review artifact collection uses gauges. Review usage is separate from Codex session and observed-dispatch accounting.
 
 | Metric | Type | Labels | Meaning |
 | --- | --- | --- | --- |
-| `cwo_review_source_available` | gauge | None | At least one configured CLI launch receipt was read. |
-| `cwo_review_collection_complete` | gauge | None | Configured paired review artifacts read without errors, pending results or limits. |
+| `cwo_review_source_available` | gauge | None | At least one configured review launch or provenance record was read. |
+| `cwo_review_collection_complete` | gauge | None | Enabled review sources read without errors, missing results or limits. |
 | `cwo_review_scan_timestamp_seconds` | gauge | None | Unix time of the latest CLI review scan attempt. |
-| `cwo_review_source_files` | gauge | None | CLI launch receipts read in the latest scan. |
+| `cwo_review_source_files` | gauge | None | Review launch and provenance records read in the latest scan. |
 | `cwo_review_source_errors` | gauge | None | Review artifact access failures in the latest scan. |
-| `cwo_review_pending_results` | gauge | None | Launch receipts whose paired result file is absent. |
+| `cwo_review_pending_results` | gauge | None | Recorded launches without a saved final result. |
 | `cwo_review_limit_reached` | gauge | None | Review artifact discovery, byte or export cap reached. |
 | `cwo_review_skipped_records` | gauge | `reason` | Review artifacts omitted in the latest scan by bounded reason. |
-| `cwo_review_started_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | Recorded launch time of a CLI review with a collected result; not its finish time. |
+| `cwo_review_started_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | Recorded launch time of an external review invocation. |
 | `cwo_review_tokens` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `kind` | CLI top-level usage by kind; thinking is a subset of output. Input excludes cache creation and reads. |
-| `cwo_review_duration_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | CLI-reported result duration; not time inferred from file timestamps. |
+| `cwo_review_duration_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | CLI-reported result duration. |
 | `cwo_review_session_info` | gauge | `review_id`, `project_id`, `session_id` | Value 1 identifies the launching Codex session for a Linked review. |
 | `cwo_review_attribution_state` | gauge | `review_id`, `state` | Value 1 for the review's current state: `linked`, `unlinked`, `pending` or `ambiguous`. |
+| `cwo_review_discovered_launches` | gauge | None | Review launches found in retained CWO session commands; excludes model checks. |
+| `cwo_review_discovery_gaps` | gauge | `reason` | Incomplete discovered evidence, grouped by bounded reason. |
+| `cwo_review_record_state` | gauge | `review_id`, `record_state` | Complete result or reason its evidence is unavailable. |
+| `cwo_review_evaluation_info` | gauge | `review_id`, `verdict` | Recorded evaluator verdict; `accept_pending_peer` retains an outstanding peer-review hold. |
+| `cwo_review_snapshot_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `history`, `state`, `record_state`, `verdict`, `project_id`, `session_id`, `input_available`, `output_available`, `duration_available` | Scan time and current record metadata used to reconcile later-collected historical reviews. `history="tracked"` includes removal markers; `record_state="removed"` withdraws a replaced or invalidated record without adding usage. Ordinary age expiry keeps the last historical record. |
+
+Discovery gap reasons are `missing_result`, `conflicting_result`, `invalid_record`, `oversized_output`, `changing_output`, `unreadable_output`, `reused_output` and `unsupported_launch`. They describe saved evidence, not whether a review was accepted. CLI completion, evaluator verdict and implementation outcome are separate facts.
+
+## IBM Bob
+
+### Saved history
+
+Bob gauges describe currently saved records. Chat identity uses hashed task IDs
+in `session_id`; projects use hashed IDs in `project_id`. Parent token values
+exclude completed subtask costs when the saved values support that calculation.
+Uncertain parent values are unavailable. Cache fields are input breakdowns;
+`total` is input plus output.
+
+| Name | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `traceonaut_bob_collector_source_available` | gauge | None | One when the source was readable on the latest scan. |
+| `traceonaut_bob_collector_scan_timestamp_seconds` | gauge | None | Latest scan attempt, Unix seconds. |
+| `traceonaut_bob_collector_last_success_timestamp_seconds` | gauge | None | Latest successful collection check, Unix seconds; includes incremental and unchanged-source checks. See [Bob data freshness](retention-and-limits.md#ibm-bob). |
+| `traceonaut_bob_collector_collection_complete` | gauge | None | One when collection finished without source errors, skips, invalid token values, unsafe subtask reconciliation or unknown tool outcomes. Omitted token fields alone leave this at one. |
+| `traceonaut_bob_collector_pending` | gauge | None | One while a bounded source read continues over later scans. |
+| `traceonaut_bob_collector_limit_reached` | gauge | None | One when a scan or storage limit prevents completion. |
+| `traceonaut_bob_collector_source_errors` | gauge | None | Source failures in the latest scan. |
+| `traceonaut_bob_collector_indexed_sessions` | gauge | None | Chats in the last completed source read. |
+| `traceonaut_bob_collector_expired_sessions` | gauge | None | Chats excluded by inactivity retention. |
+| `traceonaut_bob_collector_cap_omitted_sessions` | gauge | None | Eligible chats omitted by the export cap. |
+| `traceonaut_bob_collector_retention_seconds` | gauge | None | Per-source export inactivity window; zero disables expiry. |
+| `traceonaut_bob_collector_export_cap` | gauge | None | Maximum exported Bob chats. |
+| `traceonaut_bob_collector_skipped_records` | gauge | `reason` | Skips in the latest completed source read. |
+| `traceonaut_bob_session_info` | gauge | `project_id`, `session_id`, `kind` | Bob chat identity; value 1. |
+| `traceonaut_bob_session_usage_tokens` | gauge | `project_id`, `session_id`, `token_kind` | Recorded tokens by input, output, cached_input, cache_write_input or total. |
+| `traceonaut_bob_session_token_status` | gauge | `project_id`, `session_id`, `token_kind` | Availability of input, output and total: 0 recorded, 1 not recorded by Bob, 2 invalid saved value, 3 reconciliation unavailable. |
+| `traceonaut_bob_session_last_event_timestamp_seconds` | gauge | `project_id`, `session_id` | Latest saved message time, Unix seconds. |
+| `traceonaut_bob_session_response_count` | gauge | `project_id`, `session_id` | Saved assistant responses, excluding local UI messages. |
+| `traceonaut_bob_session_tool_result_count` | gauge | `project_id`, `session_id` | Saved tool results, including unknown outcomes. |
+| `traceonaut_bob_session_tool_error_count` | gauge | `project_id`, `session_id` | Saved tool results explicitly marked as errors. |
+| `traceonaut_bob_session_tool_unknown_count` | gauge | `project_id`, `session_id` | Saved tool results with unknown outcomes. |
+| `traceonaut_bob_session_tool_duration_seconds` | gauge | `project_id`, `session_id` | Sum of recorded tool durations in seconds. |
+| `traceonaut_bob_session_timed_tool_count` | gauge | `project_id`, `session_id` | Tool results with recorded durations. |
+| `traceonaut_bob_session_partial` | gauge | `project_id`, `session_id` | One when chat usage or tool outcomes have missing or inconsistent fields. |
+
+Chat kinds: `normal`, `subtask`, `subagent`. Skip reasons: `invalid_record`,
+`invalid_json`, `invalid_number`, `invalid_timestamp`, `unsupported_version`,
+`unsupported_kind`, `oversized_record`, `unknown_tool_outcome`.
+
+Absent or null token fields have status 1; invalid fields have status 2; withheld
+parent values have status 3. A total requires valid input and output. Optional
+cache fields and each input/output value remain independently usable. Older
+collectors without status metrics display **Unavailable**. `session_partial`
+includes missing token fields separately from collection coverage.
+
+Known zero values are exported; missing usage and durations are omitted. A source
+failure retains the last numeric cache with availability 0 and the previous
+last-success timestamp. See the [IBM Bob source](../sources/ibm-bob.md).
+
+### Optional Generation Capture
+
+Enable the reader with `--bob-otel-journal-dir`. Captured values are counters;
+saved history uses gauges. See [token scope](retention-and-limits.md#token-capture)
+and [setup](../optional/bob-token-capture.md).
+
+| Name | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `traceonaut_bob_capture_enabled` | gauge | None | One when the optional journal reader is enabled. |
+| `traceonaut_bob_capture_source_available` | gauge | None | One when the latest journal access succeeded. |
+| `traceonaut_bob_capture_last_success_timestamp_seconds` | gauge | None | Latest successful journal check, Unix seconds. |
+| `traceonaut_bob_capture_epoch_timestamp_seconds` | gauge | None | Start of the durable capture ledger epoch, Unix seconds. |
+| `traceonaut_bob_capture_backlog_bytes` | gauge | None | Unread bytes, including incomplete trailing records. |
+| `traceonaut_bob_capture_pending_joins` | gauge | None | Events withheld pending a known chat identity. |
+| `traceonaut_bob_capture_scope_partial` | gauge | None | One for the enabled generation-token scope. |
+| `traceonaut_bob_capture_errors` | gauge | None | Latest journal read failed independently of database collection. |
+| `traceonaut_bob_capture_loss_total` | counter | None | Detected lost, rejected, conflicting or expired records. |
+| `traceonaut_bob_session_captured_tokens_total` | counter | `project_id`, `session_id`, `token_kind`, `event_kind` | Accepted generation tokens within the epoch. |
+| `traceonaut_bob_session_capture_status` | gauge | `project_id`, `session_id` | 0 disabled, 1 no activity, 2 recorded zero with partial scope, 3 missing counts, 4 partial capture, 5 unavailable/stale. |
+| `traceonaut_bob_session_capture_missing_events_total` | counter | `project_id`, `session_id` | Joined generation records without valid counts. |
+
+Capture token kinds are `input`, `output`, `total`, `cached_input`,
+`cache_write_input` and `reasoning`; `event_kind` is `generation`. An optional
+detail total is omitted if any counted event lacks that field. Export selection
+uses the same per-source retention and cap as saved chats. Metric labels exclude
+trace/span IDs, producer/model names, titles, users and paths.
+
+See [capture storage and replay](limits-and-internals.md#token-capture) and
+[dashboard values](../dashboards/ibm-bob-beta.md#captured-tokens).

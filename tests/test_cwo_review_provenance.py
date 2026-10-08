@@ -169,5 +169,5 @@ class ProvenanceTests(unittest.TestCase):
               'source_errors':0,'pending_results':0,'limit_reached':0,'skipped_records':{}}
         before=render_review_metrics({**base,'reviews':[self.review]}).splitlines()
         after=render_review_metrics({**base,'reviews':[linked]}).splitlines()
-        unchanged=lambda lines:[l for l in lines if b'cwo_review_session_info' not in l and b'cwo_review_attribution_state' not in l]
+        unchanged=lambda lines:[l for l in lines if not any(name in l for name in (b'cwo_review_session_info',b'cwo_review_attribution_state',b'cwo_review_snapshot_timestamp_seconds'))]
         self.assertEqual(unchanged(before),unchanged(after))

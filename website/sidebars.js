@@ -19,11 +19,23 @@ module.exports = {
           "type": "doc",
           "id": "references/getting-started",
           "label": "Quick Start"
+        }
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Sources",
+      "collapsed": false,
+      "items": [
+        {
+          "type": "doc",
+          "id": "references/sources/codex",
+          "label": "Codex"
         },
         {
           "type": "doc",
-          "id": "references/bob-collection",
-          "label": "IBM Bob Collection"
+          "id": "references/sources/ibm-bob",
+          "label": "IBM Bob"
         }
       ]
     },
@@ -38,24 +50,41 @@ module.exports = {
           "label": "Choosing a Dashboard"
         },
         {
-          "type": "doc",
-          "id": "references/dashboards/work-overview",
-          "label": "Work Overview"
+          "type": "category",
+          "label": "Codex",
+          "items": [
+            {
+              "type": "doc",
+              "id": "references/dashboards/work-overview",
+              "label": "Work Overview"
+            },
+            {
+              "type": "doc",
+              "id": "references/dashboards/all-sessions",
+              "label": "All Sessions"
+            },
+            {
+              "type": "doc",
+              "id": "references/dashboards/tui-beta",
+              "label": "Codex TUI \u00b7 Beta"
+            },
+            {
+              "type": "doc",
+              "id": "references/dashboards/cwo",
+              "label": "CWO Overview"
+            }
+          ]
         },
         {
-          "type": "doc",
-          "id": "references/dashboards/all-sessions",
-          "label": "All Sessions"
-        },
-        {
-          "type": "doc",
-          "id": "references/dashboards/tui-beta",
-          "label": "Codex TUI · Beta"
-        },
-        {
-          "type": "doc",
-          "id": "references/dashboards/ibm-bob-beta",
-          "label": "IBM Bob · Beta"
+          "type": "category",
+          "label": "IBM Bob",
+          "items": [
+            {
+              "type": "doc",
+              "id": "references/dashboards/ibm-bob-beta",
+              "label": "IBM Bob \u00b7 Beta"
+            }
+          ]
         },
         {
           "type": "doc",
@@ -68,7 +97,10 @@ module.exports = {
       "type": "category",
       "label": "Operations",
       "collapsed": true,
-      "link": {"type": "doc", "id": "references/operations"},
+      "link": {
+        "type": "doc",
+        "id": "references/operations"
+      },
       "items": [
         {
           "type": "doc",
@@ -171,13 +203,13 @@ module.exports = {
         },
         {
           "type": "doc",
-          "id": "references/dashboards/cwo",
-          "label": "CWO Overview"
+          "id": "references/integrations/terminal-export",
+          "label": "Completed Dispatch Export"
         },
         {
           "type": "doc",
-          "id": "references/integrations/terminal-export",
-          "label": "Completed Dispatch Export"
+          "id": "references/optional/bob-token-capture",
+          "label": "Token Capture"
         }
       ]
     }

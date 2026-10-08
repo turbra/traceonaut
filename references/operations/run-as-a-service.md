@@ -7,7 +7,7 @@ description: Run the collector persistently with your existing service manager.
 # Run as a Service
 
 Use the collector command from [Quick Start](../getting-started.mdx#1-run-the-collector)
-or [IBM Bob Collection](../bob-collection.md#run-the-collector). Run it as the user
+or [IBM Bob](../sources/ibm-bob.md#enable). Run it as the user
 who owns the source profiles, with absolute paths and one collector per state directory.
 
 For a Linux user service, save this as `~/.config/systemd/user/traceonaut.service`.

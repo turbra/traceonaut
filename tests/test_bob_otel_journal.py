@@ -185,6 +185,149 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(second['epoch'], health['epoch'])
         self.assertEqual(self.db.execute('SELECT count(*) FROM bob_capture_events').fetchone()[0], 1)
 
+    def test_event_limit_is_a_retention_window_not_a_lifetime_limit(self):
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3)
+        for sequence in range(1, 6):
+            self.write(packet(sequence=sequence, now=self.now))
+        rows, first = self.scan()
+        self.assertEqual(rows[0]['captured_usage']['total'], 360)
+        self.assertEqual(first['losses'], 2)
+        later = self.now + 60 * 86400
+        self.write(packet(sequence=6, now=later))
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3)
+        rows, second = self.scan(now=later+1)
+        self.assertEqual(rows[0]['captured_usage']['total'], 480)
+        self.assertEqual(second['losses'], 2)
+        self.assertEqual(second['epoch'], first['epoch'])
+        self.assertEqual(self.reader.event_count, 1)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM bob_capture_events').fetchone()[0], 1)
+
+    def test_rotation_prunes_source_window_across_restart_and_more_lifetime_events(self):
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=0)
+        epoch = None
+        for sequence in range(1, 10):
+            if self.path.exists():
+                self.path.replace(self.journal/'bob-usage-old.json')
+            self.write(packet(sequence=sequence, now=self.now+sequence))
+            if sequence in (4, 7):
+                self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=0)
+            rows, health = self.scan(now=self.now+sequence+1)
+            epoch = health['epoch'] if epoch is None else epoch
+            self.assertEqual(rows[0]['captured_usage']['total'], 120*sequence)
+            self.assertEqual(health['epoch'], epoch)
+            self.assertLessEqual(self.reader.event_count, 3)
+        self.assertEqual(self.reader.event_count, 2)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM bob_capture_dedup').fetchone()[0], 2)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM bob_capture_refs').fetchone()[0], 2)
+        # Reintroducing removed source history cannot recount its old span.
+        self.write(packet(sequence=1, now=self.now+1))
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=0)
+        self.assertEqual(self.scan(now=self.now+11)[0][0]['captured_usage']['total'], 1080)
+
+    def test_retained_duplicate_after_body_pruning_counts_once_and_conflicts_once(self):
+        original = packet(now=self.now)
+        self.write(original)
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=10)
+        rows, before = self.scan()
+        rows, health = self.scan(now=self.now+20)
+        self.assertEqual(self.reader.event_count, 0)
+        self.assertEqual(rows[0]['captured_usage']['total'], 120)
+        self.write(original)
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=10)
+        rows, health = self.scan(now=self.now+21)
+        self.assertEqual(rows[0]['captured_usage']['total'], 120)
+        self.assertEqual(health['epoch'], before['epoch'])
+        self.assertEqual(health['losses'], 0)
+        self.assertEqual(self.reader.event_count, 0)
+        self.write(packet(input_value=999, now=self.now))
+        rows, health = self.scan(now=self.now+22)
+        self.assertEqual(rows[0]['captured_usage']['total'], 120)
+        self.assertEqual(health['losses'], 1)
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=10)
+        self.write(packet(input_value=999, now=self.now))
+        self.assertEqual(self.scan(now=self.now+23)[1]['losses'], 1)
+
+    def test_duplicate_source_reference_survives_removing_one_rotated_file(self):
+        original = packet(now=self.now)
+        self.write(original)
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=10)
+        self.scan()
+        rotated = self.journal/'bob-usage-old.json'
+        self.path.rename(rotated)
+        self.write(original)
+        self.scan(now=self.now+20)
+        rotated.unlink()
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=10)
+        self.write(original)
+        rows, health = self.scan(now=self.now+21)
+        self.assertEqual(rows[0]['captured_usage']['total'], 120)
+        self.assertEqual(health['losses'], 0)
+
+    def test_admission_uses_running_count_and_rolls_it_back_with_offsets(self):
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3)
+        self.write(packet(now=self.now))
+        queries = []
+        self.db.set_trace_callback(queries.append)
+        self.scan()
+        self.assertNotIn('SELECT count(*) FROM bob_capture_events', queries)
+        self.assertEqual(self.reader.event_count, 1)
+        self.write(packet(sequence=2, now=self.now))
+        with patch.object(self.reader, '_resolve', side_effect=ValueError('synthetic rollback')):
+            self.scan()
+        self.assertEqual(self.reader.event_count, 1)
+        self.assertEqual(self.db.execute('SELECT event_count FROM bob_capture_window').fetchone()[0], 1)
+        rows, health = self.scan()
+        self.assertEqual(rows[0]['captured_usage']['total'], 240)
+        self.assertEqual(self.reader.event_count, 2)
+        self.assertEqual(health['errors'], 0)
+
+    def test_source_floor_waits_for_partial_tail_and_out_of_order_record(self):
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=0)
+        self.write(packet(now=self.now))
+        self.scan()
+        newer = packet(sequence=2, now=self.now+20)
+        older = json.dumps(packet(sequence=3, now=self.now-20)).encode()
+        self.path.write_bytes(json.dumps(newer).encode()+b'\n'+older[:len(older)//2])
+        self.scan(now=self.now+21)
+        self.assertEqual(self.reader.source_floor, self.now)
+        # The unknown trailing record cannot authorize pruning the prior ID.
+        self.assertIsNotNone(self.db.execute('SELECT id FROM bob_capture_events WHERE id=?',
+                                           (f'{1:032x}:{1:016x}',)).fetchone())
+        with self.path.open('ab') as stream:
+            stream.write(older[len(older)//2:]+b'\n')
+        self.scan(now=self.now+22)
+        self.assertEqual(self.reader.source_floor, self.now)
+
+    def test_changed_file_invalidates_inventory_before_another_file_advances_floor(self):
+        a, b = self.journal/'bob-usage-a.json', self.journal/'bob-usage-b.json'
+        def write(path, sequence, seconds):
+            path.write_bytes(json.dumps(packet(sequence=sequence, now=self.now+seconds)).encode()+b'\n')
+            modified = self.now + int(path == b)
+            os.utime(path, (modified, modified))
+        write(a, 1, 100)
+        write(b, 2, 300)
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=6, retention=0)
+        self.scan(now=self.now+500)
+        write(a, 3, 200)
+        write(b, 4, 400)
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=6, retention=0, max_rows=1)
+        self.scan(now=self.now+500)
+        write(a, 5, 150)  # Same size and mtime; ctime identifies the rewrite.
+        self.scan(now=self.now+500)
+        self.assertLessEqual(self.reader.source_floor, self.now+150)
+        self.scan(now=self.now+500)
+        self.assertEqual(self.scan(now=self.now+500)[0][0]['captured_usage']['total'], 600)
+
+    def test_empty_rewritten_file_releases_obsolete_dedup_references(self):
+        self.reader = JournalReader(self.journal, self.db, self.state, max_events=3, retention=10)
+        self.write(packet(now=self.now))
+        self.scan()
+        self.path.write_bytes(b'')
+        self.scan(now=self.now+20)
+        self.assertEqual(self.reader.event_count, 0)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM bob_capture_refs').fetchone()[0], 0)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM bob_capture_dedup').fetchone()[0], 0)
+
     def test_zero_missing_and_unsupported_version_are_distinct_from_activity_absence(self):
         for seq, chat, input_value, output, version in [(1,'zero',0,0,'2.0.5'),
             (2,'missing',4,None,'2.0.5'),(3,'unknown',10,2,'9.9')]:

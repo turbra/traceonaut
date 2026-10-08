@@ -1,9 +1,11 @@
 """Paired CLI results: source identity, exact accounting, privacy and failures."""
 import copy
+import hashlib
 from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -47,6 +49,213 @@ class ReviewTests(unittest.TestCase):
             dispatch_id=self.launch['dispatch_id'], packet_sha256=self.launch['packet_sha256']))
 
     def scan(self, **kwargs):return self.collector.scan(now=kwargs.get('now', NOW))
+
+    def write_provenance(self, directory=None, *, final=True):
+        root = directory or self.root
+        root.mkdir(exist_ok=True)
+        prompt = ('Dispatch ID: ' + self.launch['dispatch_id'] + '\nPacket SHA-256: '
+                  + self.launch['packet_sha256'] + '\nPRIVATE_PROMPT\n').encode()
+        result = {key: value for key, value in self.result.items() if key not in ('uuid', 'session_id')}
+        provenance = {'started_at': self.launch['started_at'],
+                      'requested_model': self.launch['requested_model'], 'executed_effort': 'high',
+                      'prompt_sha256': hashlib.sha256(prompt).hexdigest(),
+                      'events': ([{'type': 'assistant', 'usage': {'input_tokens': 999}},
+                                  {'type': 'assistant', 'usage': {'input_tokens': 999}}, result] if final else [])}
+        (root/'review-prompt.txt').write_bytes(prompt)
+        (root/'review-provenance.json').write_text(json.dumps(provenance))
+        (root/'contract-audit.jsonl').write_bytes(record('dispatch_prepared', timestamp=NOW - 110,
+            dispatch_id=self.launch['dispatch_id'], packet_sha256=self.launch['packet_sha256']))
+        return provenance
+
+    def test_new_launch_pair_normalizes_effort_and_preserves_identity(self):
+        expected = self.scan()['reviews'][0]
+        launch = {**self.launch, 'requested_effort': self.launch['effort']}
+        launch.pop('effort')
+        (self.root/'claude-launch.json').write_text(json.dumps(launch))
+        (self.root/'claude-response.json').write_text(json.dumps(self.result))
+        result = self.scan()
+        self.assertEqual(result['collection_complete'], 1)
+        self.assertEqual(result['reviews'], [expected])
+        (self.root/'lane-launch-receipt.json').unlink()
+        self.assertEqual(self.scan()['reviews'], [expected])
+
+    def test_snapshot_removal_restart_and_reappearance(self):
+        snapshot = self.scan()
+        db_path = self.root/'history.sqlite3'
+        with sqlite3.connect(db_path) as db:
+            review.preserve_review_markers(db, snapshot)
+            changes = db.total_changes
+            review.preserve_review_markers(db, {**snapshot, 'scan_timestamp_seconds': NOW+1})
+            self.assertEqual(db.total_changes, changes)
+            removed = review.preserve_review_markers(db, {**snapshot, 'reviews': [], 'scan_timestamp_seconds': NOW+2})
+            self.assertEqual(len(removed['retired_reviews']), 1)
+            payload = review.render_review_metrics(removed).decode()
+            samples = [line for line in payload.splitlines() if 'review_id=' in line]
+            self.assertEqual(len(samples), 1)
+            self.assertTrue(samples[0].startswith('cwo_review_snapshot_timestamp_seconds{'))
+            self.assertIn('record_state="removed"', samples[0])
+            self.assertIn('history="tracked"', samples[0])
+            self.assertNotIn('PRIVATE', payload)
+        with sqlite3.connect(db_path) as db:
+            restarted = review.preserve_review_markers(db, {**snapshot, 'reviews': [], 'scan_timestamp_seconds': NOW+3})
+            self.assertEqual(restarted['retired_reviews'], removed['retired_reviews'])
+            returned = review.preserve_review_markers(db, {**snapshot, 'scan_timestamp_seconds': NOW+4})
+            self.assertEqual(returned['retired_reviews'], [])
+
+    def test_snapshot_pending_replaced_and_normal_expiry(self):
+        snapshot = self.scan()
+        final = snapshot['reviews'][0]
+        pending = {**final, 'review_id': 'pending-result', 'outcome': 'unknown',
+                   'tokens': {}, 'duration': None, 'record_state': 'missing_result'}
+        with sqlite3.connect(':memory:') as db:
+            review.preserve_review_markers(db, {**snapshot, 'reviews': [pending]})
+            changed = review.preserve_review_markers(db, {**snapshot, 'scan_timestamp_seconds': NOW+1})
+            self.assertEqual([row['review_id'] for row in changed['retired_reviews']], ['pending-result'])
+            self.assertEqual(changed['reviews'], [final])
+            expired = review.preserve_review_markers(db, {**snapshot, 'reviews': [],
+                'scan_timestamp_seconds': final['timestamp']+review.RETENTION_SECONDS})
+            self.assertEqual(expired['retired_reviews'], [])
+            self.assertEqual(db.execute('SELECT count(*) FROM review_snapshot_history').fetchone()[0], 0)
+
+    def test_snapshot_history_cap_remains_visible_until_expiry(self):
+        snapshot = self.scan()
+        first = snapshot['reviews'][0]
+        second = {**first, 'review_id': 'second', 'timestamp': first['timestamp']+1}
+        with sqlite3.connect(':memory:') as db, mock.patch.object(review, 'SNAPSHOT_HISTORY_CAP', 1):
+            limited = review.preserve_review_markers(db, {**snapshot, 'reviews': [first, second]})
+            self.assertEqual(limited['limit_reached'], 1)
+            self.assertEqual(limited['collection_complete'], 0)
+            self.assertEqual(db.execute('SELECT count(*) FROM review_snapshot_history').fetchone()[0], 1)
+            later = review.preserve_review_markers(db, {**snapshot, 'reviews': [second], 'scan_timestamp_seconds': NOW+1})
+            self.assertEqual(later['limit_reached'], 1)
+            self.assertIn('history="legacy"', review.render_review_metrics(self.scan()).decode())
+
+    def test_conflicting_effort_aliases_are_rejected(self):
+        for field in ('requested_effort', 'executed_effort'):
+            for value in ('low', None, 1, []):
+                with self.subTest(field=field, value=value):
+                    launch = {**self.launch, field: value}
+                    with self.assertRaises(ValueError):
+                        review.project(launch, self.result,
+                                       {(self.launch['dispatch_id'], self.launch['packet_sha256']): NOW-110}, NOW)
+
+    def test_preparation_sidecar_does_not_add_pending_result(self):
+        preparation = {key: value for key, value in self.launch.items() if key != 'started_at'}
+        (self.root/'lane-launch.json').write_text(json.dumps(preparation))
+        self.assertEqual(self.scan()['collection_complete'], 1)
+        self.assertEqual(self.scan()['source_files'], 1)
+
+    def test_complete_new_pair_survives_bad_or_pending_legacy_receipt(self):
+        (self.root/'lane-launch.json').write_text(json.dumps(self.launch))
+        (self.root/'lane-response.json').write_text(json.dumps(self.result))
+        (self.root/'lane-launch-receipt.json').write_text('{}')
+        snapshot = self.scan()
+        self.assertEqual(len(snapshot['reviews']), 1)
+        self.assertEqual(snapshot['skipped_records']['invalid_record'], 1)
+        self.write()
+        (self.root/'lane-response.raw.json').unlink()
+        snapshot = self.scan()
+        self.assertEqual(len(snapshot['reviews']), 1)
+        self.assertEqual(snapshot['pending_results'], 1)
+
+    def test_valid_audit_survives_bad_alternate_with_visible_health(self):
+        expected = self.scan()['reviews']
+        (self.root/'contract-audit.jsonl').write_text('broken\n')
+        snapshot = self.scan()
+        self.assertEqual(snapshot['reviews'], expected)
+        self.assertEqual(snapshot['skipped_records']['invalid_record'], 1)
+        self.assertEqual(snapshot['collection_complete'], 0)
+
+    def test_provenance_final_usage_and_attempt_identity(self):
+        (self.root/'lane-launch-receipt.json').unlink()
+        self.write_provenance()
+        first = self.scan()
+        self.assertEqual(first['collection_complete'], 1)
+        row = first['reviews'][0]
+        self.assertEqual(row['tokens']['input'], 2)
+        self.assertEqual(row['tokens']['output'], 50)
+        self.assertEqual(row['effort'], 'high')
+        self.assertFalse(row['cli_identity'])
+        self.assertEqual(row['provenance_keys'], [])
+        self.write_provenance(self.root/'copy')
+        self.assertEqual(self.scan()['reviews'], [row])
+        self.assertEqual(review.ReviewCollector(directories=[self.root]).scan(now=NOW)['reviews'], [row])
+        payload = review.render_review_metrics(first).decode()
+        self.assertNotIn('PRIVATE', payload)
+        self.assertNotIn('dispatch-example', payload)
+        self.assertNotIn('cwo_review_session_info{', payload)
+
+    def test_mixed_formats_count_once_preserving_cli_identity(self):
+        expected = self.scan()['reviews'][0]
+        self.write_provenance()
+        result = self.scan()
+        self.assertEqual(result['collection_complete'], 1)
+        self.assertEqual(result['reviews'], [expected])
+        self.result['usage']['output_tokens'] = 60
+        self.write_provenance()
+        result = self.scan()
+        self.assertEqual(result['reviews'], [])
+        self.assertGreater(result['skipped_records']['conflicting_result'], 0)
+
+    def test_provenance_requires_prompt_hash_headers_and_audited_launch(self):
+        (self.root/'lane-launch-receipt.json').unlink()
+        provenance = self.write_provenance()
+        prompt_path = self.root/'review-prompt.txt'
+        prompt_path.write_bytes(prompt_path.read_bytes()+b'changed')
+        self.assertEqual(self.scan()['skipped_records']['invalid_record'], 1)
+        self.write_provenance()
+        (self.root/'contract-audit.jsonl').write_bytes(record('dispatch_prepared', timestamp=NOW-90,
+            dispatch_id=self.launch['dispatch_id'], packet_sha256=self.launch['packet_sha256']))
+        # Remove the older matching audit so the future prepare cannot qualify.
+        (self.root/'audit.jsonl').unlink()
+        self.assertEqual(self.scan()['skipped_records']['unmatched_dispatch'], 1)
+        self.write_provenance()
+        prompt_path.write_bytes(b'PRIVATE_PROMPT\n')
+        provenance['prompt_sha256'] = hashlib.sha256(prompt_path.read_bytes()).hexdigest()
+        (self.root/'review-provenance.json').write_text(json.dumps(provenance))
+        self.assertEqual(self.scan()['skipped_records']['invalid_record'], 1)
+
+    def test_provenance_cannot_resurrect_conflicting_cli_copies(self):
+        self.write_provenance()
+        self.result['usage']['output_tokens'] = 60
+        self.write(prefix='conflict')
+        snapshot = self.scan()
+        self.assertEqual(snapshot['reviews'], [])
+        self.assertGreater(snapshot['skipped_records']['conflicting_result'], 0)
+        self.assertEqual(snapshot['collection_complete'], 0)
+
+    def test_missing_provenance_prompt_is_a_source_error(self):
+        (self.root/'lane-launch-receipt.json').unlink()
+        self.write_provenance()
+        (self.root/'review-prompt.txt').unlink()
+        snapshot = self.scan()
+        self.assertEqual(snapshot['source_errors'], 1)
+        self.assertEqual(snapshot['pending_results'], 0)
+
+    def test_provenance_pending_and_multiple_final_results(self):
+        (self.root/'lane-launch-receipt.json').unlink()
+        self.write_provenance(final=False)
+        self.assertEqual(self.scan()['pending_results'], 1)
+        provenance = self.write_provenance()
+        provenance['events'].append(provenance['events'][-1])
+        (self.root/'review-provenance.json').write_text(json.dumps(provenance))
+        self.assertEqual(self.scan()['reviews'], [])
+        self.assertEqual(self.scan()['skipped_records']['invalid_record'], 1)
+
+    def test_provenance_retries_have_separate_recorded_launch_times(self):
+        (self.root/'lane-launch-receipt.json').unlink()
+        self.write_provenance()
+        self.launch['started_at'] = datetime.fromtimestamp(NOW-50, timezone.utc).isoformat()
+        self.write_provenance(self.root/'retry')
+        self.assertEqual(len(self.scan()['reviews']), 2)
+
+    def test_provenance_prompt_symlink_is_rejected(self):
+        (self.root/'lane-launch-receipt.json').unlink()
+        self.write_provenance()
+        prompt = self.root/'review-prompt.txt'
+        prompt.rename(self.root/'real-prompt.txt')
+        prompt.symlink_to(self.root/'real-prompt.txt')
+        self.assertEqual(self.scan()['source_errors'], 1)
 
     def test_exact_top_level_usage_models_duration_and_privacy(self):
         snap = self.scan();self.assertEqual(snap['collection_complete'], 1)

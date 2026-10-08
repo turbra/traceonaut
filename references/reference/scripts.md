@@ -6,46 +6,87 @@ description: Purpose, required arguments and defaults for the supported command-
 
 # Scripts
 
-Run `python3 scripts/<name> --help` from the checkout root for argument syntax. Paths in examples are placeholders.
+Run `python3 scripts/<name> --help` from the checkout root for syntax.
+Paths in examples are placeholders.
 
 ## Collection and Checks
 
+| Script | Arguments and behavior |
+| --- | --- |
+| `collect_sessions.py` | `--session-state-dir` and at least one source pair below. `--credential-file` is required when serving. Defaults: `--host 127.0.0.1`, `--port 9464`, `--poll-seconds 5` (1–60). `--once` reports enabled sources under `codex` / `bob` and exits without a listener. |
+| `create_metrics_token.py` | `--credential-file`: creates a new `0600` token file in an existing trusted directory, refuses replacement and prints no token. |
+| `check_metrics.py` | `--credential-file`; default `--url http://127.0.0.1:9464/metrics`, four-second timeout. Checks health-metric presence with proxies and redirects disabled. |
+
+Both sources accept `--session-retention-seconds 2592000` and
+`--session-export-cap 1000`; see [retention](retention-and-limits.md).
+Invalid configuration and fatal state/snapshot writes exit nonzero. Source read
+failures keep the listener running with that source's availability at 0.
+`--once` performs one bounded scan slice per source; unavailable sources exit
+nonzero, while readable sources with pending work exit 0.
+
+## Codex
+
+### Collection
+
+Enable with `--codex-home` and `--snapshot-file`.
+
 | Script | Required arguments | Behavior and defaults |
 | --- | --- | --- |
-| `collect_sessions.py` | `--session-state-dir`; at least one of `--codex-home` + `--snapshot-file` or `--bob-home` + `--bob-snapshot-file`; `--credential-file` when serving | Independently enables each source on one endpoint. Optional `--bob-otel-journal-dir` requires Bob and reads only a private sanitized generation journal. Defaults: `--host 127.0.0.1`, `--port 9464`, `--poll-seconds 5` (1–60). `--once` reports enabled sources under `codex` / `bob` keys and exits without a listener. |
-| `collect_codex_sessions.py` | `--codex-home`, `--session-state-dir`, `--snapshot-file`; `--credential-file` when serving | Compatibility entry point for existing Codex-only commands, including `--once`. |
-| `collect_codex_account.py` | `--codex-bin`, `--codex-home`, `--snapshot-file` | Account reads about once per minute; `--once` performs one read. Makes upstream requests. |
-| `create_metrics_token.py` | `--credential-file` | Creates a new `0600` token file in an existing trusted directory; refuses replacement. Prints no token. |
-| `check_metrics.py` | `--credential-file` | `--url http://127.0.0.1:9464/metrics`; four-second timeout. Checks health-metric presence; disables proxies and redirects. |
+| `collect_codex_sessions.py` | `--codex-home`, `--session-state-dir`, `--snapshot-file`; `--credential-file` when serving | Compatibility entry point for existing Codex commands. Defaults: `--host 127.0.0.1`, `--port 9464`, `--poll-seconds 5` (1–60). `--once` performs one bounded scan and exits without a listener. |
 
-Session collection also accepts `--session-retention-seconds 2592000` and `--session-export-cap 1000`; see [Retention and Limits](retention-and-limits.md).
+### Optional features
 
-Invalid arguments or configuration and fatal state or snapshot writes exit nonzero.
-Source read failures keep the listener running with that source's availability at
-`0`. `--once` performs one bounded scan slice per enabled source without starting
-a listener. It exits nonzero if an enabled source is unavailable; readable sources
-with pending work still exit `0`.
+| Script | Required arguments | Behavior and defaults |
+| --- | --- | --- |
+| `collect_codex_account.py` | `--codex-bin`, `--codex-home`, `--snapshot-file` | Makes upstream account reads about once per minute. `--once` performs one read and exits. |
 
-The following options require Codex collection. `--state-dir` adds an existing dispatch ledger, and `--account-snapshot-file` adds the optional account snapshot. These are separate inputs from the session state and snapshot.
+| Option | Purpose |
+| --- | --- |
+| `--account-snapshot-file` | Adds the private numeric account snapshot. |
+| `--cwo-sessions` | Associates supported skill blocks and direct helper commands with Codex sessions. |
+| `--cwo-audit-dir`, `--cwo-audit-file` | Adds selected read-only CWO workflow logs; repeat for multiple absolute paths. |
+| `--cwo-review-dir` | Reads saved review launch/result pairs or provenance bundles with matching audits; repeat for each absolute source directory. |
+| `--cwo-review-discovery` | Discovers external reviews from recorded CWO session launches and their literal output paths; requires `--cwo-sessions`. Disabled by default. |
+| `--state-dir` | Adds an existing read-only controller dispatch ledger. |
 
-`--cwo-sessions` enables CWO association across the configured Codex profile. `--once` includes CWO scan status and association count.
+Account and CWO options require Codex collection. Inputs must be separate from
+collector output. `--once` includes health and counts for enabled optional inputs.
+See [account allowance](../optional/account-allowance.md),
+[CWO integration](../integrations/cwo.md) and the
+[custom review adapter](../integrations/custom-review-adapter.md).
 
-`--cwo-review-dir` reads optional custom paired review artifacts from an absolute directory. Inputs must be separate from collector output. `--once` includes `cwo_reviews` health and counts. See the [custom review adapter](../integrations/custom-review-adapter.md).
+### Renderers
 
-`--cwo-audit-dir` and `--cwo-audit-file` add optional read-only CWO workflow logs to the same endpoint. Both take absolute paths and can be repeated. Sources must be separate from collector output. With these options, `--once` includes a `cwo_audit` health/count summary. See [CWO Integration](../integrations/cwo.md).
-
-## Dashboard Renderers
-
-All renderers require `--template` and `--output`. Session renderers also require `--snapshot-file`. CWO Overview requires at least one of `--session-snapshot-file` or `--presentation-file`; use `--session-snapshot-file` for session and project names. `--presentation-file` is an advanced option described in [Controller Metrics](../integrations/controller-metrics.md).
-
-| Script | Output / additional option |
+| Script | Dashboard |
 | --- | --- |
 | `render_codex_beta_dashboard.py` | Work Overview; optional `--labels-file` aliases. |
 | `render_codex_sessions_dashboard.py` | All Sessions or Codex TUI · Beta, selected by `--template`. |
-| `render_observability_dashboard.py` | CWO Overview. |
-| `render_bob_dashboard.py` | IBM Bob · Beta; reads the separate Bob snapshot. |
+| `render_observability_dashboard.py` | CWO Overview; accepts `--session-snapshot-file` or `--presentation-file`. |
 
-All accept `--datasource-uid` for provisioning and `--watch-seconds` (1–60). Omitting the watch option renders once. Omitting the datasource keeps the import picker.
+## IBM Bob
+
+### Collection
+
+Enable with `--bob-home` and `--bob-snapshot-file`. Source paths, snapshots and
+`--session-state-dir` must be absolute, with collector output outside source homes.
+
+### Optional features
+
+`--bob-otel-journal-dir` reads the private sanitized generation journal and requires
+`--bob-home`. Keep the journal separate from source homes, private state, snapshots
+and credentials. See [token capture setup](../optional/bob-token-capture.md).
+
+### Renderers
+
+`render_bob_dashboard.py` renders IBM Bob · Beta from the private Bob snapshot.
+
+## Dashboard Renderers
+
+All renderers require `--template` and `--output`. Session renderers require
+`--snapshot-file`. CWO Overview requires at least one of `--session-snapshot-file` or `--presentation-file`; readable project/session names use the former.
+All accept `--datasource-uid` and `--watch-seconds` (1–60). Omitting the watch option
+renders once; omitting the datasource retains the import picker.
+See [dashboard identities](dashboards.md) for UIDs, templates and renderer names.
 
 | Dashboard | Identity | Renderer | Release bundle |
 | --- | --- | --- | --- |

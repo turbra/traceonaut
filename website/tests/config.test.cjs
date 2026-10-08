@@ -22,15 +22,18 @@ test('renders only explicit public documents, directly from source', () => {
   assert.equal(path.isAbsolute(docs.sidebarPath), false);
   assert.equal(path.isAbsolute(config.presets[0][1].theme.customCss), false);
   assert.deepEqual(docs.include, require('../docs-manifest.json'));
-  assert.equal(docs.include.length, 30);
+  assert.equal(docs.include.length, 32);
   assert.equal(new Set(docs.include).size, docs.include.length);
   for (const file of docs.include) {
     assert.match(file, /^(references\/(?:[a-z-]+\/)*[a-z-]+\.mdx?|website\/docs\/home\.mdx)$/);
     assert(fs.lstatSync(path.join(root, file)).isFile());
   }
-  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 29);
+  assert.equal(docs.include.filter(file => file.startsWith('references/')).length, 31);
   assert(docs.include.includes('references/integrations/custom-review-adapter.md'));
   assert(docs.include.includes('references/integrations/controller-metrics.md'));
+  for (const file of ['references/sources/codex.md', 'references/sources/ibm-bob.md',
+    'references/optional/bob-token-capture.md']) assert(docs.include.includes(file), file);
+  assert(!docs.include.includes('references/bob-collection.md'));
 });
 
 test('sidebar document IDs resolve to the same authoritative files', () => {
@@ -94,7 +97,14 @@ test('README and site navigation use matching guide destinations', () => {
   const start = sidebars.docs.find(item => item.label === 'Getting Started');
   assert.deepEqual(start.items.map(item => [item.label, item.id]), [
     ['Install', 'references/install'], ['Quick Start', 'references/getting-started'],
-    ['IBM Bob Collection', 'references/bob-collection'],
+  ]);
+  const sources = sidebars.docs.find(item => item.label === 'Sources');
+  assert.deepEqual(sources.items.map(item => [item.label, item.id]), [
+    ['Codex', 'references/sources/codex'], ['IBM Bob', 'references/sources/ibm-bob'],
+  ]);
+  const sourceMenu = config.themeConfig.navbar.items.find(item => item.label === 'Sources');
+  assert.deepEqual(sourceMenu.items.map(item => [item.label, item.to]), [
+    ['Codex', '/sources/codex/'], ['IBM Bob', '/sources/ibm-bob/'],
   ]);
   assert.match(fs.readFileSync(path.join(root, 'references/install.md'), 'utf8'), /^# Install$/m);
   assert.match(fs.readFileSync(path.join(root, 'references/getting-started.mdx'), 'utf8'), /^# Quick Start$/m);
@@ -103,25 +113,37 @@ test('README and site navigation use matching guide destinations', () => {
 
 test('dashboard choices match all standard and experimental templates', () => {
   const dashboards = sidebars.docs.find(item => item.type === 'category' && item.label === 'Dashboards');
-  assert(dashboards.items.some(item => item.id === 'references/dashboards/all-sessions'));
+  assert.deepEqual([dashboards.items[0].label, dashboards.items[0].id],
+    ['Choosing a Dashboard', 'references/dashboards/index']);
+  const codex = dashboards.items.find(item => item.type === 'category' && item.label === 'Codex');
+  const bob = dashboards.items.find(item => item.type === 'category' && item.label === 'IBM Bob');
+  assert.deepEqual(codex.items.map(item => item.id), [
+    'references/dashboards/work-overview', 'references/dashboards/all-sessions',
+    'references/dashboards/tui-beta', 'references/dashboards/cwo',
+  ]);
+  assert.deepEqual(bob.items.map(item => item.id), ['references/dashboards/ibm-bob-beta']);
+  assert(dashboards.items.some(item => item.id === 'references/dashboards/reading-values'));
   const optional = sidebars.docs.find(item => item.label === 'Optional');
-  assert(optional.items.some(item => item.id === 'references/dashboards/cwo'));
+  assert(!optional.items.some(item => item.id === 'references/dashboards/cwo'));
+  for (const id of ['references/optional/account-allowance', 'references/integrations/cwo',
+    'references/optional/bob-token-capture']) assert(optional.items.some(item => item.id === id), id);
   const home = fs.readFileSync(path.join(root, 'website/docs/home.mdx'), 'utf8');
   const section = home.split('\n## Dashboards\n')[1].split('\n## ')[0];
   const routes = [
     '/dashboards/work-overview/',
-    '/dashboards/all-sessions/', '/dashboards/cwo/',
-    '/dashboards/tui-beta/',
+    '/dashboards/all-sessions/', '/dashboards/tui-beta/',
+    '/dashboards/cwo/',
     '/dashboards/ibm-bob-beta/',
   ];
   const menu = config.themeConfig.navbar.items.find(item => item.label === 'Dashboards');
-  assert.deepEqual(menu.items.map(item => item.to), routes);
+  assert.deepEqual(menu.items.map(item => item.to), ['/dashboards/', ...routes]);
+  assert.equal(menu.items[0].label, 'Choosing a Dashboard');
   for (const route of routes) assert(section.includes(`to="${route}"`));
   const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
-  for (const [index, name] of ['codex-work-overview-beta', 'codex-all-sessions', 'cwo-overview', 'codex-tui-beta', 'ibm-bob-beta'].entries()) {
+  for (const [index, name] of ['codex-work-overview-beta', 'codex-all-sessions', 'codex-tui-beta', 'cwo-overview', 'ibm-bob-beta'].entries()) {
     const {title} = JSON.parse(fs.readFileSync(path.join(root, `examples/observability/${name}.json`), 'utf8'));
     assert(section.includes(`<strong>${title}</strong>`), title);
-    assert.equal(menu.items[index].label, title);
+    assert.equal(menu.items[index + 1].label, (name === 'ibm-bob-beta' ? 'IBM Bob: ' : 'Codex: ') + title);
     assert(readme.includes(`[${title}](https://turbra.github.io/traceonaut${routes[index]})`), title);
   }
   const expectedFiles = ['codex-all-sessions.json', 'codex-tui-beta.json', 'codex-work-overview-beta.json', 'cwo-overview.json', 'ibm-bob-beta.json'];
@@ -129,6 +151,8 @@ test('dashboard choices match all standard and experimental templates', () => {
     .filter(file => file.endsWith('.json')).sort();
   assert.deepEqual(actualFiles, expectedFiles);
   const chooser = fs.readFileSync(path.join(root, 'references/dashboards/index.md'), 'utf8');
+  assert.deepEqual([...chooser.matchAll(/^## (Codex|IBM Bob)$/gm)].map(match => match[1]),
+    ['Codex', 'IBM Bob']);
   const reference = fs.readFileSync(path.join(root, 'references/reference/dashboards.md'), 'utf8');
   const referenceFiles = [...reference.matchAll(/`([a-z-]+\.json)`/g)].map(match => match[1]).sort();
   assert.deepEqual(referenceFiles, actualFiles);

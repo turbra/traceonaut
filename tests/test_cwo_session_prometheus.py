@@ -28,7 +28,9 @@ class CwoSessionQueryTests(unittest.TestCase):
         detail_queries = {t['refId']: interpolate(t['expr'])
                           for t in table['targets'] if t['refId'] in ('E', 'F', 'G')}
         for panel in dashboard['panels']:
-            if panel['id'] >= 300:
+            # Session inventory is latest-at-end. Contractor review history
+            # (400-series panels) separately supports expired saved records.
+            if 300 <= panel['id'] < 400:
                 for target in panel.get('targets',[]):
                     self.assertNotIn('[$__range]',target['expr'], 'Session view must not scan every historical sample for a latest-at-end value')
         def series(name,value):return {'series':name,'values':str(value)+'x120'}

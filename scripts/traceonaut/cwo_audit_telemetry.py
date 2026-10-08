@@ -196,6 +196,7 @@ class AuditCollector:
             "source_available": int(read > 0), "collection_complete": int(read > 0 and not errors and not limited and not any(skipped.values())),
             "scan_timestamp_seconds": now, "source_files": read, "source_errors": errors,
             "limit_reached": int(limited), "events": ordered[:EXPORT_CAP], "skipped_records": dict(skipped),
+            "source_paths": [str(path) for path in cache],
         }
 
 

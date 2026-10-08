@@ -8,7 +8,6 @@
   "references/dashboards/tui-beta.md",
   "references/getting-started.mdx",
   "references/install.md",
-  "references/bob-collection.md",
   "references/dashboards/ibm-bob-beta.md",
   "references/integrations/cwo.md",
   "references/integrations/custom-review-adapter.md",
@@ -28,5 +27,8 @@
   "references/reference/limits-and-internals.md",
   "references/reference/metrics.md",
   "references/reference/retention-and-limits.md",
-  "references/reference/scripts.md"
+  "references/reference/scripts.md",
+  "references/sources/codex.md",
+  "references/sources/ibm-bob.md",
+  "references/optional/bob-token-capture.md"
 ]

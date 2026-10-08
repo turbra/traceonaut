@@ -206,7 +206,10 @@ class DocumentationTests(unittest.TestCase):
         self.assertIn("Deprecated", scripts)
         self.assertIn("--state-dir", controller)
         self.assertIn("not built-in CWO artifacts", guide)
-        self.assertIn("not built-in CWO files or behavior", adapter)
+        self.assertIn("Review scripts must save one of the formats below", adapter)
+        for layout in ("reviewer-launch-receipt.json", "reviewer-launch.json", "reviewer-provenance.json"):
+            self.assertIn(layout, adapter)
+        self.assertIn("Repeat the option for each project", adapter)
         self.assertIn("runner.py", adapter)
         self.assertIn("at least one of `--session-snapshot-file` or `--presentation-file`", scripts)
         custom_events = (

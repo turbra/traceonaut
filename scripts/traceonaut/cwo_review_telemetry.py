@@ -1,4 +1,4 @@
-"""Opt-in reader for paired CWO launch receipts and Claude CLI JSON results.
+"""Opt-in reader for audited contractor launches and Claude CLI results.
 
 This adapter reads an existing artifact layout, not the observed Codex ledger.
 Launch time is explicit; a result's duration does not establish a finish timestamp.
@@ -15,7 +15,7 @@ import time
 
 from .codex_session_telemetry import _open_source, _timestamp, _uuid
 from .cwo_audit_telemetry import AuditCollector, _object, _parse, RETENTION_SECONDS
-from .cwo_review_provenance import receipt_keys
+from .cwo_review_provenance import digest, receipt_keys
 
 MAX_FILE_BYTES = 2 * 1024 * 1024
 MAX_SCAN_BYTES = 32 * 1024 * 1024
@@ -24,12 +24,12 @@ SKIP_REASONS = ("invalid_record", "unmatched_dispatch", "future_timestamp", "con
 LABELS = ("review_id", "outcome", "requested_model", "reported_model", "effort")
 KINDS = ("input", "cache_creation", "cache_read", "output", "thinking")
 METRICS = {
-    "cwo_review_source_available": ((), "At least one configured CLI launch receipt was read."),
+    "cwo_review_source_available": ((), "At least one configured review launch or provenance record was read."),
     "cwo_review_collection_complete": ((), "Configured paired review artifacts read without errors, pending results or limits."),
     "cwo_review_scan_timestamp_seconds": ((), "Unix time of the latest CLI review scan attempt."),
-    "cwo_review_source_files": ((), "CLI launch receipts read in the latest scan."),
+    "cwo_review_source_files": ((), "Review launch and provenance records read in the latest scan."),
     "cwo_review_source_errors": ((), "Review artifact access failures in the latest scan."),
-    "cwo_review_pending_results": ((), "Launch receipts whose paired result file is absent."),
+    "cwo_review_pending_results": ((), "Recorded launches without a saved final result."),
     "cwo_review_limit_reached": ((), "Review artifact discovery, byte or export cap reached."),
     "cwo_review_skipped_records": (("reason",), "Review artifacts omitted in the latest scan by bounded reason."),
     "cwo_review_started_timestamp_seconds": (LABELS, "Recorded launch time of a CLI review with a collected result; not its finish time."),
@@ -59,21 +59,46 @@ def _json(content):
     return value
 
 
-def project(launch, result, prepared, now):
+def normalize_launch(launch):
+    """Accept recorded CLI effort aliases without claiming provider attestation."""
+    launch = dict(launch)
+    efforts = {launch[key] for key in ("effort", "requested_effort", "executed_effort")
+               if key in launch and isinstance(launch[key], str)}
+    if len(efforts) > 1 or any(key in launch and not isinstance(launch[key], str)
+                             for key in ("effort", "requested_effort", "executed_effort")):
+        raise ValueError("invalid_record")
+    if efforts:
+        launch["effort"] = efforts.pop()
+    return launch
+
+
+def launch_time(launch, now):
+    value = launch.get("started_at")
+    at = _timestamp(value)
+    if (not isinstance(value, str) or not re.search(r"(?:Z|[+-]\d\d:\d\d)$", value)
+            or at is None or at <= 0):
+        raise ValueError("invalid_record")
+    if at > now:
+        raise ValueError("future_timestamp")
+    _label(launch.get("requested_model"))
+    _label(launch.get("effort", "unknown"))
+    return at
+
+
+def project(launch, result, prepared, now, *, attempt_identity=False):
+    launch = normalize_launch(launch)
     dispatch, packet = launch.get("dispatch_id"), launch.get("packet_sha256")
     if (not isinstance(dispatch, str) or not 0 < len(dispatch) <= 256
             or not isinstance(packet, str) or re.fullmatch(r"[0-9a-f]{64}", packet) is None):
         raise ValueError("invalid_record")
-    at = _timestamp(launch.get("started_at"))
-    # Require timezone-qualified source time, never filesystem mtime.
-    if not isinstance(launch.get("started_at"), str) or not re.search(r"(?:Z|[+-]\d\d:\d\d)$", launch["started_at"]) or at is None or at <= 0:
-        raise ValueError("invalid_record")
-    if at > now:
-        raise ValueError("future_timestamp")
+    at = launch_time(launch, now)
     if (dispatch, packet) not in prepared or prepared[dispatch, packet] > at:
         raise ValueError("unmatched_dispatch")
     identity, session = _uuid(result.get("uuid")), _uuid(result.get("session_id"))
-    if result.get("type") != "result" or type(result.get("is_error")) is not bool or not identity or not session:
+    if attempt_identity and any(key in result and not _uuid(result[key]) for key in ("uuid", "session_id")):
+        raise ValueError("invalid_record")
+    if (result.get("type") != "result" or type(result.get("is_error")) is not bool
+            or (not attempt_identity and (not identity or not session))):
         raise ValueError("invalid_record")
     usage = result.get("usage")
     if usage is not None and not isinstance(usage, dict):
@@ -96,7 +121,9 @@ def project(launch, result, prepared, now):
     models = result.get("modelUsage", {})
     if not isinstance(models, dict):raise ValueError("invalid_record")
     reported = _label(next(iter(models))) if len(models) == 1 else "multiple" if models else "unknown"
-    review_id = hashlib.sha256((session + ":" + identity).encode()).hexdigest()
+    attempt = digest(["review-attempt", dispatch, packet, at])
+    review_id = (hashlib.sha256((session + ":" + identity).encode()).hexdigest()
+                 if identity and session else digest([attempt, launch.get("prompt_sha256")]))
     return {"review_id": review_id, "timestamp": at,
             "outcome": "failed" if result["is_error"] else "completed",
             "requested_model": _label(launch.get("requested_model")), "reported_model": reported,
@@ -104,7 +131,8 @@ def project(launch, result, prepared, now):
             "duration": duration / 1000 if duration is not None else None,
             # Retained in the private numeric projection for conflict checks only.
             "binding": hashlib.sha256((dispatch + ":" + packet).encode()).hexdigest(),
-            "provenance_keys": receipt_keys(launch, result)}
+            "attempt": attempt, "cli_identity": bool(identity and session),
+            "provenance_keys": receipt_keys(launch, result) if identity and session else []}
 
 
 class ReviewCollector(AuditCollector):
@@ -112,14 +140,14 @@ class ReviewCollector(AuditCollector):
         super().__init__(directories=directories)
 
     def _candidate(self, name):
-        return name.endswith("-launch-receipt.json")
+        return name.endswith(("-launch-receipt.json", "-launch.json", "-provenance.json"))
 
     def scan(self, *, now=None):
         now = time.time() if now is None else now
         files, errors, limited = self._discover()
         read = pending = 0
         remaining = MAX_SCAN_BYTES
-        reviews, conflicts, skipped = {}, set(), Counter()
+        reviews, conflicts, poisoned_attempts, skipped = {}, set(), set(), Counter()
         audits = {}
 
         def content(path):
@@ -139,30 +167,93 @@ class ReviewCollector(AuditCollector):
                 raise OSError("source changed")
             return raw
 
-        for path in files:
-            try:
-                launch = _json(content(path)); read += 1
-                raw_path = path.with_name(path.name.removesuffix("-launch-receipt.json") + "-response.raw.json")
-                try:
-                    result = _json(content(raw_path))
-                except FileNotFoundError:
-                    pending += 1;continue
-                audit_path = path.parent / "audit.jsonl"
-                if audit_path not in audits:
-                    raw = content(audit_path)
+        def prepared_at(directory):
+            nonlocal errors, limited
+            if directory not in audits:
+                prepared = {}
+                found = False
+                for name in ("audit.jsonl", "contract-audit.jsonl"):
+                    try:
+                        raw = content(directory / name)
+                    except FileNotFoundError:
+                        continue
+                    except OverflowError:
+                        found = limited = True
+                        continue
+                    except (OSError, UnicodeError):
+                        found = True
+                        errors += 1
+                        continue
+                    found = True
                     events, omissions = _parse(raw)
-                    if omissions:raise ValueError("invalid_record")
-                    valid = {event[0]: event[2] for event in events if event[1] == "dispatch_prepared" and event[2] <= now}
-                    prepared = {}
+                    if omissions:
+                        skipped["invalid_record"] += 1
+                        continue
+                    valid = {event[0]: event[2] for event in events
+                             if event[1] == "dispatch_prepared" and event[2] <= now}
                     for line in raw.splitlines():
-                        if not line.strip():continue
+                        if not line.strip():
+                            continue
                         record = _json(line)
                         at = valid.get(record.get("event_hash"))
                         key = record.get("dispatch_id"), record.get("packet_sha256")
                         if at is not None and all(isinstance(v, str) for v in key):
                             prepared[key] = min(at, prepared.get(key, at))
-                    audits[audit_path] = prepared
-                row = project(launch, result, audits[audit_path], now)
+                if not found:
+                    raise FileNotFoundError()
+                audits[directory] = prepared
+            return audits[directory]
+
+        def provenance(path, launch):
+            # The prompt is hashed in memory, never retained or exported. Only
+            # its explicit CWO dispatch headers bind this attempt to the audit.
+            prompt = content(path.with_name(path.name.removesuffix("-provenance.json") + "-prompt.txt"))
+            if hashlib.sha256(prompt).hexdigest() != launch.get("prompt_sha256"):
+                raise ValueError("invalid_record")
+            text = prompt.decode("utf-8")
+            dispatches = re.findall(r"^Dispatch ID: ([^\r\n]+)$", text, re.MULTILINE)
+            packets = re.findall(r"^Packet SHA-256: ([0-9a-f]{64})$", text, re.MULTILINE)
+            if len(dispatches) != 1 or len(packets) != 1:
+                raise ValueError("invalid_record")
+            for key, value in (("dispatch_id", dispatches[0]), ("packet_sha256", packets[0])):
+                if key in launch and launch[key] != value:
+                    raise ValueError("invalid_record")
+                launch[key] = value
+            events = launch.get("events")
+            if not isinstance(events, list) or any(not isinstance(event, dict) for event in events):
+                raise ValueError("invalid_record")
+            finals = [event for event in events if event.get("type") == "result"]
+            if not finals:
+                return None
+            if len(finals) != 1:
+                raise ValueError("invalid_record")
+            return finals[0]
+
+        for path in files:
+            try:
+                # A preparation file is sometimes retained alongside the actual
+                # timed launch receipt. A complete second launch is still read.
+                launch = _json(content(path))
+                if (path.name.endswith("-launch.json") and
+                        "started_at" not in launch and
+                        path.with_name(path.name.removesuffix("-launch.json") + "-launch-receipt.json") in files):
+                    continue
+                read += 1
+                launch = normalize_launch(launch)
+                launch_time(launch, now)
+                is_provenance = path.name.endswith("-provenance.json")
+                if is_provenance:
+                    result = provenance(path, launch)
+                    if result is None:
+                        pending += 1;continue
+                else:
+                    suffix, result_suffix = ("-launch-receipt.json", "-response.raw.json") if path.name.endswith("-launch-receipt.json") else ("-launch.json", "-response.json")
+                    try:
+                        result = _json(content(path.with_name(path.name.removesuffix(suffix) + result_suffix)))
+                    except FileNotFoundError:
+                        pending += 1;continue
+                row = project(launch, result, prepared_at(path.parent), now,
+                              attempt_identity=is_provenance)
                 if row["timestamp"] < now - RETENTION_SECONDS:continue
                 identity = row["review_id"]
                 if identity in reviews:
@@ -170,6 +261,7 @@ class ReviewCollector(AuditCollector):
                     core = lambda value: {k:v for k,v in value.items() if k not in {"provenance_keys", "provenance_conflict"}}
                     if core(prior) != core(row):
                         conflicts.add(identity)
+                        poisoned_attempts.update((prior["attempt"], row["attempt"]))
                     elif prior["provenance_keys"] != row["provenance_keys"]:
                         prior["provenance_conflict"] = True
                 else:
@@ -182,6 +274,27 @@ class ReviewCollector(AuditCollector):
                 # Bounded reasons only; never expose source exception strings.
                 reason = str(error)
                 skipped[reason if reason in SKIP_REASONS else "invalid_record"] += 1
+        for identity, row in list(reviews.items()):
+            if row["attempt"] in poisoned_attempts:
+                conflicts.add(identity)
+                reviews.pop(identity)
+        # A copied launch can have both a full CLI result and a sanitized
+        # provenance result. Reconcile on the audited launch, never token values.
+        attempts = {}
+        for row in reviews.values():
+            attempts.setdefault(row["attempt"], []).append(row)
+        for group in attempts.values():
+            if len(group) == 1 or all(row["cli_identity"] for row in group):
+                continue
+            prior = next((row for row in group if row["cli_identity"]), group[0])
+            fields = ("timestamp", "outcome", "requested_model", "reported_model", "effort", "tokens", "duration", "binding")
+            if (any(any(prior[key] != row[key] for key in fields) for row in group)
+                    or sum(row["cli_identity"] for row in group) > 1):
+                conflicts.update(row["review_id"] for row in group)
+            else:
+                for row in group:
+                    if row is not prior:
+                        reviews.pop(row["review_id"], None)
         for identity in conflicts:reviews.pop(identity, None)
         skipped["conflicting_result"] = len(conflicts)
         ordered = sorted(reviews.values(), key=lambda r: (r["timestamp"], r["review_id"]), reverse=True)

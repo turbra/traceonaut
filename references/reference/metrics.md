@@ -198,16 +198,16 @@ Association sources: `skill_block`, `tool_execution`, `parent_session`. Command 
 
 ### CLI Review Results
 
-Optional paired-artifact collection uses gauges. Review usage is separate from Codex session and observed-dispatch accounting.
+Optional review artifact collection uses gauges. Review usage is separate from Codex session and observed-dispatch accounting.
 
 | Metric | Type | Labels | Meaning |
 | --- | --- | --- | --- |
-| `cwo_review_source_available` | gauge | None | At least one configured CLI launch receipt was read. |
+| `cwo_review_source_available` | gauge | None | At least one configured review launch or provenance record was read. |
 | `cwo_review_collection_complete` | gauge | None | Configured paired review artifacts read without errors, pending results or limits. |
 | `cwo_review_scan_timestamp_seconds` | gauge | None | Unix time of the latest CLI review scan attempt. |
-| `cwo_review_source_files` | gauge | None | CLI launch receipts read in the latest scan. |
+| `cwo_review_source_files` | gauge | None | Review launch and provenance records read in the latest scan. |
 | `cwo_review_source_errors` | gauge | None | Review artifact access failures in the latest scan. |
-| `cwo_review_pending_results` | gauge | None | Launch receipts whose paired result file is absent. |
+| `cwo_review_pending_results` | gauge | None | Recorded launches without a saved final result. |
 | `cwo_review_limit_reached` | gauge | None | Review artifact discovery, byte or export cap reached. |
 | `cwo_review_skipped_records` | gauge | `reason` | Review artifacts omitted in the latest scan by bounded reason. |
 | `cwo_review_started_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | Recorded launch time of a CLI review with a collected result. |

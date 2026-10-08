@@ -45,7 +45,7 @@ Enable with `--codex-home` and `--snapshot-file`.
 | `--account-snapshot-file` | Adds the private numeric account snapshot. |
 | `--cwo-sessions` | Associates supported skill blocks and direct helper commands with Codex sessions. |
 | `--cwo-audit-dir`, `--cwo-audit-file` | Adds selected read-only CWO workflow logs; repeat for multiple absolute paths. |
-| `--cwo-review-dir` | Reads paired artifacts supplied by a custom adapter; repeat for multiple absolute directories. |
+| `--cwo-review-dir` | Reads saved review launch/result pairs or provenance bundles with matching audits; repeat for each absolute source directory. |
 | `--state-dir` | Adds an existing read-only controller dispatch ledger. |
 
 Account and CWO options require Codex collection. Inputs must be separate from

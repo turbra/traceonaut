@@ -63,7 +63,7 @@ See [session association parsing and scan bounds](limits-and-internals.md#cwo-se
 
 The optional paired-artifact reader exports at most **256 collected results launched within 30 days**. Source files stay unchanged.
 
-Result identity comes from the CLI session and result UUIDs. Source launch times select the interval. Repeated scans and copied artifacts preserve one result. Prometheus history begins at the first scrape, including results collected from older files.
+Result identity comes from the CLI session and result UUIDs when retained. Provenance bundles without those IDs use their audited dispatch, packet, prompt hash and launch time. Source launch times select the interval. Repeated scans and copied artifacts preserve one result. Prometheus history begins at the first scrape, including results collected from older files.
 
 Incomplete session scans or unreadable sources can leave attribution Pending while review counts and usage remain visible. Expired or unsupported session sources leave reviews Unlinked; expanding the session export window can make older source histories eligible again.
 See [review artifact parsing and scan bounds](limits-and-internals.md#cwo-cli-review-artifacts).

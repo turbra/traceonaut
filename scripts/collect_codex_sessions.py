@@ -199,7 +199,7 @@ def main(argv=None, *, require_codex=True):
     parser.add_argument("--cwo-audit-dir", type=Path, action="append", default=[],
                         help="optional audit directory; recursively read audit.jsonl and *-audit.jsonl files")
     parser.add_argument("--cwo-review-dir", type=Path, action="append", default=[],
-                        help="optional custom-adapter directory of launch receipts, Claude results and audit.jsonl; standard CWO does not create these pairs")
+                        help="optional review artifact directory; reads supported launch/result pairs or provenance bundles with matching CWO audits; repeat for multiple roots")
     parser.add_argument("--credential-file", type=Path)
     parser.add_argument("--host", default="127.0.0.1",
                         help="numeric bind IP (default: 127.0.0.1); use a specific LAN/VPN IP for remote scraping; HTTP only")

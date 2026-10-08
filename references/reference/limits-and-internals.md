@@ -46,7 +46,9 @@ Each pass reads at most 64 MiB, up to 32 MiB per file, from at most 4,096 select
 
 The custom review reader requires a matching hash-valid `dispatch_prepared` audit event recorded before launch, an explicit timezone-qualified start time, and a saved final Claude CLI result. It accepts paired files and provenance bundles. Bundles bind the launch through a hash-checked prompt's explicit dispatch headers. Timing uses the source launch time. Conflicting copies are omitted; repeated scans and copies preserve one result. See the [custom review adapter](../integrations/custom-review-adapter.md) for the artifact fields.
 
-The review reader scans at most 256 results, 32 MiB per scan, and 2 MiB per file; review attribution has a separate 64 MiB per pass, 32 MiB per file, and 4,096-file bound. Its private index retains at most 4,096 launch evidence records and 4,096 interactive launch records. Source files are read without following symlinks.
+The review reader exports at most 256 invocations. Explicit artifact directories have a 32 MiB scan budget and a 2 MiB file limit. Optional launch discovery shares a separate 32 MiB output budget, with an 8 MiB file limit and 4,096 retained launch records. Review attribution reads at most 64 MiB per pass, 32 MiB per rollout, and 4,096 rollout files. Limits and unsupported recognized launches produce visible gaps. Source files must be owned regular files; symlinks are rejected.
+
+Discovery parses recorded commands as data. Checked-command wrapper linkage requires a literal spec, a retained script older than the launch, an exact prompt/output pair, matching audit binding and compatible timestamps. This is retained-artifact association, not historical code attestation. Numeric projections, provider identities and audit dispositions persist in the private index; prompts and review text do not.
 
 ### Account Windows
 

@@ -21,22 +21,31 @@ MAX_FILE_BYTES = 2 * 1024 * 1024
 MAX_SCAN_BYTES = 32 * 1024 * 1024
 EXPORT_CAP = 256
 SKIP_REASONS = ("invalid_record", "unmatched_dispatch", "future_timestamp", "conflicting_result")
+DISCOVERY_REASONS = ('missing_result','conflicting_result','invalid_record','oversized_output',
+                     'changing_output','unreadable_output','reused_output','unsupported_launch')
 LABELS = ("review_id", "outcome", "requested_model", "reported_model", "effort")
 KINDS = ("input", "cache_creation", "cache_read", "output", "thinking")
+SNAPSHOT_LABELS = (*LABELS, 'state', 'record_state', 'verdict', 'project_id', 'session_id',
+                   'input_available', 'output_available', 'duration_available')
 METRICS = {
     "cwo_review_source_available": ((), "At least one configured review launch or provenance record was read."),
-    "cwo_review_collection_complete": ((), "Configured paired review artifacts read without errors, pending results or limits."),
+    "cwo_review_collection_complete": ((), "Enabled review sources read without errors, missing results or limits."),
     "cwo_review_scan_timestamp_seconds": ((), "Unix time of the latest CLI review scan attempt."),
     "cwo_review_source_files": ((), "Review launch and provenance records read in the latest scan."),
     "cwo_review_source_errors": ((), "Review artifact access failures in the latest scan."),
     "cwo_review_pending_results": ((), "Recorded launches without a saved final result."),
     "cwo_review_limit_reached": ((), "Review artifact discovery, byte or export cap reached."),
     "cwo_review_skipped_records": (("reason",), "Review artifacts omitted in the latest scan by bounded reason."),
-    "cwo_review_started_timestamp_seconds": (LABELS, "Recorded launch time of a CLI review with a collected result; not its finish time."),
+    "cwo_review_started_timestamp_seconds": (LABELS, "Recorded launch time of an external review invocation."),
     "cwo_review_tokens": ((*LABELS, "kind"), "CLI top-level usage by kind; thinking is a subset of output. Input excludes cache creation and reads."),
     "cwo_review_duration_seconds": (LABELS, "CLI-reported result duration; not time inferred from file timestamps."),
     "cwo_review_session_info": (("review_id", "project_id", "session_id"), "Proven immediate launching Codex session for a collected CLI review."),
     "cwo_review_attribution_state": (("review_id", "state"), "Review attribution: linked, unlinked, ambiguous or pending source scanning; one state per review."),
+    "cwo_review_discovered_launches": ((), "External review launches found in retained CWO session command records; excludes explicit model checks."),
+    "cwo_review_discovery_gaps": (("reason",), "Discovered review executions with incomplete or conflicting saved evidence."),
+    "cwo_review_record_state": (("review_id","record_state"), "Availability of the saved invocation result; not review acceptance."),
+    "cwo_review_evaluation_info": (("review_id","verdict"), "Latest recorded evaluator verdict for the matching audited dispatch; not final human acceptance."),
+    "cwo_review_snapshot_timestamp_seconds": (SNAPSHOT_LABELS, "Scan timestamp identifying the current review projection, including missing values and source linkage."),
 }
 
 
@@ -132,26 +141,55 @@ def project(launch, result, prepared, now, *, attempt_identity=False):
             # Retained in the private numeric projection for conflict checks only.
             "binding": hashlib.sha256((dispatch + ":" + packet).encode()).hexdigest(),
             "attempt": attempt, "cli_identity": bool(identity and session),
-            "provenance_keys": receipt_keys(launch, result) if identity and session else []}
+            "provenance_keys": receipt_keys(launch, result) if identity and session else [],
+            "provider_session_id": session, "provider_result_id": identity}
+
+
+def pending_projection(launch, prepared, now):
+    at=launch_time(launch,now)
+    key=launch.get('dispatch_id'),launch.get('packet_sha256')
+    if key not in prepared or prepared[key]>at:
+        raise ValueError('unmatched_dispatch')
+    identity=digest(['pending-launch',*key,at])
+    return {'review_id':identity,'timestamp':at,'outcome':'unknown',
+            'requested_model':launch['requested_model'],'reported_model':'unknown','effort':launch.get('effort','unknown'),
+            'tokens':{},'duration':None,'record_state':'missing_result','provenance_keys':[],
+            'binding':hashlib.sha256((key[0]+':'+key[1]).encode()).hexdigest(),
+            'attempt':digest(['review-attempt',*key,at]),'cli_identity':False}
+
+
+def saved_metadata(row, launch, path, now):
+    finished = _timestamp(launch.get('finished_at'))
+    if finished is not None and row['timestamp'] <= finished <= now:
+        row['finished_timestamp'] = finished
+    if row.get('record_state') == 'missing_result' and launch.get('model_attestation') == 'timed-out':
+        row['outcome'] = 'failed'
+        row['execution_detail'] = 'timed_out'
+    return row
 
 
 class ReviewCollector(AuditCollector):
     def __init__(self, *, directories):
-        super().__init__(directories=directories)
+        if directories:
+            super().__init__(directories=directories)
+        else:
+            self.directories, self.files, self._cache = (), (), {}
 
     def _candidate(self, name):
         return name.endswith(("-launch-receipt.json", "-launch.json", "-provenance.json"))
 
-    def scan(self, *, now=None):
+    def scan(self, *, now=None, files=None, reader=None):
         now = time.time() if now is None else now
-        files, errors, limited = self._discover()
+        files, errors, limited = self._discover() if files is None else (files, 0, False)
         read = pending = 0
         remaining = MAX_SCAN_BYTES
         reviews, conflicts, poisoned_attempts, skipped = {}, set(), set(), Counter()
-        audits = {}
+        audits, evaluations = {}, {}
 
         def content(path):
             nonlocal remaining
+            if reader is not None:
+                return reader(path)
             try:
                 source = _open_source(path)
             except ValueError:
@@ -189,16 +227,21 @@ class ReviewCollector(AuditCollector):
                     if omissions:
                         skipped["invalid_record"] += 1
                         continue
-                    valid = {event[0]: event[2] for event in events
-                             if event[1] == "dispatch_prepared" and event[2] <= now}
+                    valid = {event[0]: (event[1],event[2]) for event in events if event[2] <= now}
                     for line in raw.splitlines():
                         if not line.strip():
                             continue
                         record = _json(line)
-                        at = valid.get(record.get("event_hash"))
+                        event = valid.get(record.get("event_hash"))
                         key = record.get("dispatch_id"), record.get("packet_sha256")
-                        if at is not None and all(isinstance(v, str) for v in key):
-                            prepared[key] = min(at, prepared.get(key, at))
+                        if event is not None and all(isinstance(v, str) for v in key):
+                            kind,at=event
+                            if kind=='dispatch_prepared':
+                                prepared[key] = min(at, prepared.get(key, at))
+                            elif kind=='return_evaluated' and record.get('verdict') in {'accept','reject'}:
+                                binding=hashlib.sha256((key[0]+':'+key[1]).encode()).hexdigest()
+                                if at>=evaluations.get(binding,(0,''))[0]:
+                                    evaluations[binding]=(at,record['verdict'])
                 if not found:
                     raise FileNotFoundError()
                 audits[directory] = prepared
@@ -245,7 +288,11 @@ class ReviewCollector(AuditCollector):
                 if is_provenance:
                     result = provenance(path, launch)
                     if result is None:
-                        pending += 1;continue
+                        pending += 1
+                        row=saved_metadata(pending_projection(launch,prepared_at(path.parent),now), launch, path, now)
+                        if row['timestamp']>=now-RETENTION_SECONDS:
+                            reviews[row['review_id']]=row
+                        continue
                 else:
                     suffix, result_suffix = ("-launch-receipt.json", "-response.raw.json") if path.name.endswith("-launch-receipt.json") else ("-launch.json", "-response.json")
                     try:
@@ -254,6 +301,7 @@ class ReviewCollector(AuditCollector):
                         pending += 1;continue
                 row = project(launch, result, prepared_at(path.parent), now,
                               attempt_identity=is_provenance)
+                saved_metadata(row, launch, path, now)
                 if row["timestamp"] < now - RETENTION_SECONDS:continue
                 identity = row["review_id"]
                 if identity in reviews:
@@ -296,6 +344,8 @@ class ReviewCollector(AuditCollector):
                     if row is not prior:
                         reviews.pop(row["review_id"], None)
         for identity in conflicts:reviews.pop(identity, None)
+        for row in reviews.values():
+            row['evaluation']=evaluations.get(row['binding'],(0,'unknown'))[1]
         skipped["conflicting_result"] = len(conflicts)
         ordered = sorted(reviews.values(), key=lambda r: (r["timestamp"], r["review_id"]), reverse=True)
         limited = limited or len(ordered) > EXPORT_CAP
@@ -311,6 +361,25 @@ def render_review_metrics(snapshot):
         key = name.removeprefix("cwo_review_")
         if key == "skipped_records":
             lines.extend(f'{name}{{reason="{reason}"}} {snapshot[key].get(reason, 0)}' for reason in SKIP_REASONS)
+        elif key == 'discovered_launches':
+            lines.append(f"{name} {snapshot.get('discovery',{}).get('launches',0)}")
+        elif key == 'discovery_gaps':
+            lines.extend(f'{name}{{reason="{reason}"}} {snapshot.get("discovery",{}).get("gaps",{}).get(reason,0)}' for reason in DISCOVERY_REASONS)
+        elif key == 'record_state':
+            lines.extend(name+'{review_id='+json.dumps(row['review_id'])+',record_state='+json.dumps(row.get('record_state','complete'))+'} 1' for row in snapshot['reviews'])
+        elif key == 'evaluation_info':
+            lines.extend(name+'{review_id='+json.dumps(row['review_id'])+',verdict='+json.dumps(row.get('evaluation','unknown'))+'} 1' for row in snapshot['reviews'])
+        elif key == 'snapshot_timestamp_seconds':
+            for row in snapshot['reviews']:
+                dimensions={label:row[label] for label in LABELS}
+                dimensions.update(state=row.get('attribution','unlinked'),record_state=row.get('record_state','complete'),
+                                  verdict=row.get('evaluation','unknown'),
+                                  project_id=row.get('source_session',{}).get('project_id',''),
+                                  session_id=row.get('source_session',{}).get('session_id',''),
+                                  input_available=str(int(all(k in row['tokens'] for k in KINDS[:3]))),
+                                  output_available=str(int('output' in row['tokens'])),
+                                  duration_available=str(int(row['duration'] is not None)))
+                lines.append(name+'{'+','.join(k+'='+json.dumps(v) for k,v in dimensions.items())+'} '+str(snapshot['scan_timestamp_seconds']))
         elif key in {"session_info", "attribution_state"}:
             for row in snapshot["reviews"]:
                 if key == "session_info":

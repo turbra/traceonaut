@@ -49,7 +49,7 @@ With `--cwo-sessions`, Traceonaut adds supported CWO association signals to the 
 
 #### CWO CLI Review Artifacts
 
-The [optional custom review reader](../integrations/custom-review-adapter.md) reads paired launch receipts, Claude CLI results, and their audit file. Metrics contain hashed result identities, requested/reported model names, requested effort, outcome, source launch time, and numeric usage. Linked review rows use existing Codex project and session IDs. Prompts, response text, account names, paths, and contractor session/result UUIDs stay out of metrics.
+The [optional custom review reader](../integrations/custom-review-adapter.md) reads saved launch/results and audits. Launch discovery also reads recorded command output and literal redirected paths, including temporary files. It reads matching prompt headers to establish audit linkage. Private state retains numeric projections, source paths, hashes and original provider IDs for reconciliation. Metrics contain hashed review identities, models, effort, execution/evaluation state, source launch time and numeric usage. Linked rows use existing Codex project/session IDs. Prompts, responses, account names, paths and provider UUIDs stay out of metrics.
 
 ## IBM Bob
 

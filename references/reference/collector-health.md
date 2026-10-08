@@ -36,6 +36,12 @@ These totals count encounters, so retries and file replays can increment them ag
 
 Use the [Example Queries](example-queries.md) for checks in Prometheus. Alerting is left to your monitoring setup.
 
+## CWO Reviews
+
+CWO Overview's **Review collection** tile shows incomplete evidence, source access errors and limits. The review table keeps each known invocation and identifies missing results in **Saved record**. A timed-out process with no final usage record is an explained gap; its tokens remain unavailable.
+
+Run the collector with `--once` and its usual options to inspect `cwo_reviews.discovery.gaps` and pending provenance scans. Restore unreadable output or save a [supported review bundle](../integrations/custom-review-adapter.md); the running collector retries incomplete files. Unsupported recorded launches need a supported wrapper or parser support. Collected numeric results survive removal of temporary output. No alert service is required.
+
 ## IBM Bob
 
 ### Collection

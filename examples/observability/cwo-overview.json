@@ -43,7 +43,7 @@
       "keepTime": true
     },
     {
-      "title": "Codex TUI · Beta",
+      "title": "Codex TUI \u00b7 Beta",
       "type": "link",
       "url": "/d/traceonaut-codex-tui-beta/codex-tui-beta?${__url_time_range}&${project:queryparam}&${session:queryparam}",
       "targetBlank": false,
@@ -65,7 +65,7 @@
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 12,
+        "w": 8,
         "h": 2
       },
       "fieldConfig": {
@@ -179,9 +179,9 @@
         "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
-        "x": 12,
+        "x": 8,
         "y": 0,
-        "w": 12,
+        "w": 8,
         "h": 2
       },
       "fieldConfig": {
@@ -284,6 +284,84 @@
         }
       ],
       "transparent": false
+    },
+    {
+      "id": 402,
+      "type": "stat",
+      "title": "Review collection",
+      "description": "Profile-wide external review collection. Gaps count unreadable, unsupported or incomplete launch records; a failed execution without a final usage record is an explained gap. The table retains known launch metadata. Check --once cwo_reviews.discovery for reasons and repair or restore the source; the collector retries on subsequent scans.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 2
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "\u2014",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 16,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(cwo_review_discovery_gaps) + max(cwo_review_source_errors) + max(cwo_review_limit_reached)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Evidence gaps"
+        }
+      ],
+      "transparent": false,
+      "transformations": []
     },
     {
       "id": 300,
@@ -1269,7 +1347,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "topk(10, count by (event_type) (((label_replace(max by (event_id) (last_over_time(cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range])), \"event_type\", \"other\", \"event_type\", \".*\") or max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range]))) >= ($__from / 1000)) and ((label_replace(max by (event_id) (last_over_time(cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range])), \"event_type\", \"other\", \"event_type\", \".*\") or max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range]))) <= ($__to / 1000))))",
+          "expr": "topk(10, (count by (event_type) (((max by (event_id, event_type) ((last_over_time(cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[30d] offset -30d) or cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"})) or label_replace(max by (event_id) ((last_over_time(cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[30d] offset -30d) or cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"})), \"event_type\", \"other\", \"\", \"\")) >= ($__from / 1000)) and ((max by (event_id, event_type) ((last_over_time(cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[30d] offset -30d) or cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"})) or label_replace(max by (event_id) ((last_over_time(cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[30d] offset -30d) or cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"})), \"event_type\", \"other\", \"\", \"\")) <= ($__to / 1000)))) or (topk(10, count by (event_type) (((label_replace(max by (event_id) (last_over_time(cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range])), \"event_type\", \"other\", \"event_type\", \".*\") or max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range]))) >= ($__from / 1000)) and ((label_replace(max by (event_id) (last_over_time(cwo_audit_event_timestamp_seconds{event_type!~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range])), \"event_type\", \"other\", \"event_type\", \".*\") or max by (event_id, event_type) (last_over_time(cwo_audit_event_timestamp_seconds{event_type=~\"^(packet_built|dispatch_prepared|return_evaluated|native_pool_rendered|native_pool_status|native_pool_terminal|native_pool_interrupt_requested)$\"}[$__range]))) <= ($__to / 1000))))))",
           "instant": true,
           "range": false,
           "format": "time_series",
@@ -1281,7 +1359,7 @@
       "id": 401,
       "type": "table",
       "title": "External contractor reviews",
-      "description": "Claude review attempts read by the custom review adapter, selected by launch time. Shows source session, result, requested and reported model, requested effort, tokens and duration. Project and Session filters use the linked source session. Choose All in both filters to include unlinked reviews; check Attribution if a source session is missing. [Custom Review Adapter](https://turbra.github.io/traceonaut/integrations/custom-review-adapter/). [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "External review invocations selected by original launch time. Execution means the CLI completed or failed; Evaluation is the recorded evaluator verdict, separate from implementation success. Pending peer review stays explicit. Saved record describes missing evidence; missing token counts remain blank. Historical ranges include later-collected evidence within the 30-day retained review inventory. Project and Session filter the linked source session. [Custom Review Adapter](https://turbra.github.io/traceonaut/integrations/custom-review-adapter/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -1300,7 +1378,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "(((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000))) * 1000) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\"))))",
+          "expr": "((((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) <= ($__to / 1000))) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds)))) * 1000) or ((((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000))) * 1000) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\")))) unless on () count((last_over_time(cwo_review_snapshot_timestamp_seconds[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds)))",
           "instant": true,
           "range": false,
           "format": "table"
@@ -1312,7 +1390,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "((sum by (review_id, outcome, requested_model, reported_model, effort) (max by (review_id, outcome, requested_model, reported_model, effort, kind) (cwo_review_tokens{kind=~\"input|cache_creation|cache_read\"})) and (count by (review_id, outcome, requested_model, reported_model, effort) (max by (review_id, outcome, requested_model, reported_model, effort, kind) (cwo_review_tokens{kind=~\"input|cache_creation|cache_read\"})) == 3)) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\"))))",
+          "expr": "((sum by (review_id, outcome, requested_model, reported_model, effort) (max by (review_id, outcome, requested_model, reported_model, effort, kind) ((last_over_time(cwo_review_tokens{kind=~\"input|cache_creation|cache_read\"}[30d] offset -30d) or cwo_review_tokens{kind=~\"input|cache_creation|cache_read\"}))) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\",input_available=\"1\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\",input_available=\"1\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds)))) and on (review_id) (((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) <= ($__to / 1000))) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds))))) or (((sum by (review_id, outcome, requested_model, reported_model, effort) (max by (review_id, outcome, requested_model, reported_model, effort, kind) (cwo_review_tokens{kind=~\"input|cache_creation|cache_read\"})) and (count by (review_id, outcome, requested_model, reported_model, effort) (max by (review_id, outcome, requested_model, reported_model, effort, kind) (cwo_review_tokens{kind=~\"input|cache_creation|cache_read\"})) == 3)) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\")))) unless on () count((last_over_time(cwo_review_snapshot_timestamp_seconds[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds)))",
           "instant": true,
           "range": false,
           "format": "table"
@@ -1324,7 +1402,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "(max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_tokens{kind=\"output\"}) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\"))))",
+          "expr": "((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_tokens{kind=\"output\"}[30d] offset -30d) or cwo_review_tokens{kind=\"output\"})) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\",output_available=\"1\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\",output_available=\"1\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds)))) and on (review_id) (((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) <= ($__to / 1000))) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds))))) or ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_tokens{kind=\"output\"}) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\")))) unless on () count((last_over_time(cwo_review_snapshot_timestamp_seconds[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds)))",
           "instant": true,
           "range": false,
           "format": "table"
@@ -1336,7 +1414,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "(max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_duration_seconds) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\"))))",
+          "expr": "((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_duration_seconds[30d] offset -30d) or cwo_review_duration_seconds)) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\",duration_available=\"1\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\",duration_available=\"1\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds)))) and on (review_id) (((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) <= ($__to / 1000))) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds))))) or ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_duration_seconds) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\")))) unless on () count((last_over_time(cwo_review_snapshot_timestamp_seconds[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds)))",
           "instant": true,
           "range": false,
           "format": "table"
@@ -1348,7 +1426,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "(max by (review_id, state) (cwo_review_attribution_state) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\"))))",
+          "expr": "(count by (review_id, state) (((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds))) and on (review_id) (((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) <= ($__to / 1000))) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds)))))) or ((max by (review_id, state) (cwo_review_attribution_state) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\")))) unless on () count((last_over_time(cwo_review_snapshot_timestamp_seconds[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds)))",
           "instant": true,
           "range": false,
           "format": "table"
@@ -1360,7 +1438,31 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "(max by (review_id, session_id) (cwo_review_session_info) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\"))))",
+          "expr": "(count by (review_id, session_id) (((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\",session_id!=\"\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\",session_id!=\"\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds))) and on (review_id) (((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) <= ($__to / 1000))) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds)))))) or ((max by (review_id, session_id) (cwo_review_session_info) and on (review_id) ((max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) (cwo_review_started_timestamp_seconds) <= ($__to / 1000)))) and on (review_id) (max by (review_id) (cwo_review_session_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or ((max by (review_id) (cwo_review_started_timestamp_seconds) unless on (review_id) max by (review_id) (cwo_review_session_info)) and on () (label_replace(vector(1), \"filters\", \"${project:regex}/${session:regex}\", \"\", \"\") and on (filters) label_replace(vector(1), \"filters\", \".*/.*\", \"\", \"\")))) unless on () count((last_over_time(cwo_review_snapshot_timestamp_seconds[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds)))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count by (review_id, record_state) (((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds))) and on (review_id) (((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) <= ($__to / 1000))) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds)))))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count by (review_id, verdict) (((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds))) and on (review_id) (((max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) >= ($__from / 1000)) and (max by (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_started_timestamp_seconds[30d] offset -30d) or cwo_review_started_timestamp_seconds)) <= ($__to / 1000))) and on (review_id, outcome, requested_model, reported_model, effort) ((last_over_time(cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d] offset -30d) or cwo_review_snapshot_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) == on (job, instance) group_left max by (job, instance) ((last_over_time(cwo_review_scan_timestamp_seconds[30d] offset -30d) or cwo_review_scan_timestamp_seconds)))))",
           "instant": true,
           "range": false,
           "format": "table"
@@ -1426,24 +1528,14 @@
               "id": "byName",
               "options": "Requested model"
             },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 160
-              }
-            ]
+            "properties": []
           },
           {
             "matcher": {
               "id": "byName",
               "options": "Reported model"
             },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 160
-              }
-            ]
+            "properties": []
           },
           {
             "matcher": {
@@ -1518,58 +1610,106 @@
                     }
                   }
                 ]
-              },
-              {
-                "id": "custom.width",
-                "value": 90
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Result"
+              "options": "Execution"
             },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 85
-              }
-            ]
+            "properties": []
           },
           {
             "matcher": {
               "id": "byName",
               "options": "Requested effort"
             },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 145
-              }
-            ]
+            "properties": []
           },
           {
             "matcher": {
               "id": "byName",
               "options": "Input tokens"
             },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 110
-              }
-            ]
+            "properties": []
           },
           {
             "matcher": {
               "id": "byName",
               "options": "Output tokens"
             },
+            "properties": []
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Evaluation"
+            },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 115
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "accept": {
+                        "text": "Accepted by evaluator"
+                      },
+                      "accept_pending_peer": {
+                        "text": "Peer review pending"
+                      },
+                      "reject": {
+                        "text": "Rejected by evaluator"
+                      },
+                      "unknown": {
+                        "text": "Not recorded"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Saved record"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "complete": {
+                        "text": "Complete"
+                      },
+                      "missing_result": {
+                        "text": "No final result"
+                      },
+                      "unreadable_output": {
+                        "text": "Output unreadable"
+                      },
+                      "invalid_record": {
+                        "text": "Invalid metadata"
+                      },
+                      "reused_output": {
+                        "text": "Output overwritten"
+                      },
+                      "changing_output": {
+                        "text": "Reading output"
+                      },
+                      "conflicting_result": {
+                        "text": "Conflicting copies"
+                      },
+                      "oversized_output": {
+                        "text": "Output limit"
+                      }
+                    }
+                  }
+                ]
               }
             ]
           }
@@ -1594,7 +1734,7 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "pattern": "^(Time|review_id|outcome|requested_model|reported_model|effort|state|session_id|Value.*)$"
+              "pattern": "^(Time|review_id|outcome|requested_model|reported_model|effort|state|session_id|record_state|verdict|Value.*)$"
             }
           }
         },
@@ -1609,7 +1749,9 @@
               "Time": true,
               "review_id": true,
               "Value #E": true,
-              "Value #F": true
+              "Value #F": true,
+              "Value #G": true,
+              "Value #H": true
             },
             "indexByName": {
               "Value #A": 0,
@@ -1621,11 +1763,13 @@
               "effort": 6,
               "Value #B": 7,
               "Value #C": 8,
-              "Value #D": 9
+              "Value #D": 9,
+              "record_state": 10,
+              "verdict": 11
             },
             "renameByName": {
               "Value #A": "Launched",
-              "outcome": "Result",
+              "outcome": "Execution",
               "requested_model": "Requested model",
               "reported_model": "Reported model",
               "effort": "Requested effort",
@@ -1633,7 +1777,9 @@
               "Value #C": "Output tokens",
               "Value #D": "Duration",
               "session_id": "Source session",
-              "state": "Attribution"
+              "state": "Attribution",
+              "record_state": "Saved record",
+              "verdict": "Evaluation"
             }
           }
         }

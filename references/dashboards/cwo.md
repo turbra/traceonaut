@@ -41,7 +41,7 @@ The rendered dropdowns use names from the exported session snapshot. Collection 
 
 **Recorded session tokens** covers the selected sessions' whole recorded history, including work outside CWO. It is separate from tokens consumed during the selected range. Missing values display a dash; known empty counts display zero.
 
-The top strip reports session collection and workflow-source health. **Partial** means the configured sources have incomplete coverage. The default range is 30 days and refresh is one minute; choose a shorter range, such as **Last 1 hour**, to focus recent activity.
+The top strip reports session collection, workflow-source health and review evidence gaps. **Partial** means the configured sources have incomplete coverage. Review gaps retain the known invocation row while unavailable usage stays blank. The default range is 30 days and refresh is one minute; choose a shorter range, such as **Last 1 hour**, to focus recent activity.
 
 Configure [CWO session collection](../integrations/cwo.md#collect-cwo-sessions) and [workflow event collection](../integrations/cwo.md#collect-workflow-activity) in the CWO Integration guide. Optional review rows require the [custom review adapter](../integrations/custom-review-adapter.md).
 
@@ -66,6 +66,6 @@ The time picker selects sessions active in that range. Their token and turn tota
 
 **Workflow events by type** counts events whose original timestamps fall inside the selected range, across configured audit logs. It can be empty while session and helper activity is present: only operations that write audit events appear in that chart.
 
-**External contractor reviews** shows metadata from collected custom review attempts: requested and reported model, requested effort, outcome, token usage and duration. Rows can remain unlinked from a Codex session. Completed and failed attempts appear when their launch dates fall within the selected range. With [session attribution](../integrations/custom-review-adapter.md#link-reviews-to-codex-sessions) enabled, **Source session** links to the launching session when attribution is **Linked**. Reviews with Unlinked, Pending or Ambiguous attribution appear when Project and Session are both **All**.
+**External contractor reviews** shows requested and reported model, effort, tokens and duration for recorded invocations. **Execution** describes CLI completion or failure; **Evaluation** shows the audit verdict and any pending peer review. **Saved record** identifies unavailable evidence. Attempts remain visible when their launch dates fall within the selected range, including results recovered later. With [session attribution](../integrations/custom-review-adapter.md#link-reviews-to-codex-sessions) enabled, **Source session** links to the launcher. Unlinked, Pending and Ambiguous rows appear when both filters are **All**.
 
 [Retention and Limits](../reference/retention-and-limits.md) explains source history and exports. [Reading the Values](reading-values.md) explains token totals, partial coverage and missing values.

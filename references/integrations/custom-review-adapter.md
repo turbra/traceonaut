@@ -6,7 +6,23 @@ description: Collect saved contractor review results, models, effort and token u
 
 # Custom Review Adapter
 
-Traceonaut reads saved contractor reviews from each directory supplied with `--cwo-review-dir`. It shows their model, CLI effort, token usage, duration and outcome in CWO Overview. Review scripts must save one of the formats below.
+Traceonaut collects external review invocations, models, CLI effort, token usage and evaluator verdicts in CWO Overview. Enable launch discovery for reviews started inside CWO-associated Codex sessions. Use explicit directories for additional saved review bundles.
+
+## Discover Reviews from Sessions
+
+Add these options to your session collector command:
+
+```text
+--cwo-sessions --cwo-review-discovery
+```
+
+The collector follows recorded Claude and Codex CLI launches. It reads final results saved in command output or an explicitly redirected JSON/JSONL file, including `*.stream.jsonl`. Literal account-switching commands and single-command shell wrappers are supported. Supported CWO checked-command wrappers can also identify a saved provenance bundle through their exact prompt and output paths.
+
+Discovery follows launch records across projects, so a new output directory needs no collection-directory change. Temporary output must still exist when first read. Collected numeric results remain in the private index after that output is removed. Exact readiness probes and CLI authentication/configuration commands are excluded from reviews.
+
+Hash-valid audit events beside discovered review prompts also feed Workflow activity. Collected events survive removal of the temporary directory and keep their original event IDs and timestamps.
+
+Unsupported launch syntax, unreadable output and missing final results appear as collection gaps. Restore the output or save a supported bundle below; the running collector retries incomplete records. It never executes a recorded command.
 
 ## Collect Paired Results
 
@@ -53,15 +69,17 @@ The saved prompt's SHA-256 must match `prompt_sha256`. Its CWO `Dispatch ID:` an
 
 ## Check Collection
 
-Run the collector with `--once` and the same review directory options. Its `cwo_reviews` output reports source health, pending results and exported review counts. Compare that count with the saved reviews you expect; health covers only configured directories. An attempt without a saved final result appears as pending, including a timed-out review whose result was lost.
+Run the collector with `--once` and the same collection options. Its `cwo_reviews` output reports source health, pending scans and exported review counts. With launch discovery enabled, `discovery` also reports observed launches, separate model checks and gaps by reason. An initial scan can need several passes; the running collector continues automatically.
 
-In CWO Overview, select a time range containing the review's launch and set Project and Session to All. Reviews with a verified source-session link also appear under those filters. If newer reviews are missing, check their source directory and file layout first.
+CWO Overview's Review collection tile shows evidence gaps. The review table retains attempts without a final result and leaves their usage blank. Execution describes the CLI invocation. Evaluation describes the matching audit verdict, including pending peer review. Neither field establishes that the requested implementation was delivered.
+
+Select a time range containing the review's original launch and set Project and Session to All. Linked reviews also appear under those filters. Historical ranges include evidence collected later, within the retained 30-day review inventory. The latest projection excludes superseded pending records and old attribution states.
 
 Uncached input, cache-creation input, and cache-read input are distinct token kinds; the dashboard input total includes all three. Thinking is a subset of output. Missing usage remains unavailable; a reported zero remains zero. Conflicting copies are skipped, and repeated audit evaluations do not add usage.
 
 ## Link Reviews to Codex Sessions
 
-Enable both `--cwo-sessions` and `--cwo-review-dir` to add source session and attribution to reviews. Traceonaut can link a review to the Codex session that ran its launch, including a subagent when it was the launcher.
+Enable `--cwo-sessions` with review discovery or explicit review directories to add source session and attribution. Traceonaut links a review to the Codex session that ran its launch, including a subagent when it was the launcher.
 
 Supported evidence includes completed direct Claude commands with matching result identities, and paired-result `runner.py` launches whose recorded output matches the receipt's prompt hash, model, effort, and result metadata. Interactive account-switched launches also need a recorded stdin command tied to the same process. Preparing a dispatch, reading a receipt, or mentioning a review does not establish a link. Other wrappers remain unlinked until supported.
 

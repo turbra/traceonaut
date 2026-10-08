@@ -68,7 +68,7 @@ class CodexSource:
             if args.cwo_sessions:
                 self.cwo = CwoSessionCollector(args.codex_home, args.session_state_dir)
                 if reviews:
-                    self.provenance = ProvenanceIndex(self.cwo)
+                    self.provenance = ProvenanceIndex(self.cwo, discover=getattr(args,'cwo_review_discovery',False))
             if args.state_dir:
                 self.ledger = ObservabilityLedger(args.state_dir, readonly=True)
             if args.account_snapshot_file:
@@ -95,6 +95,11 @@ class CodexSource:
         if self.provenance:
             reviews['provenance'] = self.provenance.scan(self.collector.db, snapshot, reviews,
                                                         now=reviews['scan_timestamp_seconds'])
+            if self.provenance.discovery:
+                audit=self.provenance.discovery.merge_audit(audit,reviews['scan_timestamp_seconds'],reviews['provenance']['ready'])
+                snapshot['cwo_audit']=audit
+        if reviews is not None:
+            snapshot['cwo_reviews'] = reviews
         status = {"sessions": len(snapshot["sessions"]), "pending_files": snapshot["pending_files"],
                   "source_available": snapshot["source_available"]}
         if self.cwo:
@@ -107,6 +112,8 @@ class CodexSource:
         if reviews is not None:
             status['cwo_reviews'] = {k: reviews[k] for k in ('source_available', 'collection_complete', 'source_files', 'source_errors', 'pending_results', 'limit_reached', 'skipped_records')}
             status['cwo_reviews']['exported_reviews'] = len(reviews['reviews'])
+            if 'discovery' in reviews:
+                status['cwo_reviews']['discovery'] = reviews['discovery']
             if self.provenance:
                 status['cwo_reviews']['provenance'] = reviews['provenance']
                 status['cwo_reviews']['attribution'] = {state: sum(r['attribution'] == state for r in reviews['reviews'])
@@ -200,6 +207,8 @@ def main(argv=None, *, require_codex=True):
                         help="optional audit directory; recursively read audit.jsonl and *-audit.jsonl files")
     parser.add_argument("--cwo-review-dir", type=Path, action="append", default=[],
                         help="optional review artifact directory; reads supported launch/result pairs or provenance bundles with matching CWO audits; repeat for multiple roots")
+    parser.add_argument('--cwo-review-discovery', action='store_true',
+                        help='discover external model launches and their saved outputs from CWO-associated Codex sessions; requires --cwo-sessions')
     parser.add_argument("--credential-file", type=Path)
     parser.add_argument("--host", default="127.0.0.1",
                         help="numeric bind IP (default: 127.0.0.1); use a specific LAN/VPN IP for remote scraping; HTTP only")
@@ -221,6 +230,8 @@ def main(argv=None, *, require_codex=True):
         parser.error("--bob-home and --bob-snapshot-file must be supplied together")
     if args.bob_otel_journal_dir and not args.bob_home:
         parser.error('--bob-otel-journal-dir requires --bob-home')
+    if args.cwo_review_discovery and not args.cwo_sessions:
+        parser.error('--cwo-review-discovery requires --cwo-sessions')
     if not args.codex_home and any((args.cwo_sessions, args.cwo_audit_file, args.cwo_audit_dir,
                                    args.cwo_review_dir, args.account_snapshot_file, args.state_dir)):
         parser.error("CWO and account options require --codex-home")
@@ -266,7 +277,7 @@ def main(argv=None, *, require_codex=True):
                 or account_path == args.bob_snapshot_file):
             parser.error("account snapshot must be separate from Codex source and session state")
     try:
-        review_collector = ReviewCollector(directories=args.cwo_review_dir) if args.cwo_review_dir else None
+        review_collector = ReviewCollector(directories=args.cwo_review_dir) if args.cwo_review_dir or args.cwo_review_discovery else None
         audit_collector = (AuditCollector(files=args.cwo_audit_file, directories=args.cwo_audit_dir)
                            if args.cwo_audit_file or args.cwo_audit_dir else None)
     except ValueError as error:

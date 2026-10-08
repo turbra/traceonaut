@@ -61,9 +61,11 @@ See [session association parsing and scan bounds](limits-and-internals.md#cwo-se
 
 ### CWO CLI Review Results
 
-The optional paired-artifact reader exports at most **256 collected results launched within 30 days**. Source files stay unchanged.
+The optional review reader exports at most **256 invocations launched within 30 days**, including attempts with missing results. Source files stay unchanged.
 
-Result identity comes from the CLI session and result UUIDs when retained. Provenance bundles without those IDs use their audited dispatch, packet, prompt hash and launch time. Source launch times select the interval. Repeated scans and copied artifacts preserve one result. Prometheus history begins at the first scrape, including results collected from older files.
+Result identity comes from the CLI session and result UUIDs when retained. Codex CLI invocations also use their original command identity, keeping resumed attempts separate. Provenance bundles without result IDs use their audited dispatch, packet, prompt hash and launch time. Repeated scans and copied artifacts preserve one result.
+
+Source launch times select the interval. The review table includes later-collected evidence of launches in the selected range, within the retained 30-day inventory. Prometheus samples still begin at collection time; no past scrape samples are fabricated. A projection timestamp selects the latest record and prevents superseded pending rows, attribution or missing values from reappearing.
 
 Incomplete session scans or unreadable sources can leave attribution Pending while review counts and usage remain visible. Expired or unsupported session sources leave reviews Unlinked; expanding the session export window can make older source histories eligible again.
 See [review artifact parsing and scan bounds](limits-and-internals.md#cwo-cli-review-artifacts).

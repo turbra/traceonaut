@@ -110,6 +110,8 @@ class ReviewQueryTests(unittest.TestCase):
             checks = []
             for target in table['targets']:
                 ref = target['refId']
+                if ref in {'G','H'}:
+                    continue  # Older collectors have no record/evaluation marker.
                 selected = [reviews[index] for index in indexes
                             if not (ref == 'B' and reviews[index][0] == 'first-child')
                             and not (ref == 'F' and reviews[index][1] is None)]

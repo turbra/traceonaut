@@ -33,7 +33,7 @@ Append the option to the [session collector command](../getting-started.mdx). Re
 
 ## Read Custom Review Results
 
-Add `--cwo-review-dir` for each directory where your review scripts save results. The reader supports paired launch/result files and provenance bundles containing final Claude results. These files are produced by review scripts, not built-in CWO artifacts. Follow the [custom review adapter guide](custom-review-adapter.md) for supported layouts and a collection check. Review usage stays separate from Codex session totals.
+Add `--cwo-review-discovery` alongside `--cwo-sessions` to collect external Claude and Codex CLI reviews from recorded launches, including their redirected output files. Use `--cwo-review-dir` for additional saved launch/result pairs or provenance bundles. The [custom review adapter guide](custom-review-adapter.md) covers supported launches, source checks and missing results. Review usage stays separate from Codex session totals.
 
 <a id="existing-controller-metrics"></a>
 ## Existing Controller Metrics

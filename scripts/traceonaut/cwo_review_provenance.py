@@ -1,7 +1,7 @@
 """Read-only review attribution from completed Codex command records.
 
-Only hashes, source identities, times and cursors persist. Source programs are
-never evaluated and paths mentioned in commands are never opened.
+Only numeric metadata, hashes, source identities and cursors persist. Source
+programs are never evaluated. Optional discovery reads literal output paths.
 """
 from __future__ import annotations
 
@@ -151,7 +151,7 @@ def summaries(output):
 
 class ProvenanceIndex:
     """Additive derived tables in the existing, locked private CWO database."""
-    def __init__(self, cwo):
+    def __init__(self, cwo, *, discover=False):
         self.home, self.db = cwo.home, cwo.db
         self.db.executescript('''
             CREATE TABLE IF NOT EXISTS review_files(path TEXT PRIMARY KEY,sid TEXT,device INTEGER,inode INTEGER,
@@ -161,11 +161,20 @@ class ProvenanceIndex:
             CREATE TABLE IF NOT EXISTS review_evidence(path TEXT,sid TEXT,identity TEXT,key TEXT,start REAL,end REAL,
                 PRIMARY KEY(path,identity,key));
         ''')
+        self.discovery = None
+        if discover:
+            from .cwo_review_discovery import LaunchDiscovery
+            existed = self.db.execute("SELECT 1 FROM sqlite_master WHERE name='review_launches'").fetchone()
+            self.discovery = LaunchDiscovery(self.db)
+            if not existed:
+                self.db.execute('UPDATE review_files SET offset=0')
 
     def _consume(self, raw, path, sid):
         if not candidate(raw):
             return
         record = json.loads(raw)
+        if self.discovery:
+            self.discovery.consume(record, path, sid)
         payload = record.get("payload", {})
         if not isinstance(payload, dict):
             return
@@ -217,13 +226,23 @@ class ProvenanceIndex:
                                 (path, sid, digest([payload.get("turn_id"), identity]), key, start, end))
 
     def scan(self, index, snapshot, reviews, *, now, byte_budget=MAX_BYTES, per_file_budget=PER_FILE_BYTES):
+        if self.discovery:
+            from .cwo_review_discovery import MAX_SCAN_OUTPUT_BYTES
+            self.discovery.remaining=MAX_SCAN_OUTPUT_BYTES
+            self.discovery.limited=False
+            self.discovery.audit_errors=0
+            self.discovery.audit_seen=set()
+            self.discovery.audit_skipped={}
         rows = {r["session_id"]: r for r in snapshot["sessions"]}
         stamps = [r["timestamp"] for r in reviews["reviews"]]
         policy = snapshot.get("session_export", {})
         retained, _ = session_export_rows(list(rows.values()), now=now,
             retention_seconds=policy.get("retention_seconds",30*86400), cap=policy.get("cap",1000))
-        selected = {r["session_id"] for r in retained if stamps and (r.get("created") or 0) <= max(stamps)+2}
-        sources = [dict(r) for r in index.execute("SELECT path,session_id FROM files ORDER BY path") if r["session_id"] in selected]
+        selected = {r["session_id"] for r in retained
+                    if self.discovery or (stamps and (r.get("created") or 0) <= max(stamps)+2)}
+        if self.discovery:
+            selected &= {r['session_id'] for r in snapshot.get('cwo_sessions',{}).get('associations',[])}
+        sources = [dict(r) for r in index.execute("SELECT path,session_id FROM files ORDER BY modified DESC,path") if r["session_id"] in selected]
         limited = len(sources) > MAX_FILES
         sources = sources[:MAX_FILES]
         remaining, pending, errors = byte_budget, 0, 0
@@ -309,6 +328,11 @@ class ProvenanceIndex:
                 row["source_session"] = {"session_id":sid, "project_id":rows[sid]["project_id"]}
             else:
                 row.pop("source_session", None)
+        if self.discovery:
+            with self.db:
+                self.discovery.merge(reviews,snapshot,now)
+            if not ready:
+                reviews['collection_complete'] = 0
         return {"ready":int(ready), "pending_files":pending, "source_errors":errors, "limit_reached":int(limited)}
 
     @staticmethod
@@ -321,3 +345,6 @@ class ProvenanceIndex:
     def _discard(self, path):
         for table in ("review_files", "review_stdin", "review_evidence"):
             self.db.execute("DELETE FROM " + table + " WHERE path=?", (path,))
+        if self.discovery:
+            self.db.execute('DELETE FROM review_launches WHERE path=?',(path,))
+            self.db.execute('DELETE FROM review_discovery_errors WHERE path=?',(path,))

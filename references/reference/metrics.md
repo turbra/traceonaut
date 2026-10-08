@@ -203,18 +203,25 @@ Optional review artifact collection uses gauges. Review usage is separate from C
 | Metric | Type | Labels | Meaning |
 | --- | --- | --- | --- |
 | `cwo_review_source_available` | gauge | None | At least one configured review launch or provenance record was read. |
-| `cwo_review_collection_complete` | gauge | None | Configured paired review artifacts read without errors, pending results or limits. |
+| `cwo_review_collection_complete` | gauge | None | Enabled review sources read without errors, missing results or limits. |
 | `cwo_review_scan_timestamp_seconds` | gauge | None | Unix time of the latest CLI review scan attempt. |
 | `cwo_review_source_files` | gauge | None | Review launch and provenance records read in the latest scan. |
 | `cwo_review_source_errors` | gauge | None | Review artifact access failures in the latest scan. |
 | `cwo_review_pending_results` | gauge | None | Recorded launches without a saved final result. |
 | `cwo_review_limit_reached` | gauge | None | Review artifact discovery, byte or export cap reached. |
 | `cwo_review_skipped_records` | gauge | `reason` | Review artifacts omitted in the latest scan by bounded reason. |
-| `cwo_review_started_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | Recorded launch time of a CLI review with a collected result. |
+| `cwo_review_started_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | Recorded launch time of an external review invocation. |
 | `cwo_review_tokens` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `kind` | CLI top-level usage by kind; thinking is a subset of output. Input excludes cache creation and reads. |
 | `cwo_review_duration_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort` | CLI-reported result duration. |
 | `cwo_review_session_info` | gauge | `review_id`, `project_id`, `session_id` | Value 1 identifies the launching Codex session for a Linked review. |
 | `cwo_review_attribution_state` | gauge | `review_id`, `state` | Value 1 for the review's current state: `linked`, `unlinked`, `pending` or `ambiguous`. |
+| `cwo_review_discovered_launches` | gauge | None | Review launches found in retained CWO session commands; excludes model checks. |
+| `cwo_review_discovery_gaps` | gauge | `reason` | Incomplete discovered evidence, grouped by bounded reason. |
+| `cwo_review_record_state` | gauge | `review_id`, `record_state` | Complete result or reason its evidence is unavailable. |
+| `cwo_review_evaluation_info` | gauge | `review_id`, `verdict` | Recorded evaluator verdict; `accept_pending_peer` retains an outstanding peer-review hold. |
+| `cwo_review_snapshot_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `state`, `record_state`, `verdict`, `project_id`, `session_id`, `input_available`, `output_available`, `duration_available` | Scan time and current record metadata used to reconcile later-collected historical reviews. |
+
+Discovery gap reasons are `missing_result`, `conflicting_result`, `invalid_record`, `oversized_output`, `changing_output`, `unreadable_output`, `reused_output` and `unsupported_launch`. They describe saved evidence, not whether a review was accepted. CLI completion, evaluator verdict and implementation outcome are separate facts.
 
 ## IBM Bob
 

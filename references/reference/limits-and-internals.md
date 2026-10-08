@@ -50,6 +50,8 @@ The review reader exports at most 256 invocations. Explicit artifact directories
 
 Discovery parses recorded commands as data. Checked-command wrapper linkage requires a literal spec, a retained script older than the launch, an exact prompt/output pair, matching audit binding and compatible timestamps. This is retained-artifact association, not historical code attestation. Numeric projections, provider identities and audit dispositions persist in the private index; prompts and review text do not.
 
+The private review projection history holds at most 4,096 records for 30 days. A row withdrawn before expiry leaves a removal marker; ordinary expiry leaves its final historical sample intact. Reaching the history cap raises the review limit signal until the omitted records expire.
+
 ### Account Windows
 
 The weekly strip selects exactly one shared 10,080-minute window. Remaining allowance is `max(0, 100 - usedPercent)`. Reset credits use `availableCount`, because the returned detail list can be capped. Multiple ambiguous account series are suppressed.

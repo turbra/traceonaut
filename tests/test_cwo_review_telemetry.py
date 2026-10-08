@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -77,6 +78,57 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(result['reviews'], [expected])
         (self.root/'lane-launch-receipt.json').unlink()
         self.assertEqual(self.scan()['reviews'], [expected])
+
+    def test_snapshot_removal_restart_and_reappearance(self):
+        snapshot = self.scan()
+        db_path = self.root/'history.sqlite3'
+        with sqlite3.connect(db_path) as db:
+            review.preserve_review_markers(db, snapshot)
+            changes = db.total_changes
+            review.preserve_review_markers(db, {**snapshot, 'scan_timestamp_seconds': NOW+1})
+            self.assertEqual(db.total_changes, changes)
+            removed = review.preserve_review_markers(db, {**snapshot, 'reviews': [], 'scan_timestamp_seconds': NOW+2})
+            self.assertEqual(len(removed['retired_reviews']), 1)
+            payload = review.render_review_metrics(removed).decode()
+            samples = [line for line in payload.splitlines() if 'review_id=' in line]
+            self.assertEqual(len(samples), 1)
+            self.assertTrue(samples[0].startswith('cwo_review_snapshot_timestamp_seconds{'))
+            self.assertIn('record_state="removed"', samples[0])
+            self.assertIn('history="tracked"', samples[0])
+            self.assertNotIn('PRIVATE', payload)
+        with sqlite3.connect(db_path) as db:
+            restarted = review.preserve_review_markers(db, {**snapshot, 'reviews': [], 'scan_timestamp_seconds': NOW+3})
+            self.assertEqual(restarted['retired_reviews'], removed['retired_reviews'])
+            returned = review.preserve_review_markers(db, {**snapshot, 'scan_timestamp_seconds': NOW+4})
+            self.assertEqual(returned['retired_reviews'], [])
+
+    def test_snapshot_pending_replaced_and_normal_expiry(self):
+        snapshot = self.scan()
+        final = snapshot['reviews'][0]
+        pending = {**final, 'review_id': 'pending-result', 'outcome': 'unknown',
+                   'tokens': {}, 'duration': None, 'record_state': 'missing_result'}
+        with sqlite3.connect(':memory:') as db:
+            review.preserve_review_markers(db, {**snapshot, 'reviews': [pending]})
+            changed = review.preserve_review_markers(db, {**snapshot, 'scan_timestamp_seconds': NOW+1})
+            self.assertEqual([row['review_id'] for row in changed['retired_reviews']], ['pending-result'])
+            self.assertEqual(changed['reviews'], [final])
+            expired = review.preserve_review_markers(db, {**snapshot, 'reviews': [],
+                'scan_timestamp_seconds': final['timestamp']+review.RETENTION_SECONDS})
+            self.assertEqual(expired['retired_reviews'], [])
+            self.assertEqual(db.execute('SELECT count(*) FROM review_snapshot_history').fetchone()[0], 0)
+
+    def test_snapshot_history_cap_remains_visible_until_expiry(self):
+        snapshot = self.scan()
+        first = snapshot['reviews'][0]
+        second = {**first, 'review_id': 'second', 'timestamp': first['timestamp']+1}
+        with sqlite3.connect(':memory:') as db, mock.patch.object(review, 'SNAPSHOT_HISTORY_CAP', 1):
+            limited = review.preserve_review_markers(db, {**snapshot, 'reviews': [first, second]})
+            self.assertEqual(limited['limit_reached'], 1)
+            self.assertEqual(limited['collection_complete'], 0)
+            self.assertEqual(db.execute('SELECT count(*) FROM review_snapshot_history').fetchone()[0], 1)
+            later = review.preserve_review_markers(db, {**snapshot, 'reviews': [second], 'scan_timestamp_seconds': NOW+1})
+            self.assertEqual(later['limit_reached'], 1)
+            self.assertIn('history="legacy"', review.render_review_metrics(self.scan()).decode())
 
     def test_conflicting_effort_aliases_are_rejected(self):
         for field in ('requested_effort', 'executed_effort'):

@@ -18,7 +18,7 @@ from traceonaut.codex_session_telemetry import (
 )
 from traceonaut.codex_account_telemetry import AccountSnapshotMetrics
 from traceonaut.cwo_audit_telemetry import AuditCollector, render_audit_metrics
-from traceonaut.cwo_review_telemetry import ReviewCollector, render_review_metrics
+from traceonaut.cwo_review_telemetry import ReviewCollector, render_review_metrics, preserve_review_markers
 from traceonaut.cwo_review_provenance import ProvenanceIndex
 from traceonaut.cwo_session_telemetry import CwoSessionCollector, render_cwo_session_metrics
 from traceonaut.observability_exporter import (
@@ -99,6 +99,7 @@ class CodexSource:
                 audit=self.provenance.discovery.merge_audit(audit,reviews['scan_timestamp_seconds'],reviews['provenance']['ready'])
                 snapshot['cwo_audit']=audit
         if reviews is not None:
+            preserve_review_markers(self.collector.db, reviews)
             snapshot['cwo_reviews'] = reviews
         status = {"sessions": len(snapshot["sessions"]), "pending_files": snapshot["pending_files"],
                   "source_available": snapshot["source_available"]}

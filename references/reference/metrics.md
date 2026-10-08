@@ -219,7 +219,7 @@ Optional review artifact collection uses gauges. Review usage is separate from C
 | `cwo_review_discovery_gaps` | gauge | `reason` | Incomplete discovered evidence, grouped by bounded reason. |
 | `cwo_review_record_state` | gauge | `review_id`, `record_state` | Complete result or reason its evidence is unavailable. |
 | `cwo_review_evaluation_info` | gauge | `review_id`, `verdict` | Recorded evaluator verdict; `accept_pending_peer` retains an outstanding peer-review hold. |
-| `cwo_review_snapshot_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `state`, `record_state`, `verdict`, `project_id`, `session_id`, `input_available`, `output_available`, `duration_available` | Scan time and current record metadata used to reconcile later-collected historical reviews. |
+| `cwo_review_snapshot_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `history`, `state`, `record_state`, `verdict`, `project_id`, `session_id`, `input_available`, `output_available`, `duration_available` | Scan time and current record metadata used to reconcile later-collected historical reviews. `history="tracked"` includes removal markers; `record_state="removed"` withdraws a replaced or invalidated record without adding usage. Ordinary age expiry keeps the last historical record. |
 
 Discovery gap reasons are `missing_result`, `conflicting_result`, `invalid_record`, `oversized_output`, `changing_output`, `unreadable_output`, `reused_output` and `unsupported_launch`. They describe saved evidence, not whether a review was accepted. CLI completion, evaluator verdict and implementation outcome are separate facts.
 

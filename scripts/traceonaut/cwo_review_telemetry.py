@@ -20,12 +20,13 @@ from .cwo_review_provenance import digest, receipt_keys
 MAX_FILE_BYTES = 2 * 1024 * 1024
 MAX_SCAN_BYTES = 32 * 1024 * 1024
 EXPORT_CAP = 256
+SNAPSHOT_HISTORY_CAP = 4096
 SKIP_REASONS = ("invalid_record", "unmatched_dispatch", "future_timestamp", "conflicting_result")
 DISCOVERY_REASONS = ('missing_result','conflicting_result','invalid_record','oversized_output',
                      'changing_output','unreadable_output','reused_output','unsupported_launch')
 LABELS = ("review_id", "outcome", "requested_model", "reported_model", "effort")
 KINDS = ("input", "cache_creation", "cache_read", "output", "thinking")
-SNAPSHOT_LABELS = (*LABELS, 'state', 'record_state', 'verdict', 'project_id', 'session_id',
+SNAPSHOT_LABELS = (*LABELS, 'history', 'state', 'record_state', 'verdict', 'project_id', 'session_id',
                    'input_available', 'output_available', 'duration_available')
 METRICS = {
     "cwo_review_source_available": ((), "At least one configured review launch or provenance record was read."),
@@ -354,6 +355,58 @@ class ReviewCollector(AuditCollector):
                 "pending_results": pending, "limit_reached": int(limited), "skipped_records": dict(skipped), "reviews": ordered[:EXPORT_CAP]}
 
 
+def preserve_review_markers(db, snapshot):
+    """Retain withdrawals separately from ordinary age expiry in private state."""
+    now = snapshot['scan_timestamp_seconds']
+    active = {row['review_id']: row for row in snapshot['reviews']
+              if row['timestamp'] + RETENTION_SECONDS > now}
+    with db:
+        db.execute('''CREATE TABLE IF NOT EXISTS review_snapshot_history(
+            review_id TEXT PRIMARY KEY, started REAL NOT NULL,
+            projection TEXT NOT NULL, removed INTEGER NOT NULL)''')
+        db.execute('''CREATE TABLE IF NOT EXISTS review_snapshot_history_limit(
+            singleton INTEGER PRIMARY KEY CHECK(singleton=1), until REAL NOT NULL)''')
+        # Expiry leaves the final positive (or withdrawal) sample in Prometheus.
+        db.execute('DELETE FROM review_snapshot_history WHERE started<=?',
+                   (now - RETENTION_SECONDS,))
+        previous = {row[0]: row for row in db.execute(
+            'SELECT review_id,started,projection,removed FROM review_snapshot_history')}
+        for identity, row in active.items():
+            projection = {key: row[key] for key in (*LABELS, 'timestamp', 'tokens', 'duration')}
+            for key in ('attribution', 'record_state', 'evaluation', 'source_session'):
+                if key in row:
+                    projection[key] = row[key]
+            encoded = json.dumps(projection, sort_keys=True, separators=(',', ':'))
+            old = previous.get(identity)
+            if old is None or old[1] != row['timestamp'] or old[2] != encoded or old[3]:
+                db.execute('INSERT OR REPLACE INTO review_snapshot_history VALUES(?,?,?,0)',
+                           (identity, row['timestamp'], encoded))
+        for identity, row in previous.items():
+            if identity not in active and not row[3]:
+                db.execute('UPDATE review_snapshot_history SET removed=1 WHERE review_id=?', (identity,))
+        retained = list(db.execute('SELECT review_id,started FROM review_snapshot_history ORDER BY started DESC,review_id'))
+        dropped = retained[SNAPSHOT_HISTORY_CAP:]
+        if dropped:
+            db.executemany('DELETE FROM review_snapshot_history WHERE review_id=?',
+                           ((row[0],) for row in dropped))
+            until = max(row[1] + RETENTION_SECONDS for row in dropped)
+            db.execute('''INSERT INTO review_snapshot_history_limit VALUES(1,?)
+                ON CONFLICT(singleton) DO UPDATE SET until=max(until,excluded.until)''', (until,))
+        limit = db.execute('SELECT until FROM review_snapshot_history_limit WHERE singleton=1').fetchone()
+        limited = bool(limit and limit[0] > now)
+        retired = []
+        for encoded, in db.execute('SELECT projection FROM review_snapshot_history WHERE removed=1 ORDER BY review_id'):
+            row = json.loads(encoded)
+            row.update(record_state='removed', tokens={}, duration=None)
+            retired.append(row)
+    snapshot['retired_reviews'] = retired
+    snapshot['history_tracked'] = True
+    if limited:
+        snapshot['limit_reached'] = 1
+        snapshot['collection_complete'] = 0
+    return snapshot
+
+
 def render_review_metrics(snapshot):
     lines = []
     for name, (labels, help_text) in METRICS.items():
@@ -370,9 +423,10 @@ def render_review_metrics(snapshot):
         elif key == 'evaluation_info':
             lines.extend(name+'{review_id='+json.dumps(row['review_id'])+',verdict='+json.dumps(row.get('evaluation','unknown'))+'} 1' for row in snapshot['reviews'])
         elif key == 'snapshot_timestamp_seconds':
-            for row in snapshot['reviews']:
+            for row in (*snapshot['reviews'], *snapshot.get('retired_reviews', [])):
                 dimensions={label:row[label] for label in LABELS}
-                dimensions.update(state=row.get('attribution','unlinked'),record_state=row.get('record_state','complete'),
+                dimensions.update(history='tracked' if snapshot.get('history_tracked') else 'legacy',
+                                  state=row.get('attribution','unlinked'),record_state=row.get('record_state','complete'),
                                   verdict=row.get('evaluation','unknown'),
                                   project_id=row.get('source_session',{}).get('project_id',''),
                                   session_id=row.get('source_session',{}).get('session_id',''),

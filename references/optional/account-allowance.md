@@ -26,12 +26,12 @@ From the checkout root, choose your profile and absolute Codex binary path:
 
 ```bash
 TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
-TRACEONAUT_SOURCE_HOME="$HOME/.codex"
+TRACEONAUT_CODEX_HOME="$HOME/.codex"
 TRACEONAUT_CODEX_BINARY="/absolute/path/to/codex"
 install -d -m 700 "$TRACEONAUT_DATA_DIR/account-state"
 python3 scripts/collect_codex_account.py \
   --codex-bin "$TRACEONAUT_CODEX_BINARY" \
-  --codex-home "$TRACEONAUT_SOURCE_HOME" \
+  --codex-home "$TRACEONAUT_CODEX_HOME" \
   --snapshot-file "$TRACEONAUT_DATA_DIR/account-state/allowance.json"
 ```
 

@@ -87,7 +87,7 @@ class ReviewTests(unittest.TestCase):
             changes = db.total_changes
             review.preserve_review_markers(db, {**snapshot, 'scan_timestamp_seconds': NOW+1})
             self.assertEqual(db.total_changes, changes)
-            removed = review.preserve_review_markers(db, {**snapshot, 'reviews': [], 'scan_timestamp_seconds': NOW+2})
+            removed = review.preserve_review_markers(db, {**snapshot, 'reviews': [], 'eligible_review_ids': [], 'scan_timestamp_seconds': NOW+2})
             self.assertEqual(len(removed['retired_reviews']), 1)
             payload = review.render_review_metrics(removed).decode()
             samples = [line for line in payload.splitlines() if 'review_id=' in line]
@@ -97,7 +97,7 @@ class ReviewTests(unittest.TestCase):
             self.assertIn('history="tracked"', samples[0])
             self.assertNotIn('PRIVATE', payload)
         with sqlite3.connect(db_path) as db:
-            restarted = review.preserve_review_markers(db, {**snapshot, 'reviews': [], 'scan_timestamp_seconds': NOW+3})
+            restarted = review.preserve_review_markers(db, {**snapshot, 'reviews': [], 'eligible_review_ids': [], 'scan_timestamp_seconds': NOW+3})
             self.assertEqual(restarted['retired_reviews'], removed['retired_reviews'])
             returned = review.preserve_review_markers(db, {**snapshot, 'scan_timestamp_seconds': NOW+4})
             self.assertEqual(returned['retired_reviews'], [])
@@ -130,6 +130,69 @@ class ReviewTests(unittest.TestCase):
             self.assertEqual(later['limit_reached'], 1)
             self.assertIn('history="legacy"', review.render_review_metrics(self.scan()).decode())
 
+    def test_export_cap_and_actual_deletion_in_same_scan_survive_restart(self):
+        def add(prefix, number):
+            self.launch['started_at'] = datetime.fromtimestamp(NOW-100+number,timezone.utc).isoformat()
+            self.result['uuid'] = '00000000-0000-4000-8000-'+str(number).zfill(12)
+            self.write(prefix)
+        add('second',2)
+        before = self.scan()
+        by_time = sorted(before['reviews'],key=lambda row:row['timestamp'])
+        removed_id, capped_id = [row['review_id'] for row in by_time]
+        db_path = self.root/'history.sqlite3'
+        with sqlite3.connect(db_path) as db:
+            review.preserve_review_markers(db,before)
+            add('third',3);add('fourth',4)
+            (self.root/'lane-launch-receipt.json').unlink()
+            with mock.patch.object(review,'EXPORT_CAP',1):
+                current = self.scan()
+            self.assertEqual(len(current['eligible_review_ids']),3)
+            self.assertIn(capped_id,current['eligible_review_ids'])
+            changed = review.preserve_review_markers(db,current)
+            self.assertEqual([row['review_id'] for row in changed['retired_reviews']],[removed_id])
+        with sqlite3.connect(db_path) as db:
+            restarted = review.preserve_review_markers(db,current)
+            self.assertEqual(restarted['retired_reviews'],changed['retired_reviews'])
+            changes = db.total_changes
+            review.preserve_review_markers(db,current)
+            self.assertEqual(db.total_changes,changes)
+
+    def test_unreadable_scan_preserves_history_but_confirmed_conflict_withdraws(self):
+        with sqlite3.connect(':memory:') as db:
+            first = review.preserve_review_markers(db,self.scan())
+            identity = first['reviews'][0]['review_id']
+            self.write('copy')
+            wrong = copy.deepcopy(self.result);wrong['usage']['output_tokens'] += 1
+            (self.root/'copy-response.raw.json').write_text(json.dumps(wrong))
+            def read(path):
+                if path.name == 'unreadable-launch.json':raise OSError('unreadable')
+                return path.read_bytes()
+            absent = self.collector.scan(now=NOW,files=[self.root/'unreadable-launch.json'],reader=read)
+            self.assertFalse(absent['membership_complete'])
+            self.assertEqual(review.preserve_review_markers(db,absent)['retired_reviews'],[])
+            files = list(self.root.glob('*-launch-receipt.json'))+[self.root/'unreadable-launch.json']
+            conflict = self.collector.scan(now=NOW,files=files,reader=read)
+            self.assertFalse(conflict['membership_complete'])
+            self.assertIn(identity,conflict['withdrawn_review_ids'])
+            self.assertEqual([r['review_id'] for r in review.preserve_review_markers(db,conflict)['retired_reviews']],[identity])
+
+    def test_missing_pair_is_visible_and_final_replaces_it_during_partial_scan(self):
+        response = self.root/'lane-response.raw.json'
+        response.unlink()
+        with sqlite3.connect(':memory:') as db:
+            pending = review.preserve_review_markers(db,self.scan())
+            row = pending['reviews'][0]
+            self.assertEqual(row['record_state'],'missing_result')
+            self.assertEqual(row['tokens'],{})
+            self.assertEqual(row['requested_model'],self.launch['requested_model'])
+            response.write_text(json.dumps(self.result))
+            (self.root/'bad-launch.json').write_text('broken')
+            final = review.preserve_review_markers(db,self.scan())
+            self.assertFalse(final['membership_complete'])
+            self.assertEqual(len(final['reviews']),1)
+            self.assertEqual(final['reviews'][0]['tokens']['output'],50)
+            self.assertEqual([r['review_id'] for r in final['retired_reviews']],[row['review_id']])
+
     def test_conflicting_effort_aliases_are_rejected(self):
         for field in ('requested_effort', 'executed_effort'):
             for value in ('low', None, 1, []):
@@ -156,7 +219,7 @@ class ReviewTests(unittest.TestCase):
         (self.root/'lane-response.raw.json').unlink()
         snapshot = self.scan()
         self.assertEqual(len(snapshot['reviews']), 1)
-        self.assertEqual(snapshot['pending_results'], 1)
+        self.assertEqual(snapshot['pending_results'], 0)
 
     def test_valid_audit_survives_bad_alternate_with_visible_health(self):
         expected = self.scan()['reviews']
@@ -165,6 +228,33 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(snapshot['reviews'], expected)
         self.assertEqual(snapshot['skipped_records']['invalid_record'], 1)
         self.assertEqual(snapshot['collection_complete'], 0)
+
+    def test_epoch_provenance_has_identical_identity_and_usage(self):
+        (self.root/'lane-launch-receipt.json').unlink()
+        value=self.write_provenance()
+        original=self.scan()['reviews']
+        value['start_epoch']=review._timestamp(value.pop('started_at'))
+        value['end_epoch']=NOW-1
+        (self.root/'review-provenance.json').write_text(json.dumps(value))
+        row=self.scan()['reviews'][0]
+        self.assertEqual(row['review_id'],original[0]['review_id'])
+        self.assertEqual(row['tokens'],original[0]['tokens'])
+        self.assertEqual(row['timestamp'],NOW-100)
+        self.assertEqual(row['finished_timestamp'],NOW-1)
+        for bad in (True, '1790000000', -1, 1e100):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                review.normalize_launch({'start_epoch':bad})
+        with self.assertRaises(ValueError):
+            review.normalize_launch({'start_epoch':NOW, 'started_at':self.launch['started_at']})
+
+    def test_preparation_configs_are_visible_exclusions(self):
+        (self.root/'plan-launch.json').write_text(json.dumps({'model':'model','effort_requested':'high',
+            'entry':'review','argv':['claude','-p'],'packet_sha256':'a'*64}))
+        snapshot=self.scan()
+        self.assertEqual(len(snapshot['reviews']),1)
+        self.assertEqual(snapshot['skipped_records']['preparation_record'],1)
+        self.assertEqual(snapshot['collection_complete'],1)
+        self.assertTrue(snapshot['membership_complete'])
 
     def test_provenance_final_usage_and_attempt_identity(self):
         (self.root/'lane-launch-receipt.json').unlink()
@@ -224,12 +314,13 @@ class ReviewTests(unittest.TestCase):
         self.assertGreater(snapshot['skipped_records']['conflicting_result'], 0)
         self.assertEqual(snapshot['collection_complete'], 0)
 
-    def test_missing_provenance_prompt_is_a_source_error(self):
+    def test_missing_provenance_prompt_is_a_saved_evidence_gap(self):
         (self.root/'lane-launch-receipt.json').unlink()
         self.write_provenance()
         (self.root/'review-prompt.txt').unlink()
         snapshot = self.scan()
-        self.assertEqual(snapshot['source_errors'], 1)
+        self.assertEqual(snapshot['source_errors'], 0)
+        self.assertEqual(snapshot['skipped_records']['missing_provenance'], 1)
         self.assertEqual(snapshot['pending_results'], 0)
 
     def test_provenance_pending_and_multiple_final_results(self):
@@ -300,7 +391,10 @@ class ReviewTests(unittest.TestCase):
         (self.root/'lane-response.raw.json').unlink()
         self.assertEqual(self.scan()['pending_results'], 1)
         self.write();(self.root/'audit.jsonl').unlink()
-        self.assertEqual(self.scan()['source_errors'], 1)
+        missing = self.scan()
+        self.assertEqual(missing['source_errors'], 0)
+        self.assertEqual(missing['skipped_records']['missing_provenance'], 1)
+        self.assertEqual(missing['collection_complete'], 0)
         self.write();(self.root/'audit.jsonl').write_bytes(record('dispatch_prepared', dispatch_id='other', packet_sha256='a'*64))
         self.assertEqual(self.scan()['skipped_records']['unmatched_dispatch'], 1)
         self.write();self.assertEqual(self.scan(now=NOW-101)['skipped_records']['future_timestamp'], 1)

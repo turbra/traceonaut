@@ -30,7 +30,7 @@ This reports HTTP status and the presence of collector health metrics while keep
 | Missing names | [Automatic Name Updates](automatic-name-updates.md). |
 | Grafana has no data | Imported datasource selection and Prometheus queries. |
 | CWO data appears only in older ranges | Enable [`--cwo-sessions`](../integrations/cwo.md#collect-cwo-sessions) for CWO-associated sessions across your Codex profile. Check pending files and source gaps. Audit logs are a separate optional source. |
-| New contractor reviews are missing | Check that each review directory is configured with `--cwo-review-dir` and uses a [supported layout](../integrations/custom-review-adapter.md#check-collection). Choose a range containing the launch time and set Project and Session to All to include unlinked reviews. |
+| New contractor reviews are missing | Enable `--cwo-sessions --cwo-review-discovery` for reviews launched from Codex sessions, or use `--cwo-review-dir` for [saved bundles](../integrations/custom-review-adapter.md). Check Review collection, select the launch date, and set Project and Session to All to include unlinked reviews. |
 | Token counts still show M or G | Re-render and import the current dashboard template. If a watcher provisions it, update the [watcher's template or release](automatic-name-updates.md) too. |
 | Account values unavailable | [Account Allowance](../optional/account-allowance.md) collector, login and freshness. |
 

@@ -12,7 +12,31 @@ BINARY=os.environ.get('CWO_TEST_PROMETHEUS_BINARY')
 
 @unittest.skipUnless(BINARY,'separately verified Prometheus binary not supplied')
 class BackfillQueries(unittest.TestCase):
-    def test_historical_review_survives_normal_export_expiry(self):
+    def test_review_health_separates_collection_faults_from_saved_gaps(self):
+        panel=next(p for p in json.loads((ROOT/'examples/observability/cwo-overview.json').read_text())['panels'] if p['id']==402)
+        # Old failed/unsupported runs persist, while actual collection faults
+        # appear on the second scan. Each query must also display a real zero.
+        sources=[]
+        for reason,value in [('missing_result',3),('unsupported_launch',4),('invalid_record',0)]:
+            sources.append({'series':f'cwo_review_discovery_gaps{{reason="{reason}"}}','values':f'{value} {value}'})
+        for metric,values in [('cwo_review_source_errors','0 2'),('cwo_review_limit_reached','0 1'),
+                              ('cwo_review_skipped_records{reason="invalid_record"}','0 1'),
+                              ('cwo_review_skipped_records{reason="preparation_record"}','2 2'),('cwo_review_pending_results','3 3')]:
+            sources.append({'series':metric,'values':values})
+        sources.append({'series':'cwo_review_skipped_records{reason="missing_provenance"}','values':'3 3'})
+        checks=[]
+        for at,faults in [('0m',0),('1m',4)]:
+            for target in panel['targets']:
+                checks.append({'expr':target['expr'],'eval_time':at,
+                    'exp_samples':[{'labels':'{}','value':faults if target['refId']=='A' else 10}]})
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'rules.json'
+            path.write_text(json.dumps({'rule_files':[],'evaluation_interval':'1m','tests':[
+                {'interval':'1m','input_series':sources,'promql_expr_test':checks}]}))
+            result=subprocess.run([str(Path(BINARY).with_name('promtool')),'test','rules',str(path)],capture_output=True,text=True,timeout=30)
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
+    def test_historical_review_survives_normal_expiry_and_export_cap(self):
         table=next(p for p in json.loads((ROOT/'examples/observability/cwo-overview.json').read_text())['panels'] if p['id']==401)
         labels='review_id="expired",outcome="completed",requested_model="model",reported_model="model",effort="high"'
         marker=',history="tracked",state="linked",record_state="complete",verdict="accept",project_id="project",session_id="session",input_available="1",output_available="1",duration_available="1"'
@@ -25,6 +49,11 @@ class BackfillQueries(unittest.TestCase):
                  {'series':'cwo_review_duration_seconds{'+labels+'}','values':'_ 3x720 stale'}]
         for kind,value in [('input',2),('cache_creation',10),('cache_read',20),('output',7)]:
             sources.append({'series':'cwo_review_tokens{'+labels+',kind="'+kind+'"}','values':f'_ {value}x720 stale'})
+        # A still-eligible review falls off the export cap after hour 2.
+        # Its last positive sample must survive without a withdrawal marker.
+        sources.extend([{'series':s['series'].replace('expired','capped'),
+                         'values':s['values'].replace('x720','x1')}
+                        for s in sources[1:]])
         # Withdrawal before expiry differs from normal retention expiry.
         withdrawn=labels.replace('expired','withdrawn')
         sources.extend([
@@ -43,6 +72,7 @@ class BackfillQueries(unittest.TestCase):
             else:
                 dimension,value={'E':('state','linked'),'F':('session_id','session'),'G':('record_state','complete'),'H':('verdict','accept')}[ref]
                 samples=[{'labels':f'{{review_id="expired",{dimension}="{value}"}}','value':1}]
+            samples += [{'labels':s['labels'].replace('expired','capped'),'value':s['value']} for s in samples[:]]
             checks.append({'expr':expr,'eval_time':'2h','exp_samples':samples})
             wide=target['expr'].replace('${project:regex}','.*').replace('${session:regex}','.*').replace('$__range','744h').replace('$__from','0').replace('$__to','2678400000')
             checks.append({'expr':wide,'eval_time':'744h','exp_samples':samples})

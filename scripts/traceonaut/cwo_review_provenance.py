@@ -168,6 +168,14 @@ class ProvenanceIndex:
             self.discovery = LaunchDiscovery(self.db)
             if not existed:
                 self.db.execute('UPDATE review_files SET offset=0')
+            self.db.execute('CREATE TABLE IF NOT EXISTS review_parser_version(version INTEGER PRIMARY KEY)')
+            if not self.db.execute('SELECT 1 FROM review_parser_version WHERE version=2').fetchone():
+                # Replay retained commands after parser changes, preserving
+                # numeric projections whose temporary outputs have disappeared.
+                self.db.execute('UPDATE review_files SET offset=0,gaps=0,boundary=?',
+                                (hashlib.sha256(b'').hexdigest(),))
+                self.db.execute('DELETE FROM review_parser_version')
+                self.db.execute('INSERT INTO review_parser_version VALUES(2)')
 
     def _consume(self, raw, path, sid):
         if not candidate(raw):
@@ -333,6 +341,7 @@ class ProvenanceIndex:
                 self.discovery.merge(reviews,snapshot,now)
             if not ready:
                 reviews['collection_complete'] = 0
+                reviews['membership_complete'] = False
         return {"ready":int(ready), "pending_files":pending, "source_errors":errors, "limit_reached":int(limited)}
 
     @staticmethod

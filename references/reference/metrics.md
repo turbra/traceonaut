@@ -200,6 +200,10 @@ Association sources: `skill_block`, `tool_execution`, `parent_session`. Command 
 
 Optional review artifact collection uses gauges. Review usage is separate from Codex session and observed-dispatch accounting.
 
+`requested_model` and `effort` describe the saved CLI settings; `reported_model` comes from the result. Execution outcome describes the CLI run, and evaluation is the recorded review decision.
+
+Token kinds separate uncached input, cache creation and cache reads; the dashboard input total includes all three. Thinking is part of output. Missing usage stays unavailable, and a reported zero stays zero. Duplicate results and repeated evaluations add no usage.
+
 | Metric | Type | Labels | Meaning |
 | --- | --- | --- | --- |
 | `cwo_review_source_available` | gauge | None | At least one configured review launch or provenance record was read. |
@@ -219,9 +223,11 @@ Optional review artifact collection uses gauges. Review usage is separate from C
 | `cwo_review_discovery_gaps` | gauge | `reason` | Incomplete discovered evidence, grouped by bounded reason. |
 | `cwo_review_record_state` | gauge | `review_id`, `record_state` | Complete result or reason its evidence is unavailable. |
 | `cwo_review_evaluation_info` | gauge | `review_id`, `verdict` | Recorded evaluator verdict; `accept_pending_peer` retains an outstanding peer-review hold. |
-| `cwo_review_snapshot_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `history`, `state`, `record_state`, `verdict`, `project_id`, `session_id`, `input_available`, `output_available`, `duration_available` | Scan time and current record metadata used to reconcile later-collected historical reviews. `history="tracked"` includes removal markers; `record_state="removed"` withdraws a replaced or invalidated record without adding usage. Ordinary age expiry keeps the last historical record. |
+| `cwo_review_snapshot_timestamp_seconds` | gauge | `review_id`, `outcome`, `requested_model`, `reported_model`, `effort`, `history`, `state`, `record_state`, `verdict`, `project_id`, `session_id`, `input_available`, `output_available`, `duration_available` | Latest scan time for a review's current details. With `history="tracked"`, `record_state="removed"` marks a withdrawn row; exclude it when querying current reviews. |
 
-Discovery gap reasons are `missing_result`, `conflicting_result`, `invalid_record`, `oversized_output`, `changing_output`, `unreadable_output`, `reused_output` and `unsupported_launch`. They describe saved evidence, not whether a review was accepted. CLI completion, evaluator verdict and implementation outcome are separate facts.
+Discovery gap reasons are `missing_result`, `conflicting_result`, `invalid_record`, `oversized_output`, `changing_output`, `unreadable_output`, `reused_output` and `unsupported_launch`. These identify collection problems; evaluation verdicts are reported separately.
+
+Artifact skip reasons are `invalid_record`, `unmatched_dispatch`, `future_timestamp`, `conflicting_result`, `missing_provenance` and `preparation_record`. Missing provenance means a required prompt or audit file is absent. Preparation records are planned commands and leave collection coverage unchanged. Pending results count distinct unresolved reviews after sources are combined.
 
 ## IBM Bob
 

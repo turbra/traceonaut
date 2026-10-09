@@ -41,8 +41,7 @@ Set your profile paths and create private collector storage:
 
 {/* <!-- setup-paths --> */}
 ```bash
-export TRACEONAUT_SOURCE_HOME="$HOME/.codex"
-export TRACEONAUT_CODEX_HOME="$TRACEONAUT_SOURCE_HOME"
+export TRACEONAUT_CODEX_HOME="$HOME/.codex"
 export TRACEONAUT_BOB_HOME="$HOME/.bob"
 export TRACEONAUT_DATA_DIR="$HOME/.local/share/traceonaut"
 export TRACEONAUT_METRICS_CREDENTIAL="$TRACEONAUT_DATA_DIR/metrics.token"
@@ -65,7 +64,7 @@ Choose one source configuration:
 {/* <!-- run-collector --> */}
 ```bash
 python3 scripts/collect_sessions.py \
-  --codex-home "$TRACEONAUT_SOURCE_HOME" \
+  --codex-home "$TRACEONAUT_CODEX_HOME" \
   --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
   --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
   --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \

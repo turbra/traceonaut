@@ -89,6 +89,72 @@ class DiscoveryTests(unittest.TestCase):
         self.consume(self.event('codex exec resume -m sample --json -',raw,'resume',start=NOW-5))
         self.assertEqual(len(self.scan()['reviews']),3)
 
+    def test_stderr_redirect_does_not_replace_inline_result(self):
+        error = self.root/'err.log'
+        error.write_text('a diagnostic, not a result')
+        self.consume(self.event(self.command()+' 2>'+str(error),json.dumps(self.result)))
+        snapshot = self.scan()
+        self.assertEqual(snapshot['reviews'][0]['tokens']['output'],7)
+        self.assertEqual(snapshot['discovery']['gaps'],{})
+
+    def test_separate_stdout_stderr_and_descriptor_copy(self):
+        output = self.root/'result.stream.jsonl'
+        output.write_text(json.dumps(self.result)+'\n')
+        for suffix in (' 2>/tmp/err.log', ' 2>>relative.log', ' 2>&1'):
+            with self.subTest(suffix=suffix):
+                command = self.command(output)+suffix
+                self.assertEqual(discovery.launch_metadata(['sh','-c',command])['output'],str(output))
+                self.consume(self.event(command,identity='redirected'))
+        self.assertEqual(self.scan()['reviews'][0]['tokens']['output'],7)
+        self.assertEqual(self.scan()['discovery']['gaps'],{})
+
+    def test_numeric_arguments_quotes_and_direct_argv_are_preserved(self):
+        for prompt in ('2', "'2'", '"2"', "'>'"):
+            command = self.command()+' '+prompt+' >/tmp/result'
+            self.assertEqual(discovery.launch_metadata(['sh','-c',command])['output'],'/tmp/result')
+        self.assertEqual(discovery.launch_metadata(['sh','-c',self.command()+' 1>/tmp/result'])['output'],'/tmp/result')
+        self.assertIsNone(discovery.launch_metadata(['sh','-c',self.command()+' 1>&2']))
+        self.assertIsNone(discovery.launch_metadata(['sh','-c',self.command()+' &>/tmp/result']))
+        self.assertIsNone(discovery.launch_metadata(['claude','-p','2>literal'])['output'])
+        self.assertEqual(discovery.launch_metadata(['sh','-c','cat /tmp/prompt | '+self.command('/tmp/result')])['output'],'/tmp/result')
+        relative=discovery.launch_metadata(['sh','-c',self.command()+' < reviews/brief.md >/tmp/result 2>/tmp/err'])
+        self.assertEqual(relative['output'],'/tmp/result')
+        self.assertIsNone(relative['prompt'])
+
+    def test_discovery_export_cap_preserves_eligible_history(self):
+        from traceonaut.cwo_review_telemetry import preserve_review_markers
+        self.consume(self.event(self.command(),json.dumps(self.result),'old',start=NOW-20))
+        first = preserve_review_markers(self.db,self.scan())
+        old_id = first['reviews'][0]['review_id']
+        self.result['uuid'] = str(uuid4())
+        self.consume(self.event(self.command(),json.dumps(self.result),'new'))
+        with mock.patch.object(discovery,'EXPORT_CAP',1):
+            snapshot = preserve_review_markers(self.db,self.scan())
+        self.assertEqual(len(snapshot['reviews']),1)
+        self.assertIn(old_id,snapshot['eligible_review_ids'])
+        self.assertEqual(snapshot['retired_reviews'],[])
+        self.assertEqual(snapshot['limit_reached'],1)
+        self.assertEqual(snapshot['collection_complete'],0)
+
+    def test_result_gaps_and_unprojected_launches_have_distinct_membership(self):
+        from traceonaut.cwo_review_telemetry import preserve_review_markers
+        self.consume(self.event(self.command(),json.dumps(self.result),'known'))
+        first=preserve_review_markers(self.db,self.scan())
+        identity=first['reviews'][0]['review_id']
+        # An unsupported launch cannot prove a previously indexed row vanished.
+        self.db.execute('DELETE FROM review_launches')
+        self.consume(self.event(self.command()+'; echo done',identity='unsupported'))
+        unknown=self.scan()
+        self.assertFalse(unknown['membership_complete'])
+        self.assertEqual(preserve_review_markers(self.db,unknown)['retired_reviews'],[])
+        # A known launch with no result is still an enumerated member. It does
+        # not mask the independent disappearance of the original source row.
+        self.db.execute('DELETE FROM review_discovery_errors')
+        self.consume(self.event(self.command(),identity='pending'))
+        pending=self.scan()
+        self.assertTrue(pending['membership_complete'])
+        self.assertEqual([r['review_id'] for r in preserve_review_markers(self.db,pending)['retired_reviews']],[identity])
+
     def test_heredoc_probe_is_separate_from_review(self):
         self.consume(self.event(self.command()+" <<'INPUT'\nReview this; explain A && B.\nINPUT",json.dumps(self.result)))
         probe=copy.deepcopy(self.result);probe['uuid']=str(uuid4())
@@ -241,6 +307,47 @@ class DiscoveryTests(unittest.TestCase):
         fixture.cwo.close();fixture.cwo=CwoSessionCollector(f.home,f.state)
         reader=ProvenanceIndex(fixture.cwo,discover=True)
         self.assertEqual(scan()['reviews'],current['reviews'])
+
+    def test_parser_upgrade_replays_redirects_without_losing_saved_results(self):
+        from test_cwo_session_telemetry import CwoCollectionTests
+        from traceonaut.cwo_review_provenance import ProvenanceIndex
+        from traceonaut.cwo_review_telemetry import ReviewCollector
+        fixture=CwoCollectionTests();fixture.setUp();self.addCleanup(fixture.doCleanups)
+        f=fixture.f;f.now=int(f.now)
+        output=self.root/'retained.stream.jsonl'
+        output.write_text(json.dumps(self.result)+'\n')
+        inline=copy.deepcopy(self.result);inline['uuid']=str(uuid4())
+        def event(identity,command,stdout=''):
+            return f.event('event_msg',{'type':'item_completed','thread_id':f.sid,'turn_id':'turn',
+                'started_at_ms':(f.now-1)*1000,'completed_at_ms':f.now*1000,
+                'item':{'type':'CommandExecution','id':identity,'status':'completed','exit_code':0,
+                        'command':['bash','-lc',command],'stdout':stdout}},at=f.now)
+        f.write(fixture.skill(at=f.now-2),f.usage(),
+                event('retained',self.command(output)),
+                event('stderr',self.command()+' 2>/tmp/old-error.log',json.dumps(inline)))
+        reader=ProvenanceIndex(fixture.cwo,discover=True)
+        def scan():
+            f.collector.scan();snapshot=f.collector.snapshot(now=f.now)
+            snapshot['cwo_sessions']=fixture.cwo.scan(f.collector.db,snapshot,now=f.now)
+            reviews=ReviewCollector(directories=[]).scan(now=f.now)
+            self.assertEqual(reader.scan(f.collector.db,snapshot,reviews,now=f.now)['ready'],1)
+            return reviews
+        first=scan();self.assertEqual(len(first['reviews']),2)
+        # Simulate the old reader having consumed all bytes and misread stderr.
+        db=fixture.cwo.db
+        row=db.execute("SELECT id,metadata FROM review_launches WHERE json_extract(metadata,'$.output') IS NULL").fetchone()
+        metadata=json.loads(row['metadata']);metadata['output']='/tmp/old-error.log'
+        db.execute("UPDATE review_launches SET metadata=?,projection=NULL,state='unreadable_output' WHERE id=?",
+                   (json.dumps(metadata),row['id']))
+        db.execute('DELETE FROM review_parser_version')
+        output.unlink()
+        reader=ProvenanceIndex(fixture.cwo,discover=True)
+        replayed=scan()
+        self.assertEqual(replayed['reviews'],first['reviews'])
+        offsets=[tuple(row) for row in db.execute('SELECT path,offset FROM review_files')]
+        reader=ProvenanceIndex(fixture.cwo,discover=True)
+        self.assertEqual([tuple(row) for row in db.execute('SELECT path,offset FROM review_files')],offsets)
+        self.assertEqual(scan()['reviews'],first['reviews'])
 
 
 if __name__=='__main__':unittest.main()

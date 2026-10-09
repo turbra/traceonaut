@@ -43,7 +43,7 @@ class OnboardingTests(unittest.TestCase):
         self.snapshot = self.presentation / "sessions.json"
         self.token = self.presentation / "metrics.token"
         self.env = {**os.environ, "HOME": str(self.root),
-                    "TRACEONAUT_SOURCE_HOME": str(self.source),
+                    "TRACEONAUT_CODEX_HOME": str(self.source),
                     "TRACEONAUT_LISTEN_ADDRESS": "127.0.0.1",
                     "TRACEONAUT_DATA_DIR": str(self.presentation),
                     "TRACEONAUT_METRICS_CREDENTIAL": str(self.token)}

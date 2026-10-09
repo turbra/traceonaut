@@ -38,9 +38,16 @@ Use the [Example Queries](example-queries.md) for checks in Prometheus. Alerting
 
 ## CWO Reviews
 
-CWO Overview's **Review collection** tile shows incomplete evidence, source access errors and limits. The review table keeps each known invocation and identifies missing results in **Saved record**. A timed-out process with no final usage record is an explained gap; its tokens remain unavailable.
+CWO Overview's **Review collection** tile separates two counts:
 
-Run the collector with `--once` and its usual options to inspect `cwo_reviews.discovery.gaps` and pending provenance scans. Restore unreadable output or save a [supported review bundle](../integrations/custom-review-adapter.md); the running collector retries incomplete files. Unsupported recorded launches need a supported wrapper or parser support. Collected numeric results survive removal of temporary output. No alert service is required.
+- **Collection faults:** read, parsing, conflicting-result and limit errors.
+- **Saved evidence gaps:** missing final results, missing bundle provenance and unsupported recorded launches, including older failed runs. A failed run can have a saved launch and no final token usage.
+
+Both counts cover the retained profile. **Saved record** in the review table identifies missing results; their token counts remain unavailable. Evidence coverage remains Partial while results are missing.
+
+Preparation files describe a planned command and are counted separately as expected exclusions. For `missing_provenance`, restore the bundle's matching prompt and audit files to collect its result.
+
+Run the collector with `--once` and its usual options to inspect `cwo_reviews.discovery.gaps`, `pending_results` and `skipped_records`. Restore unreadable output or save a [supported review bundle](../integrations/custom-review-adapter.md); the running collector retries incomplete files. Unsupported recorded launches need a supported wrapper or parser support. Collected numeric results survive removal of temporary output.
 
 ## IBM Bob
 

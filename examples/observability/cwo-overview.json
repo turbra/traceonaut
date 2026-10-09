@@ -173,7 +173,7 @@
       "id": 207,
       "type": "stat",
       "title": "Workflow scans",
-      "description": "Profile-wide collection: age and completeness of configured audit logs and custom review files. Complete means those files were fully read; use the age to check freshness. If Partial persists, check the source paths, permissions and collector errors. [Reading the Values](https://turbra.github.io/traceonaut/dashboards/reading-values/).",
+      "description": "Profile-wide audit and review scan age and evidence coverage. Partial includes missing saved results as well as collection problems. Review collection separates these causes. [Collector Health](https://turbra.github.io/traceonaut/reference/collector-health/#cwo-reviews).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -289,7 +289,7 @@
       "id": 402,
       "type": "stat",
       "title": "Review collection",
-      "description": "Profile-wide external review collection. Gaps count unreadable, unsupported or incomplete launch records; a failed execution without a final usage record is an explained gap. The table retains known launch metadata. Check --once cwo_reviews.discovery for reasons and repair or restore the source; the collector retries on subsequent scans.",
+      "description": "Collection faults count read, parsing, conflicting-result and limit errors. Saved evidence gaps count missing final results, missing bundle provenance and unsupported recorded launches, including older failed runs. Counts cover the retained profile. Inspect cwo_reviews.discovery.gaps and skipped_records in the collector's --once output for reasons. [Collector Health](https://turbra.github.io/traceonaut/reference/collector-health/#cwo-reviews).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -353,11 +353,24 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(cwo_review_discovery_gaps) + max(cwo_review_source_errors) + max(cwo_review_limit_reached)",
+          "expr": "sum(cwo_review_discovery_gaps{reason!~\"missing_result|unsupported_launch\"}) + sum(cwo_review_skipped_records{reason!~\"preparation_record|missing_provenance\"}) + max(cwo_review_source_errors) + max(cwo_review_limit_reached)",
           "instant": true,
           "range": false,
           "format": "time_series",
-          "legendFormat": "Evidence gaps"
+          "legendFormat": "Collection faults"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(cwo_review_discovery_gaps{reason=\"unsupported_launch\"}) + max(cwo_review_pending_results) + sum(cwo_review_skipped_records{reason=\"missing_provenance\"})",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "Saved evidence gaps"
         }
       ],
       "transparent": false,
@@ -1359,7 +1372,7 @@
       "id": 401,
       "type": "table",
       "title": "External contractor reviews",
-      "description": "External review invocations selected by original launch time. Execution means the CLI completed or failed; Evaluation is the recorded evaluator verdict, separate from implementation success. Pending peer review stays explicit. Saved record describes missing evidence; missing token counts remain blank. Historical ranges include later-collected evidence within the 30-day retained review inventory. Project and Session filter the linked source session. [Custom Review Adapter](https://turbra.github.io/traceonaut/integrations/custom-review-adapter/). Historical samples survive normal export expiry; records withdrawn before expiry remain excluded.",
+      "description": "External reviews selected by launch date. Execution shows whether the CLI finished or failed; Evaluation shows the recorded review decision. Saved record identifies missing results, with unavailable token counts left blank. Project and Session filter the linked launching session. Reviews collected later appear under their original launch date. [Custom Review Adapter](https://turbra.github.io/traceonaut/integrations/custom-review-adapter/).",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"

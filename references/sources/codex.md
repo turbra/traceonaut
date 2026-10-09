@@ -15,7 +15,7 @@ commands, compactions and activity. The source files stay unchanged.
 ## Enable
 
 In [Quick Start](../getting-started.mdx#1-run-the-collector), set
-`TRACEONAUT_SOURCE_HOME` to your profile and choose **Codex** or **Both**.
+`TRACEONAUT_CODEX_HOME` to your profile and choose **Codex** or **Both**.
 Import [Work Overview](../dashboards/work-overview.md).
 
 ## Check

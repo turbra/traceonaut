@@ -17,7 +17,7 @@ from urllib.parse import unquote, urlsplit
 
 from .codex_session_telemetry import _open_source, _timestamp, _uuid
 from .cwo_review_provenance import digest, summaries
-from .cwo_review_telemetry import _json, _integer, _label, project
+from .cwo_review_telemetry import _json, _integer, _label, project, EXPORT_CAP
 from .cwo_audit_telemetry import _parse
 
 MAX_OUTPUT_BYTES = 8 * 1024 * 1024
@@ -38,7 +38,8 @@ def heredoc(text):
     return re.fullmatch(r"([^\n]*?)<<\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)['\"]?\s*\n(.*?)\n\2\s*",text,re.S)
 
 
-def shell_tokens(command):
+def shell_parts(command):
+    """Literal words and operators, retaining descriptor adjacency and quotes."""
     if not isinstance(command, list) or not command or any(not isinstance(x, str) for x in command):
         return []
     if Path(command[0]).name in {'bash', 'sh', 'zsh'}:
@@ -52,30 +53,78 @@ def shell_tokens(command):
             return []
         if any(c in text for c in ('`', '$(', '${')):
             return []
-        lexer = shlex.shlex(text, posix=True, punctuation_chars=';&|<>')
-        lexer.whitespace_split = True
-        lexer.commenters = ''
+        pattern = r'''(?:[^\s;&|<>'"\\]+|\\.|'(?:[^']*)'|"(?:\\.|[^"\\])*")+|[;&|<>]+'''
+        parts, end = [], 0
         try:
-            return list(lexer)
+            for match in re.finditer(pattern, text):
+                if text[end:match.start()].strip():
+                    return []
+                raw = match.group()
+                operator = raw[0] in ';&|<>'
+                fd = None
+                if operator and raw[0] in '<>' and parts and end == match.start():
+                    if re.fullmatch(r'[0-9]+', parts[-1][3]):
+                        fd = int(parts.pop()[0])
+                value = raw if operator else shlex.split(raw, posix=True)[0]
+                parts.append((value, operator, fd, raw))
+                end = match.end()
+            return parts if not text[end:].strip() else []
         except ValueError:
             return []
-    return command
+    return [(word, False, None, word) for word in command]
+
+
+def shell_tokens(command):
+    return [part[0] for part in shell_parts(command)]
+
+
+def launch_words(command):
+    parts = shell_parts(command)
+    argv, output, prompt = [], None, None
+    index, piped = 0, False
+    while index < len(parts):
+        word, operator, fd, _ = parts[index]
+        if operator and word == '|':
+            piped = not (len(argv) == 2 and argv[0] == 'cat' and index+1 < len(parts)
+                         and Path(parts[index+1][0]).name in {'claude', 'codex'})
+        if operator and word in {'>', '>>', '<', '>&'}:
+            if index + 1 >= len(parts) or parts[index+1][1]:
+                return [], None, None
+            target = parts[index+1][0]
+            descriptor = (0 if word == '<' else 1) if fd is None else fd
+            if word == '>&':
+                # Copying stdout to stderr does not change the stdout source.
+                if descriptor != 2 or target != '1':
+                    return [], None, None
+            elif descriptor == 2 and word in {'>', '>>'}:
+                pass
+            elif descriptor == 1 and word == '>' and not piped:
+                if output is not None or not Path(target).is_absolute():
+                    return [], None, None
+                output = target
+            elif descriptor == 0 and word == '<':
+                # Relative stdin does not invalidate a launch or its stdout.
+                # It supplies no absolute prompt path for optional audit reads.
+                prompt = target if Path(target).is_absolute() else None
+            else:
+                return [], None, None
+            index += 2
+            continue
+        if operator and any(char in word for char in '<>'):
+            return [], None, None
+        argv.append(word)
+        index += 1
+    return argv, output, prompt
 
 
 def launch_metadata(command, *, script_reader=None, depth=0):
     """Recognize literal launch argv and redirects, including sudo/su wrappers."""
     if depth > 4:
         return None
-    argv = shell_tokens(command)
+    argv, output, prompt = launch_words(command)
     if not argv:
         return None
     body=heredoc(command[-1]) if len(command)==3 else None
-    output = None
-    for index, word in enumerate(argv[:-1]):
-        if word == '>':
-            if output is not None or not Path(argv[index+1]).is_absolute():
-                return None
-            output = argv[index+1]
     # A leading cd changes no launch parameters. Conditional trailing commands
     # do not establish that another invocation executed.
     if len(argv) > 3 and argv[0] == 'cd' and argv[2] == '&&':
@@ -148,7 +197,6 @@ def launch_metadata(command, *, script_reader=None, depth=0):
         _label(model); _label(effort)
     except ValueError:
         return None
-    prompt = next((argv[i+1] for i,x in enumerate(argv[:-1]) if x == '<' and Path(argv[i+1]).is_absolute()), None)
     inline = option('-p','--print') if name=='claude' else argv[-1]
     if body:
         inline=body[3]
@@ -436,7 +484,8 @@ class LaunchDiscovery:
         start,end = start/1000,end/1000
         metadata['process_status']=item['status']
         metadata['exit_code']=item.get('exit_code')
-        if old and old['projection']:
+        if old and old['projection'] and all(json.loads(old['metadata']).get(key) == metadata.get(key)
+                for key in ('provider', 'output', 'prompt', 'requested_model', 'effort')):
             return
         projection, state, fingerprint = None,'missing_result',None
         try:
@@ -495,6 +544,8 @@ class LaunchDiscovery:
             except (OSError,ValueError,UnicodeError,TypeError,RecursionError):
                 pass
         rows = {r['review_id']:r for r in reviews['reviews']}
+        eligible = set(reviews.get('eligible_review_ids', rows))
+        withdrawn = set(reviews.get('withdrawn_review_ids', ()))
         outputs = {}
         for launch in launches:
             metadata = json.loads(launch['metadata'])
@@ -504,6 +555,7 @@ class LaunchDiscovery:
         for error in self.db.execute('SELECT sid,reason FROM review_discovery_errors'):
             if error['sid'] in associated:
                 gaps[error['reason']]=gaps.get(error['reason'],0)+1
+        unprojected_launches = bool(gaps)
         for launch in launches:
             metadata = json.loads(launch['metadata'])
             if metadata.get('purpose')=='model_check':
@@ -518,6 +570,7 @@ class LaunchDiscovery:
                      'provider_session_id':metadata.get('provider_session_id')}
             else:
                 row = json.loads(launch['projection'])
+                withdrawn.add(digest(['incomplete-invocation',launch['id']]))
                 if row.get('record_state','complete')!='complete':
                     gaps[row['record_state']]=gaps.get(row['record_state'],0)+1
             row['execution_status']=metadata.get('process_status','unknown')
@@ -566,15 +619,27 @@ class LaunchDiscovery:
             if len(sids)>1 and key in rows:
                 rows[key]['attribution']='ambiguous'
                 rows[key].pop('source_session',None)
-        self.limited=self.limited or len(rows)>256
-        reviews['reviews']=sorted(rows.values(),key=lambda r:(r['timestamp'],r['review_id']),reverse=True)[:256]
+        eligible.update(rows)
+        eligible.difference_update(poisoned)
+        withdrawn.update(poisoned)
+        reviews['eligible_review_ids'] = sorted(eligible)
+        reviews['withdrawn_review_ids'] = sorted(withdrawn - rows.keys())
+        # Missing results still have known launch identities. They reduce usage
+        # coverage, but do not make the enumerated membership incomplete.
+        reviews['membership_complete'] = (reviews.get('membership_complete', True)
+                                         and not self.limited and not unprojected_launches)
+        self.limited=self.limited or len(rows)>EXPORT_CAP
+        reviews['reviews']=sorted(rows.values(),key=lambda r:(r['timestamp'],r['review_id']),reverse=True)[:EXPORT_CAP]
+        reviews['pending_results'] = sum(row.get('record_state') == 'missing_result' for row in rows.values())
         reviews['discovery']={'launches':sum(json.loads(r['metadata']).get('purpose')!='model_check' for r in launches),
                               'model_checks':sum(json.loads(r['metadata']).get('purpose')=='model_check' for r in launches),
                               'represented':sum(bool(r.get('observed_source_session')) for r in reviews['reviews']),
                               'gaps':gaps,'limit_reached':int(self.limited)}
         reviews['limit_reached'] = int(reviews['limit_reached'] or self.limited)
-        if gaps:
-            reviews['collection_complete']=0
         if launches:
             reviews['source_available']=1
+        reviews['collection_complete'] = int(reviews['source_available'] and not gaps
+            and not reviews['source_errors'] and not reviews['pending_results']
+            and not reviews['limit_reached'] and not any(count for reason,count in
+                reviews['skipped_records'].items() if reason != 'preparation_record'))
         return reviews

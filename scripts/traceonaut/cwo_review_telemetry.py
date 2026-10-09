@@ -6,6 +6,7 @@ Launch time is explicit; a result's duration does not establish a finish timesta
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -21,7 +22,8 @@ MAX_FILE_BYTES = 2 * 1024 * 1024
 MAX_SCAN_BYTES = 32 * 1024 * 1024
 EXPORT_CAP = 256
 SNAPSHOT_HISTORY_CAP = 4096
-SKIP_REASONS = ("invalid_record", "unmatched_dispatch", "future_timestamp", "conflicting_result")
+SKIP_REASONS = ("invalid_record", "unmatched_dispatch", "future_timestamp", "conflicting_result",
+                "preparation_record", "missing_provenance")
 DISCOVERY_REASONS = ('missing_result','conflicting_result','invalid_record','oversized_output',
                      'changing_output','unreadable_output','reused_output','unsupported_launch')
 LABELS = ("review_id", "outcome", "requested_model", "reported_model", "effort")
@@ -39,13 +41,13 @@ METRICS = {
     "cwo_review_skipped_records": (("reason",), "Review artifacts omitted in the latest scan by bounded reason."),
     "cwo_review_started_timestamp_seconds": (LABELS, "Recorded launch time of an external review invocation."),
     "cwo_review_tokens": ((*LABELS, "kind"), "CLI top-level usage by kind; thinking is a subset of output. Input excludes cache creation and reads."),
-    "cwo_review_duration_seconds": (LABELS, "CLI-reported result duration; not time inferred from file timestamps."),
-    "cwo_review_session_info": (("review_id", "project_id", "session_id"), "Proven immediate launching Codex session for a collected CLI review."),
+    "cwo_review_duration_seconds": (LABELS, "CLI-reported result duration in seconds."),
+    "cwo_review_session_info": (("review_id", "project_id", "session_id"), "Linked launching Codex session for an external review."),
     "cwo_review_attribution_state": (("review_id", "state"), "Review attribution: linked, unlinked, ambiguous or pending source scanning; one state per review."),
     "cwo_review_discovered_launches": ((), "External review launches found in retained CWO session command records; excludes explicit model checks."),
     "cwo_review_discovery_gaps": (("reason",), "Discovered review executions with incomplete or conflicting saved evidence."),
-    "cwo_review_record_state": (("review_id","record_state"), "Availability of the saved invocation result; not review acceptance."),
-    "cwo_review_evaluation_info": (("review_id","verdict"), "Latest recorded evaluator verdict for the matching audited dispatch; not final human acceptance."),
+    "cwo_review_record_state": (("review_id","record_state"), "Availability of the saved invocation result."),
+    "cwo_review_evaluation_info": (("review_id","verdict"), "Latest recorded evaluator verdict for the matching audited dispatch."),
     "cwo_review_snapshot_timestamp_seconds": (SNAPSHOT_LABELS, "Scan timestamp identifying the current review projection, including missing values and source linkage."),
 }
 
@@ -72,6 +74,19 @@ def _json(content):
 def normalize_launch(launch):
     """Accept recorded CLI effort aliases without claiming provider attestation."""
     launch = dict(launch)
+    for alias, key in (('start_epoch', 'started_at'), ('end_epoch', 'finished_at')):
+        if alias not in launch:
+            continue
+        value = launch[alias]
+        if type(value) not in (int, float) or not 0 < value < 2**53:
+            raise ValueError('invalid_record')
+        try:
+            stamp = datetime.fromtimestamp(value, timezone.utc).isoformat()
+        except (ValueError, OverflowError, OSError):
+            raise ValueError('invalid_record') from None
+        if key in launch and _timestamp(launch[key]) != _timestamp(stamp):
+            raise ValueError('invalid_record')
+        launch[key] = stamp
     efforts = {launch[key] for key in ("effort", "requested_effort", "executed_effort")
                if key in launch and isinstance(launch[key], str)}
     if len(efforts) > 1 or any(key in launch and not isinstance(launch[key], str)
@@ -185,6 +200,7 @@ class ReviewCollector(AuditCollector):
         read = pending = 0
         remaining = MAX_SCAN_BYTES
         reviews, conflicts, poisoned_attempts, skipped = {}, set(), set(), Counter()
+        withdrawn = set()
         audits, evaluations = {}, {}
 
         def content(path):
@@ -244,14 +260,17 @@ class ReviewCollector(AuditCollector):
                                 if at>=evaluations.get(binding,(0,''))[0]:
                                     evaluations[binding]=(at,record['verdict'])
                 if not found:
-                    raise FileNotFoundError()
+                    raise ValueError('missing_provenance')
                 audits[directory] = prepared
             return audits[directory]
 
         def provenance(path, launch):
             # The prompt is hashed in memory, never retained or exported. Only
             # its explicit CWO dispatch headers bind this attempt to the audit.
-            prompt = content(path.with_name(path.name.removesuffix("-provenance.json") + "-prompt.txt"))
+            try:
+                prompt = content(path.with_name(path.name.removesuffix("-provenance.json") + "-prompt.txt"))
+            except FileNotFoundError:
+                raise ValueError('missing_provenance') from None
             if hashlib.sha256(prompt).hexdigest() != launch.get("prompt_sha256"):
                 raise ValueError("invalid_record")
             text = prompt.decode("utf-8")
@@ -278,6 +297,11 @@ class ReviewCollector(AuditCollector):
                 # A preparation file is sometimes retained alongside the actual
                 # timed launch receipt. A complete second launch is still read.
                 launch = _json(content(path))
+                if (path.name.endswith('-launch.json') and not any(key in launch for key in
+                        ('started_at', 'start_epoch', 'events')) and
+                        {'model', 'effort_requested', 'entry', 'argv', 'packet_sha256'} <= launch.keys()):
+                    skipped['preparation_record'] += 1
+                    continue
                 if (path.name.endswith("-launch.json") and
                         "started_at" not in launch and
                         path.with_name(path.name.removesuffix("-launch.json") + "-launch-receipt.json") in files):
@@ -299,11 +323,16 @@ class ReviewCollector(AuditCollector):
                     try:
                         result = _json(content(path.with_name(path.name.removesuffix(suffix) + result_suffix)))
                     except FileNotFoundError:
-                        pending += 1;continue
+                        pending += 1
+                        row=saved_metadata(pending_projection(launch,prepared_at(path.parent),now), launch, path, now)
+                        if row['timestamp']>=now-RETENTION_SECONDS:
+                            reviews[row['review_id']]=row
+                        continue
                 row = project(launch, result, prepared_at(path.parent), now,
                               attempt_identity=is_provenance)
                 saved_metadata(row, launch, path, now)
                 if row["timestamp"] < now - RETENTION_SECONDS:continue
+                withdrawn.add(pending_projection(launch,prepared_at(path.parent),now)['review_id'])
                 identity = row["review_id"]
                 if identity in reviews:
                     prior = reviews[identity]
@@ -333,6 +362,15 @@ class ReviewCollector(AuditCollector):
         for row in reviews.values():
             attempts.setdefault(row["attempt"], []).append(row)
         for group in attempts.values():
+            finals = [row for row in group if row.get('record_state') != 'missing_result']
+            if finals:
+                for row in group[:]:
+                    if (row.get('record_state') == 'missing_result' and
+                            all(row[key] == finals[0][key] for key in
+                                ('timestamp', 'requested_model', 'effort', 'binding'))):
+                        withdrawn.add(row['review_id'])
+                        reviews.pop(row['review_id'], None)
+                        group.remove(row)
             if len(group) == 1 or all(row["cli_identity"] for row in group):
                 continue
             prior = next((row for row in group if row["cli_identity"]), group[0])
@@ -347,11 +385,16 @@ class ReviewCollector(AuditCollector):
         for identity in conflicts:reviews.pop(identity, None)
         for row in reviews.values():
             row['evaluation']=evaluations.get(row['binding'],(0,'unknown'))[1]
+        pending = sum(row.get('record_state') == 'missing_result' for row in reviews.values())
         skipped["conflicting_result"] = len(conflicts)
         ordered = sorted(reviews.values(), key=lambda r: (r["timestamp"], r["review_id"]), reverse=True)
+        failures = any(count for reason,count in skipped.items() if reason != 'preparation_record')
+        membership_complete = not errors and not limited and not failures
         limited = limited or len(ordered) > EXPORT_CAP
-        return {"source_available": int(read > 0), "collection_complete": int(read > 0 and not errors and not pending and not limited and not any(skipped.values())),
+        return {"source_available": int(read > 0), "collection_complete": int(read > 0 and not errors and not pending and not limited and not failures),
                 "scan_timestamp_seconds": now, "source_files": read, "source_errors": errors,
+                "eligible_review_ids": sorted(reviews), "withdrawn_review_ids": sorted(withdrawn | conflicts),
+                "membership_complete": membership_complete,
                 "pending_results": pending, "limit_reached": int(limited), "skipped_records": dict(skipped), "reviews": ordered[:EXPORT_CAP]}
 
 
@@ -360,6 +403,9 @@ def preserve_review_markers(db, snapshot):
     now = snapshot['scan_timestamp_seconds']
     active = {row['review_id']: row for row in snapshot['reviews']
               if row['timestamp'] + RETENTION_SECONDS > now}
+    eligible = set(snapshot.get('eligible_review_ids', active)) | active.keys()
+    withdrawn = set(snapshot.get('withdrawn_review_ids', ())) - active.keys()
+    complete = snapshot.get('membership_complete', not snapshot.get('limit_reached'))
     with db:
         db.execute('''CREATE TABLE IF NOT EXISTS review_snapshot_history(
             review_id TEXT PRIMARY KEY, started REAL NOT NULL,
@@ -382,7 +428,7 @@ def preserve_review_markers(db, snapshot):
                 db.execute('INSERT OR REPLACE INTO review_snapshot_history VALUES(?,?,?,0)',
                            (identity, row['timestamp'], encoded))
         for identity, row in previous.items():
-            if identity not in active and not row[3]:
+            if not row[3] and (identity in withdrawn or (complete and identity not in eligible)):
                 db.execute('UPDATE review_snapshot_history SET removed=1 WHERE review_id=?', (identity,))
         retained = list(db.execute('SELECT review_id,started FROM review_snapshot_history ORDER BY started DESC,review_id'))
         dropped = retained[SNAPSHOT_HISTORY_CAP:]

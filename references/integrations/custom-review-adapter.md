@@ -6,7 +6,7 @@ description: Collect saved contractor review results, models, effort and token u
 
 # Custom Review Adapter
 
-Traceonaut collects external review invocations, models, CLI effort, token usage and evaluator verdicts in CWO Overview. Enable launch discovery for reviews started inside CWO-associated Codex sessions. Use explicit directories for additional saved review bundles.
+CWO Overview shows external Claude and Codex reviews, including models, effort, token usage and review decisions. Enable discovery for reviews launched from CWO-associated Codex sessions, or configure directories containing saved review results.
 
 ## Discover Reviews from Sessions
 
@@ -16,13 +16,13 @@ Add these options to your session collector command:
 --cwo-sessions --cwo-review-discovery
 ```
 
-The collector follows recorded Claude and Codex CLI launches. It reads final results saved in command output or an explicitly redirected JSON/JSONL file, including `*.stream.jsonl`. Literal account-switching commands and single-command shell wrappers are supported. Supported CWO checked-command wrappers can also identify a saved provenance bundle through their exact prompt and output paths.
+The collector follows saved Claude and Codex CLI launch commands. Results can be in command output or a redirected JSON/JSONL file, including `*.stream.jsonl`. Supported commands include literal account switches, single-command shell scripts, and CWO checked-command wrappers that save the bundles described below.
 
-Discovery follows launch records across projects, so a new output directory needs no collection-directory change. Temporary output must still exist when first read. Collected numeric results remain in the private index after that output is removed. Exact readiness probes and CLI authentication/configuration commands are excluded from reviews.
+Discovery follows launches across projects and output directories. Keep temporary output until the collector has read it; collected results remain available after the file is removed. Recognized model checks and CLI login or configuration commands are excluded.
 
-Hash-valid audit events beside discovered review prompts also feed Workflow activity. Collected events survive removal of the temporary directory and keep their original event IDs and timestamps.
+Valid audit events saved beside a review prompt also appear in Workflow activity with their original timestamps.
 
-Unsupported launch syntax, unreadable output and missing final results appear as collection gaps. Restore the output or save a supported bundle below; the running collector retries incomplete records. It never executes a recorded command.
+Check **Review collection** for unsupported commands, unreadable output or missing results. Restore the output or save a supported bundle below; the running collector retries incomplete records.
 
 ## Collect Paired Results
 
@@ -48,7 +48,7 @@ review/
   reviewer-response.json
 ```
 
-The filename prefix can vary. Each launch record must include `dispatch_id`, `packet_sha256`, a timezone-qualified `started_at`, and `requested_model`. Effort can use `effort`, `requested_effort` or `executed_effort`; populated fields must agree. These fields describe the CLI setting, not provider-confirmed effort.
+The filename prefix can vary. Each launch record must include `dispatch_id`, `packet_sha256`, a timezone-qualified `started_at`, and `requested_model`. Effort can use `effort`, `requested_effort` or `executed_effort`; populated fields must agree.
 
 The same directory's `audit.jsonl` or `contract-audit.jsonl` must contain a hash-valid matching `dispatch_prepared` event recorded before launch. The paired result must be a Claude CLI `type: result` object with `uuid`, `session_id`, and boolean `is_error`.
 
@@ -65,31 +65,33 @@ review/
 
 The provenance JSON needs `started_at`, `requested_model`, `prompt_sha256`, and an `events` array containing exactly one final `type: result` event. Effort uses the same fields as paired results. Only the final result contributes usage; repeated assistant events are excluded.
 
-The saved prompt's SHA-256 must match `prompt_sha256`. Its CWO `Dispatch ID:` and `Packet SHA-256:` headers must match the audit. Traceonaut reads the prompt to verify that binding; prompt text is never retained in metrics or collector state. Bundles without CLI result IDs use an identity derived from the recorded launch. Copies count once.
+Numeric Unix timestamps `start_epoch` and `end_epoch` are also accepted as aliases for `started_at` and `finished_at`. When both forms are present, their values must agree.
+
+The saved prompt's SHA-256 must match `prompt_sha256`. Its CWO `Dispatch ID:` and `Packet SHA-256:` headers must match the audit. Traceonaut reads the prompt to verify this match. Bundles without CLI result IDs use the recorded launch to identify the review. Copies count once.
 
 ## Check Collection
 
-Run the collector with `--once` and the same collection options. Its `cwo_reviews` output reports source health, pending scans and exported review counts. With launch discovery enabled, `discovery` also reports observed launches, separate model checks and gaps by reason. An initial scan can need several passes; the running collector continues automatically.
+Run the collector with `--once` and the same collection options. Check `cwo_reviews` for health, pending scans and review counts. With discovery enabled, `cwo_reviews.discovery` lists launch counts and gaps by reason. The running collector finishes pending scans automatically.
 
-CWO Overview's Review collection tile shows evidence gaps. The review table retains attempts without a final result and leaves their usage blank. Execution describes the CLI invocation. Evaluation describes the matching audit verdict, including pending peer review. Neither field establishes that the requested implementation was delivered.
+CWO Overview's **Review collection** tile shows missing results, read failures and limits. **Saved record** describes result availability for each displayed review. **Execution** shows whether the review command finished or failed; **Evaluation** shows the recorded review decision, including pending peer review.
 
-Select a time range containing the review's original launch and set Project and Session to All. Linked reviews also appear under those filters. Historical ranges include evidence collected later, within the retained 30-day review inventory. The latest projection excludes superseded pending records and old attribution states.
+Select the review's original launch date and set **Project** and **Session** to **All** to include unlinked reviews. Reviews collected later can appear under their original launch date. See [review retention](../reference/retention-and-limits.md#cwo-cli-review-results) for the available history.
 
-Uncached input, cache-creation input, and cache-read input are distinct token kinds; the dashboard input total includes all three. Thinking is a subset of output. Missing usage remains unavailable; a reported zero remains zero. Conflicting copies are skipped, and repeated audit evaluations do not add usage.
+See [review metrics](../reference/metrics.md#cli-review-results) for token counts, missing values and model settings.
 
 ## Link Reviews to Codex Sessions
 
 Enable `--cwo-sessions` with review discovery or explicit review directories to add source session and attribution. Traceonaut links a review to the Codex session that ran its launch, including a subagent when it was the launcher.
 
-Supported evidence includes completed direct Claude commands with matching result identities, and paired-result `runner.py` launches whose recorded output matches the receipt's prompt hash, model, effort, and result metadata. Interactive account-switched launches also need a recorded stdin command tied to the same process. Preparing a dispatch, reading a receipt, or mentioning a review does not establish a link. Other wrappers remain unlinked until supported.
+Discovered Claude and Codex launches identify their source session directly. Paired-result `runner.py` launches can also be linked when their saved command output matches the review receipt. Interactive account-switched launches need the recorded stdin command and process identity. See [supported launch evidence](../reference/limits-and-internals.md#cwo-cli-review-artifacts) for wrapper requirements.
 
 | Attribution | Meaning |
 | --- | --- |
-| Linked | Recorded launch and result evidence identifies one source session. |
+| Linked | A recorded launch identifies one source session. |
 | Unlinked | No supported matching launch was found, or session association is disabled. |
 | Pending | Source scanning is incomplete or a relevant source could not be read. |
 | Ambiguous | Evidence points to multiple sessions or cannot separate repeated results. |
 
-All collected reviews remain visible with both filters set to All, including failures, retries and Unlinked reviews. Provenance bundles without supported launch evidence remain Unlinked. Review usage stays separate from Codex session usage. Source commands are inspected without execution. Names and command text are not metric labels.
+Bundles without a matching launch remain **Unlinked**. Review usage stays separate from Codex session usage.
 
 For review retention, scan bounds, and source handling, see [Retention and Limits](../reference/retention-and-limits.md#cwo-cli-review-results) and [Limits and Internals](../reference/limits-and-internals.md#cwo-cli-review-artifacts).

@@ -68,10 +68,12 @@ class CodexSource:
         try:
             self.collector = SessionCollector(args.codex_home, args.session_state_dir,
                 session_retention_seconds=args.session_retention_seconds, session_export_cap=args.session_export_cap)
-            if args.cwo_sessions:
+            history = getattr(args, 'cwo_command_history', False)
+            scope = getattr(args, 'command_history_scope', 'cwo')
+            if args.cwo_sessions or history:
                 self.cwo = CwoSessionCollector(args.codex_home, args.session_state_dir)
-                self.shell_commands = CommandCollector(self.cwo)
-                if reviews:
+                self.shell_commands = CommandCollector(self.cwo, history=history, scope=scope)
+                if reviews and args.cwo_sessions:
                     self.provenance = ProvenanceIndex(self.cwo, discover=getattr(args,'cwo_review_discovery',False))
             if args.state_dir:
                 self.ledger = ObservabilityLedger(args.state_dir, readonly=True)
@@ -92,8 +94,9 @@ class CodexSource:
         except SessionSourceUnavailable:
             self.collector.available = False
         snapshot = self.collector.snapshot()
-        if self.cwo:
+        if self.cwo and self.args.cwo_sessions:
             snapshot['cwo_sessions'] = self.cwo.scan(self.collector.db, snapshot)
+        if self.shell_commands:
             snapshot['cwo_shell_commands'] = self.shell_commands.scan(self.collector.db, snapshot)
         audit = self.audit.scan() if self.audit else None
         reviews = self.reviews.scan() if self.reviews else None
@@ -108,13 +111,15 @@ class CodexSource:
             snapshot['cwo_reviews'] = reviews
         status = {"sessions": len(snapshot["sessions"]), "pending_files": snapshot["pending_files"],
                   "source_available": snapshot["source_available"]}
-        if self.cwo:
+        if 'cwo_sessions' in snapshot:
             status['cwo_sessions'] = {k: snapshot['cwo_sessions'][k] for k in
                 ('scan_ready', 'pending_files', 'source_errors', 'source_gaps')}
             status['cwo_sessions']['associated_sessions'] = len(snapshot['cwo_sessions']['associations'])
+        if 'cwo_shell_commands' in snapshot:
             status['cwo_shell_commands'] = {k: snapshot['cwo_shell_commands'][k] for k in
                 ('scan_ready', 'pending_files', 'source_errors', 'source_gaps', 'limit_reached')}
             status['cwo_shell_commands']['calls'] = len(snapshot['cwo_shell_commands']['calls'])
+            status['cwo_shell_commands']['scope'] = snapshot['cwo_shell_commands']['scope']
         if audit is not None:
             status['cwo_audit'] = {k: audit[k] for k in ('source_available', 'collection_complete', 'source_files', 'source_errors', 'limit_reached')}
             status['cwo_audit']['exported_events'] = len(audit['events'])
@@ -210,6 +215,10 @@ def main(argv=None, *, require_codex=True):
     parser.add_argument("--state-dir", type=Path, help="optional directory containing an existing controller task database; read-only")
     parser.add_argument("--cwo-sessions", action="store_true",
                         help="collect CWO session associations, helper commands and shell command names")
+    parser.add_argument('--command-history', '--cwo-command-history', dest='cwo_command_history', action='store_true',
+                        help='export bounded sanitized command descriptions, directories and network evidence as Prometheus labels')
+    parser.add_argument('--command-history-scope', choices=('cwo', 'all'), default='cwo',
+                        help='command source scope: cwo requires --cwo-sessions; all includes all exported Codex sessions')
     parser.add_argument("--cwo-audit-file", type=Path, action="append", default=[],
                         help="optional CWO audit JSONL file, read-only; repeat for multiple files")
     parser.add_argument("--cwo-audit-dir", type=Path, action="append", default=[],
@@ -239,6 +248,12 @@ def main(argv=None, *, require_codex=True):
         parser.error("--bob-home and --bob-snapshot-file must be supplied together")
     if args.bob_otel_journal_dir and not args.bob_home:
         parser.error('--bob-otel-journal-dir requires --bob-home')
+    if args.cwo_command_history and args.command_history_scope == 'cwo' and not args.cwo_sessions:
+        parser.error('--cwo-command-history requires --cwo-sessions unless --command-history-scope all is selected')
+    if args.command_history_scope == 'all' and not args.cwo_command_history:
+        parser.error('--command-history-scope all requires --command-history')
+    if args.cwo_command_history and not args.codex_home:
+        parser.error('command history requires --codex-home')
     if args.cwo_review_discovery and not args.cwo_sessions:
         parser.error('--cwo-review-discovery requires --cwo-sessions')
     if not args.codex_home and any((args.cwo_sessions, args.cwo_audit_file, args.cwo_audit_dir,

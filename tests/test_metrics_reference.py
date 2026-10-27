@@ -66,9 +66,13 @@ class MetricsReferenceTests(unittest.TestCase):
         payload += render_command_usage_metrics({'scan_timestamp_seconds': now, 'scan_ready': 1,
             'pending_files': 0, 'source_errors': 0, 'source_gaps': 0, 'limit_reached': 0,
             'history_floor_timestamp_seconds': 0,
+            'history': {'enabled': True, 'rows': [{'project_id': ids['project_id'], 'sid': ids['session_id'],
+                'id': 'd'*64, 'timestamp': now, 'exit_code': 0, 'duration': 1, 'outcome': 'completed',
+                'network': [{'destination': 'https://example.test', 'source_ip': None,
+                             'source_ip_evidence': 'not recorded'}]}]},
             'sessions': [{**ids, 'complete': 1}],
             'calls': [{'project_id': ids['project_id'], 'sid': ids['session_id'],
-                       'id': 'c'*64, 'command': 'git', 'timestamp': now}]})
+                       'id': 'c'*64, 'command': 'git', 'action': 'git commit', 'timestamp': now}]})
         types = dict(re.findall(r"^# TYPE (\w+) (\w+)$", payload.decode(), re.M))
         actual = {}
         for line in payload.decode().splitlines():

@@ -88,8 +88,9 @@ class WorkDashboardRendererTests(unittest.TestCase):
                 self.assertNotIn("Release readiness", variable["query"])
         self.assertEqual(
             [(panel["id"], panel.get("targets")) for panel in walk_panels(result["panels"])],
-            [(panel["id"], panel.get("targets")) for panel in walk_panels(before["panels"])],
+            [(panel["id"], panel.get("targets")) for panel in walk_panels(before["panels"]) if panel["id"] not in {413, 414}],
         )
+        self.assertFalse(any(panel['id'] == 413 for panel in result['panels']))
         for panel_id in (305, 401):
             panel = next(panel for panel in result["panels"] if panel["id"] == panel_id)
             self.assertIn("Improve the search page", json.dumps(panel["fieldConfig"]))
@@ -109,6 +110,40 @@ class WorkDashboardRendererTests(unittest.TestCase):
                     datasource_uid="existing-prometheus",
                 )
                 self.assertNotIn("${DS_PROMETHEUS}", json.dumps(bound))
+
+    def test_all_command_scope_keeps_ordinary_session_names_and_cwo_queries(self):
+        snapshot=self.session_snapshot()
+        ordinary=str(uuid4()); other_project=str(uuid4())
+        snapshot['sessions'].append({'session_id':ordinary,'project_id':other_project,
+            'title':'Ordinary Codex session','project_name':'Other project','agent_name':'',
+            'kind':'session','parent_id':None})
+        snapshot['cwo_sessions']={'associations':[{'session_id':self.dispatch}]}
+        snapshot['command_history']={'enabled':True,'scope':'all','rows':[]}
+        before=copy.deepcopy(self.current_template)
+        result=render_dashboard(self.current_template,self.registry,session_snapshot=snapshot)
+        self.assertEqual(self.current_template,before)
+        variables={v['name']:v for v in result['templating']['list']}
+        self.assertIn(ordinary,{option['value'] for option in variables['session']['options']})
+        self.assertIn(other_project,{option['value'] for option in variables['project']['options']})
+        panels={p['id']:p for p in result['panels']}
+        self.assertEqual(panels[412]['title'],'Command coverage · all Codex sessions')
+        self.assertIn('Scope: all collected Codex sessions.',panels[414]['description'])
+        for identity in (301,302,303,304,305,310,401):
+            original=next(p for p in before['panels'] if p['id']==identity)
+            self.assertEqual(panels[identity]['targets'],original['targets'])
+
+    def test_all_command_scope_query_fallback_covers_unmapped_sessions(self):
+        snapshot={'version':1,'sessions':[], 'command_history':{'enabled':True,'scope':'all','rows':[]}}
+        result=render_dashboard(self.current_template,self.registry,session_snapshot=snapshot)
+        for variable in result['templating']['list']:
+            self.assertEqual(variable['type'],'query')
+            self.assertIn('cwo_codex_session_info',variable['query']['query'])
+            self.assertNotIn('cwo_association',variable['query']['query'])
+        snapshot['command_history']['scope']='cwo'
+        result=render_dashboard(self.current_template,self.registry,session_snapshot=snapshot)
+        self.assertEqual(next(p for p in result['panels'] if p['id']==412)['title'],'Command coverage · CWO sessions')
+        for variable in result['templating']['list']:
+            self.assertIn('cwo_codex_session_cwo_association_timestamp_seconds',variable['query']['query'])
 
     def test_current_selector_names_escape_separators_and_reject_template_expansion(self):
         for text, expected in (
@@ -143,7 +178,7 @@ class WorkDashboardRendererTests(unittest.TestCase):
         result = render_dashboard(self.template, self.registry, datasource_uid="existing-prometheus")
         self.assertEqual(result["uid"], "cwo-dispatch-observability-v1")
         self.assertEqual(self.template, before)
-        original = [(p["id"], t["expr"]) for p in walk_panels(before["panels"]) for t in p.get("targets", [])]
+        original = [(p["id"], t["expr"]) for p in walk_panels(before["panels"]) if p["id"] not in {413, 414} for t in p.get("targets", [])]
         rendered = [(p["id"], t["expr"]) for p in walk_panels(result["panels"]) for t in p.get("targets", [])]
         self.assertEqual(rendered, original)
         self.assertNotIn("__inputs", result)

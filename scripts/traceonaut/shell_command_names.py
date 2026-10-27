@@ -37,7 +37,8 @@ def _parts(text):
         value = raw if operator else shlex.split(raw, posix=True)[0]
         if operator and raw[0] in '<>' and parts and position == last_end:
             if re.fullmatch(r'[0-9]+', parts[-1][2]):
-                parts.pop()  # Descriptor, e.g. 2>log; not a command or argument.
+                descriptor = parts.pop()[2]  # Descriptor, not a command/argument.
+                raw = descriptor + raw
         parts.append((value, operator, raw))
         position = last_end = match.end()
         if expect_here is not None:
@@ -64,7 +65,7 @@ def _parts(text):
     return parts
 
 
-def _argv(words, depth):
+def _argv(words, depth, actions=False):
     words = list(words)
     while words and ASSIGNMENT.match(words[0]):
         words.pop(0)
@@ -104,15 +105,18 @@ def _argv(words, depth):
                 words.pop(0)
             else:
                 return [], False
-        return command_names(words, depth=depth+1) if words else ([], False)
+        return command_names(words, depth=depth+1, actions=actions) if words else ([], False)
     if name in SHELLS and len(words) == 3 and words[1] in {'-c', '-lc', '-cl'}:
-        return _script(words[2], depth+1)
+        return _script(words[2], depth+1, actions=actions)
     # A visible interpreter counts once; its program and subprocesses stay opaque.
     opaque = name in SHELLS or name in {'eval', 'source'}
+    if actions:
+        from .command_details import action_name
+        name = action_name(words)
     return [name], not opaque
 
 
-def _script(text, depth):
+def _script(text, depth, actions=False):
     if depth > 4 or len(text) > MAX_TEXT:
         return [], False
     try:
@@ -155,7 +159,7 @@ def _script(text, depth):
         groups.append(words)
     names, complete = [], True
     for group in groups:
-        found, supported = _argv(group, depth)
+        found, supported = _argv(group, depth, actions=actions)
         names.extend(found)
         complete = complete and supported
         if len(names) > MAX_COMMANDS:
@@ -163,10 +167,10 @@ def _script(text, depth):
     return names, complete
 
 
-def command_names(command, *, depth=0):
+def command_names(command, *, depth=0, actions=False):
     """Return (literal executable occurrences, complete syntax coverage)."""
     if (depth > 4 or not isinstance(command, list) or not command
             or any(not isinstance(word, str) or '\0' in word for word in command)
             or sum(map(len, command)) > MAX_TEXT):
         return [], False
-    return _argv(command, depth)
+    return _argv(command, depth, actions=actions)

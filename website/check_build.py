@@ -78,7 +78,7 @@ EDIT_LINKS = {page: EDIT_BASE + source for page, source in document_pages().item
 REDIRECTS = redirect_rules()
 PUBLIC_ASSETS = {
     "traceonaut-favicon.png", "traceonaut.png",
-    "screenshots/work-overview.png",
+    "screenshots/work-overview.png", "screenshots/cwo-command-history.png",
     "screenshots/all-sessions.png", "screenshots/cwo-dispatches.png",
     "screenshots/codex-tui-beta.png",
     "screenshots/ibm-bob-beta.png",

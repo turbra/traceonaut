@@ -120,7 +120,8 @@ class DashboardPresentationTests(unittest.TestCase):
                 if "gridPos" not in p or p["type"] == "row":
                     continue
                 self.assertNotIn(p["type"], ("text", "piechart"))
-                self.assertEqual(p["fieldConfig"]["defaults"]["noValue"], "—")
+                expected_missing = 'Not recorded' if name in {'cwo-overview','codex-all-sessions'} and p['id'] in {413,414} else '—'
+                self.assertEqual(p["fieldConfig"]["defaults"]["noValue"], expected_missing)
                 if p["type"] == "stat":
                     self.assertEqual(p["options"]["colorMode"], "none")
                 if p["type"] == "bargauge":

@@ -54,6 +54,13 @@ METRICS = {
     "cwo_codex_account_window_minutes",
     "cwo_codex_account_window_used_percent",
     "cwo_codex_account_window_reset_timestamp_seconds",
+    "cwo_codex_cwo_shell_invocation_timestamp_seconds",
+    "cwo_codex_cwo_shell_invocation_exit_code",
+    "cwo_codex_cwo_shell_invocation_duration_seconds",
+    "cwo_codex_cwo_shell_invocation_outcome",
+    "cwo_codex_cwo_shell_invocation_info",
+    "cwo_codex_cwo_shell_network_info",
+    "cwo_codex_cwo_shell_scan_timestamp_seconds",
 }
 
 
@@ -97,7 +104,7 @@ class CodexSessionsDashboardTests(unittest.TestCase):
             for target in panel.get("targets", []):
                 self.assertEqual(target["datasource"]["uid"], "${DS_PROMETHEUS}")
 
-    def test_queries_use_only_the_sessions_and_account_metric_contract(self) -> None:
+    def test_queries_use_only_the_sessions_account_and_command_metric_contracts(self) -> None:
         pattern = re.compile(r"\b(cwo_codex_[a-z0-9_]+)\b")
         observed = set()
         for panel in walk_panels(self.dashboard["panels"]):
@@ -269,6 +276,36 @@ class CodexSessionsDashboardTests(unittest.TestCase):
         self.assertTrue(self.panel("Diagnostics")["collapsed"])
         self.assertTrue(self.panel("Usage")["collapsed"])
         self.assertFalse(any(p["type"] in ("text", "piechart") for p in walk_panels(self.dashboard["panels"])))
+
+    def test_command_audit_is_collapsed_immediately_before_usage(self):
+        panels=self.dashboard['panels']
+        audit=self.panel('Command audit')
+        self.assertEqual(audit['type'],'row')
+        self.assertTrue(audit['collapsed'])
+        self.assertIs(panels[panels.index(audit)+1],self.panel('Usage'))
+        self.assertEqual(audit['gridPos']['y']+1,self.panel('Usage')['gridPos']['y'])
+        self.assertEqual([p['title'] for p in audit['panels']],
+                         ['Command history','Network command history'])
+        ids=[p['id'] for p in walk_panels(panels)]
+        self.assertEqual(len(ids),len(set(ids)))
+
+    def test_command_audit_reuses_cwo_queries_and_upload_fields(self):
+        cwo=json.loads((ROOT/'examples/observability/cwo-overview.json').read_text())
+        originals={p['id']:p for p in walk_panels(cwo['panels'])}
+        for panel in self.panel('Command audit')['panels']:
+            for key in ('targets','transformations','fieldConfig','options'):
+                self.assertEqual(panel[key],originals[panel['id']][key])
+            for target in panel['targets']:
+                self.assertIn('${project:regex}',target['expr'])
+                self.assertIn('${session:regex}',target['expr'])
+                self.assertIn('$__from',target['expr'])
+                self.assertIn('$__to',target['expr'])
+                self.assertNotIn('cwo_association',target['expr'])
+        organize=self.panel('Network command history')['transformations'][-1]['options']
+        columns=[organize['renameByName'][name] for name in
+                 sorted(organize['indexByName'],key=organize['indexByName'].get)]
+        self.assertEqual(columns,['Completed at','Session','Project','Command','Method',
+            'Payload source','File','Upload option','Source IP','Requested endpoint','Outcome'])
 
 
     def test_comparison_bars_receive_table_fields_for_human_name_mapping(self) -> None:

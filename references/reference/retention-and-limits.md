@@ -72,15 +72,36 @@ See [review artifact parsing and scan bounds](limits-and-internals.md#cwo-cli-re
 
 ### Shell Commands
 
-CWO command collection retains the newest 10,000 command-name occurrences from
+Command collection retains the newest 10,000 command-name occurrences from
 the last 30 days, within the current session export selection. Reaching the bound makes Command
 coverage Partial. Previously scraped requests remain in Prometheus history.
 
 The first scan can recover commands from existing session files. Their recorded
 completion times let a range ending now include older commands; a range ending
-before the first scrape has no stored samples. Completed invocations before a
-session's first CWO association are excluded. Missing original session files
-leave historical command names unavailable.
+before the first scrape has no stored samples. The default `cwo` scope excludes
+completed invocations before a session's first CWO association. Explicit
+`--command-history --command-history-scope all` uses session creation instead and
+includes ordinary Codex sessions selected for export in the configured profile.
+It does not expand the session export window or collect other applications.
+Missing original session files leave historical command names unavailable.
+
+Optional command history keeps the newest **1,000 invocations within 30 days**.
+Network metadata exports at most **1,000 rows** across those invocations, with
+up to eight endpoints per invocation. Enabling history reads retained source
+files again and preserves original completion times. Missing source files cannot
+supply old descriptions. These bounds apply in both `cwo` and `all` scopes;
+neither is a complete audit of every command on the machine.
+
+Descriptions, recorded directories, session/project names, network addresses and
+literal upload file paths are opt-in Prometheus labels. Their stored samples follow Prometheus retention,
+even after an invocation expires from current export or history is disabled.
+Disabling the option stops future export; it does not delete previously scraped
+labels, remote-storage samples or saved exports. Prometheus history begins with
+the first scrape, including when older source records are recovered.
+
+Upload-audit fields describe requested curl behavior. They do not retain file
+contents or inline payloads, estimate sizes, or establish successful delivery.
+The exit result belongs to the whole command invocation, not an HTTP response.
 
 ## IBM Bob
 

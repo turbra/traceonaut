@@ -29,7 +29,7 @@ python3 scripts/render_observability_dashboard.py \
   --output "$CWO_DASHBOARD_DIR/cwo-overview.json"
 ```
 
-Import the generated file. Names remain presentation metadata; missing names have explicit fallbacks. See [Automatic Name Updates](../operations/automatic-name-updates.md) for watcher/provisioning use.
+Import the generated file. The rendered selectors use names from the snapshot; missing names have explicit fallbacks. See [Automatic Name Updates](../operations/automatic-name-updates.md) for watcher/provisioning use.
 
 ## Use the Dashboard
 
@@ -62,13 +62,56 @@ The time picker selects sessions active in that range. Their token and turn tota
 
 **CWO helper commands** and **CWO helper commands by tool** count supported invocations in completed Codex command records within the selected interval, including failed attempts. Compound commands retain an unknown helper outcome because the shell result also covers subsequent commands.
 
+### Commands and History
+
+**Command coverage** shows Complete, Partial, Stale or Not collected. Missing session files, unsupported shell syntax or collection limits make coverage Partial while available history remains visible. [Retention and Limits](../reference/retention-and-limits.md#shell-commands) explains historical views.
+
+**Command history** adds a table with completion time, session, project, a sanitized command description, recorded working directory, outcome, exit code and duration. It retains the latest 1,000 invocations within 30 days. Examples include `git push origin feature`, `tail -n 100 app.log` and `cat config.yaml`.
+
+Command history defaults to CWO-associated sessions. `--command-history-scope all` includes ordinary Codex sessions in the configured profile's current session export selection, including sessions using a local vLLM provider. It does not collect commands from other applications or capture network packets. The dashboard's session, token, agent and helper panels remain CWO-associated.
+
+The tables use the dashboard's existing Prometheus datasource. With command history enabled, the Python exporter publishes sanitized descriptions as metadata labels. New commands appear after collection, scraping and normal dashboard refresh; a page reload is not required.
+
+**Network command history** shows curl commands and their requested HTTP(S) endpoints. Endpoints contain the scheme, host and port. URL credentials, paths, query strings and fragments are omitted. The exporter includes at most 1,000 network rows, with up to eight endpoints per invocation. **Source IP** shows the local socket address only when curl saved a supported connection report; otherwise it shows **Not recorded**. This address can differ from the public IP after NAT. Proxies and redirects can change the destination actually reached.
+
+Upload-audit fields describe the recorded curl request, not proof of delivery:
+
+| Field | Meaning |
+| --- | --- |
+| Method | Recognized requested HTTP method, or Unknown. |
+| Payload source | None, File, Inline, Stdin, Mixed or Unknown, based on supported curl options. |
+| File | Up to four literal file paths, bounded to 768 characters together. Dynamic paths remain unknown. File contents and sizes are not read. |
+| Upload option | Canonical option names without inline payload values, credentials or configuration values. |
+
+The outcome, exit code and duration describe the whole command invocation, not an HTTP response or a confirmed upload. A file path records what curl was asked to send; it does not establish that the file existed or reached the destination.
+
+![Command history and network command history with synthetic examples](../../assets/screenshots/cwo-command-history.png)
+
+Descriptions omit credential options and values, commit messages, unknown arguments and embedded programs. Permitted paths, including upload file paths, remote names, branch names and recorded network addresses become Prometheus labels. Review [command-history privacy](../reference/data-sources-and-privacy.md#command-history) before enabling it.
+
+The result belongs to the complete shell invocation. For `git status && git push`, the table has one row with one exit code and duration. **Recorded directory** comes from that invocation's record; a subsequent `cd` or `git -C` can select another directory. Missing fields show **Not recorded**.
+
+#### Enable Live Command Tables
+
+Add `--command-history` to the existing collector alongside `--cwo-sessions` for the default CWO scope. `--cwo-command-history` remains an equivalent alias. For a Codex collector configured through [Quick Start](../getting-started.mdx), stop the existing process and run:
+
+```bash
+python3 scripts/collect_sessions.py \
+  --codex-home "$TRACEONAUT_CODEX_HOME" \
+  --session-state-dir "$TRACEONAUT_DATA_DIR/session-state" \
+  --snapshot-file "$TRACEONAUT_DATA_DIR/sessions.json" \
+  --credential-file "$TRACEONAUT_METRICS_CREDENTIAL" \
+  --host "$TRACEONAUT_LISTEN_ADDRESS" --port 9464 \
+  --cwo-sessions --command-history
+```
+
+To include ordinary Codex sessions, use `--command-history --command-history-scope all`. This scope requires Codex collection but not `--cwo-sessions`; retain `--cwo-sessions` if you also want the CWO-associated panels. The default `--command-history-scope cwo` requires `--cwo-sessions`.
+
+Keep any Bob, account and review options from your existing command. For a managed service, add the flag to its existing start command. Use the ordinary rendering command above and select the existing Prometheus datasource when importing the dashboard. Command rows then update on its normal refresh interval.
+
+To disable future history export, remove `--command-history` (or its alias) and any `--command-history-scope all` option, then restart collection. Previously scraped descriptions, paths and network addresses remain in Prometheus until its retention policy removes them. Saved exports retain their data.
+
 ### Workflow Activity
-
-**Commands used** ranks command names such as `git`, `curl`, `python3` and `rg`. Collection starts automatically with `--cwo-sessions`. The chart uses completed shell invocations after each session's first CWO association, grouped by their completion time.
-
-Each written command occurrence counts: `git status; git diff` adds two `git` occurrences. Pipelines and conditional branches contribute their written commands; the counts describe the invocation, rather than proving which branches executed. Arguments, output and embedded program bodies stay private. For example, `python3 -c '...'` contributes one `python3` occurrence.
-
-**Command coverage** shows Complete, Partial, Stale or Not collected. Missing session files, unsupported shell syntax or collection limits make coverage Partial while known counts remain visible. A complete selection with no commands has an empty chart. [Retention and Limits](../reference/retention-and-limits.md#shell-commands) explains historical views.
 
 **Workflow events by type** counts events whose original timestamps fall inside the selected range, across configured audit logs. It can be empty while session and helper activity is present: only operations that write audit events appear in that chart.
 

@@ -38,3 +38,18 @@ The session table combines the latest selected model and effort in **Model / eff
 The collapsed **Diagnostics** section holds **Usage source** and **Runtime reported** for checking token coverage.
 
 The status strip leads directly into the inventory. **Usage** contains ranked comparisons; the working-sessions chart shows activity over time. The default refresh is 30 seconds.
+
+## Command Audit
+
+Expand **Command audit**, immediately before **Usage**, to see two tables:
+
+- **Command history**: completion time, session, project, sanitized command, working directory, outcome, exit code and duration.
+- **Network command history**: curl method, payload source, literal file path, upload option, source IP and requested endpoint.
+
+Both tables use the Project, Session and time-range selectors. Time filtering uses each command's completion time. New records appear on normal dashboard refresh.
+
+To include ordinary Codex sessions, add `--command-history --command-history-scope all` to your existing collector command and restart it. The default `cwo` scope includes only CWO-associated sessions. Command history must be enabled for these tables to contain data.
+
+![Command and network history with synthetic example data](../../assets/screenshots/cwo-command-history.png)
+
+The file path identifies what curl was asked to send. Credentials and payload contents are omitted; source IP appears only when recorded. See [command-history fields and setup](cwo.md#commands-and-history), [privacy](../reference/data-sources-and-privacy.md#command-history) and [retention limits](../reference/retention-and-limits.md#shell-commands).

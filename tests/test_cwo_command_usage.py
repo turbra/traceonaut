@@ -18,6 +18,9 @@ import test_codex_session_telemetry as fixtures
 class CommandTests(unittest.TestCase):
     def setUp(self):
         self.f = fixtures.SessionCollectionTests(); self.f.setUp(); self.addCleanup(self.f.doCleanups)
+        # CommandExecution timestamps are integer milliseconds. Avoid synthetic
+        # sub-microsecond future events caused by a float ms/seconds round trip.
+        self.f.now = int(self.f.now * 1000) / 1000
         self.cwo = CwoSessionCollector(self.f.home, self.f.state)
         self.addCleanup(lambda: self.cwo.close())
         self.commands = CommandCollector(self.cwo)

@@ -90,7 +90,7 @@ def _identity(value: Any, *, field: str) -> str:
     return value
 
 
-def validate_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+def validate_snapshot(snapshot: dict[str, Any], *, include_command_history=False) -> dict[str, Any]:
     if not isinstance(snapshot, dict) or snapshot.get("version") != 1:
         raise ValueError("unsupported session snapshot")
     sessions = snapshot.get("sessions")
@@ -123,7 +123,13 @@ def validate_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
                 "parent_id": parent_id,
             }
         )
-    return {"version": 1, "sessions": normalized}
+    result = {"version": 1, "sessions": normalized}
+    if include_command_history:
+        from traceonaut.command_details import validate_history
+        history = snapshot.get('cwo_shell_commands', {}).get('history', snapshot.get('command_history'))
+        if history is not None:
+            result['command_history'] = validate_history(history)
+    return result
 
 
 def _object_without_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -192,14 +198,14 @@ def _read_snapshot_bytes(path: Path) -> bytes:
         os.close(descriptor)
 
 
-def load_snapshot(path: Path) -> dict[str, Any]:
+def load_snapshot(path: Path, *, include_command_history=False) -> dict[str, Any]:
     try:
         value = json.loads(
             _read_snapshot_bytes(path), object_pairs_hook=_object_without_duplicates
         )
     except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
         raise ValueError("snapshot JSON invalid") from None
-    return validate_snapshot(value)
+    return validate_snapshot(value, include_command_history=include_command_history)
 
 
 def _project_name(session: dict[str, Any]) -> str:

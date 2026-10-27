@@ -35,13 +35,13 @@ Import the generated file. Names remain presentation metadata; missing names hav
 
 The main overview shows CWO-associated sessions, native agents, recorded session tokens and helper commands. Choose **Last 1 hour** to see sessions with activity and helper invocations in that hour. The session table appears directly below the headline values.
 
-Use **Project** and **Session** to filter the headline counts, session table, helper commands and linked contractor reviews. Both allow multiple selections; **All** clears that filter. A Session selection matches those individual sessions or subagents. Project and Session selections apply together.
+Use **Project** and **Session** to filter the headline counts, session table, command names, helper commands and linked contractor reviews. Both allow multiple selections; **All** clears that filter. A Session selection matches those individual sessions or subagents. Project and Session selections apply together.
 
 The rendered dropdowns use names from the exported session snapshot. Collection health and **Workflow events by type · all projects** remain profile-wide because their records have no project/session identity. Reviews with Unlinked, Pending or Ambiguous attribution appear when both dropdowns are **All**.
 
 **Recorded session tokens** covers the selected sessions' whole recorded history, including work outside CWO. It is separate from tokens consumed during the selected range. Missing values display a dash; known empty counts display zero.
 
-The top strip reports session collection, workflow-source health and review evidence gaps. **Partial** means the configured sources have incomplete coverage. Review gaps retain the known invocation row while unavailable usage stays blank. The default range is 30 days and refresh is one minute; choose a shorter range, such as **Last 1 hour**, to focus recent activity.
+The top strip reports session collection, workflow-source health, review evidence gaps and command coverage. **Partial** means the configured sources have incomplete coverage. Review gaps retain the known invocation row while unavailable usage stays blank. The default range is 30 days and refresh is one minute; choose a shorter range, such as **Last 1 hour**, to focus recent activity.
 
 Configure [CWO session collection](../integrations/cwo.md#collect-cwo-sessions) and [workflow event collection](../integrations/cwo.md#collect-workflow-activity) in the CWO Integration guide. Optional review rows require the [custom review adapter](../integrations/custom-review-adapter.md).
 
@@ -63,6 +63,12 @@ The time picker selects sessions active in that range. Their token and turn tota
 **CWO helper commands** and **CWO helper commands by tool** count supported invocations in completed Codex command records within the selected interval, including failed attempts. Compound commands retain an unknown helper outcome because the shell result also covers subsequent commands.
 
 ### Workflow Activity
+
+**Commands used** ranks command names such as `git`, `curl`, `python3` and `rg`. Collection starts automatically with `--cwo-sessions`. The chart uses completed shell invocations after each session's first CWO association, grouped by their completion time.
+
+Each written command occurrence counts: `git status; git diff` adds two `git` occurrences. Pipelines and conditional branches contribute their written commands; the counts describe the invocation, rather than proving which branches executed. Arguments, output and embedded program bodies stay private. For example, `python3 -c '...'` contributes one `python3` occurrence.
+
+**Command coverage** shows Complete, Partial, Stale or Not collected. Missing session files, unsupported shell syntax or collection limits make coverage Partial while known counts remain visible. A complete selection with no commands has an empty chart. [Retention and Limits](../reference/retention-and-limits.md#shell-commands) explains historical views.
 
 **Workflow events by type** counts events whose original timestamps fall inside the selected range, across configured audit logs. It can be empty while session and helper activity is present: only operations that write audit events appear in that chart.
 

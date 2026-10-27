@@ -43,7 +43,7 @@ Enable with `--codex-home` and `--snapshot-file`.
 | Option | Purpose |
 | --- | --- |
 | `--account-snapshot-file` | Adds the private numeric account snapshot. |
-| `--cwo-sessions` | Associates supported skill blocks and direct helper commands with Codex sessions. |
+| `--cwo-sessions` | Collects CWO session associations, helper commands and shell command names. |
 | `--cwo-audit-dir`, `--cwo-audit-file` | Adds selected read-only CWO workflow logs; repeat for multiple absolute paths. |
 | `--cwo-review-dir` | Reads saved review launch/result pairs or provenance bundles with matching audits; repeat for each absolute source directory. |
 | `--cwo-review-discovery` | Discovers external reviews from recorded CWO session launches and their literal output paths; requires `--cwo-sessions`. Disabled by default. |

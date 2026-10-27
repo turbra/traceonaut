@@ -42,6 +42,34 @@ Helper outcome and duration are recorded only when the helper is the sole comman
 
 Each pass reads at most 64 MiB, up to 32 MiB per file, from at most 4,096 selected rollout files. Candidate records over 8 MiB create a visible source gap. The private feature index stores opaque IDs and cursors. Helper detail is separately capped at 2,000 records within 30 days.
 
+### CWO Shell Commands
+
+The command reader uses independent cursors in the private CWO index. Its source
+is `event_msg` / `item_completed` with a `CommandExecution` item. Ownership must
+match the enclosing session. Session, turn and item IDs identify each invocation;
+the occurrence position identifies each command within it. Completion time comes
+from `completed_at_ms`. Repeated records retain one set of counts.
+
+Each scan reads at most 64 MiB, 32 MiB per file, across 4,096 associated files.
+Completion must be at or after session creation and CWO association. An earlier
+discovered association triggers a replay. Candidate records over 8 MiB are gaps.
+
+The parser supports literal argv, shell `-c`/`-lc`, sequences, pipelines,
+conditional lists, assignments, redirects, heredocs and common `env`, `sudo`,
+`command` and `exec` wrappers. It reads at most 128 KiB of command text and emits
+128 occurrences per invocation. Quotes protect arguments and heredoc bodies are
+skipped. Dynamic executables, substitutions, loops and functions have partial
+coverage. Interpreter programs and subprocesses remain opaque. Only bounded
+executable basenames and accounting metadata enter the private index and metrics.
+
+The endpoint exposes up to 10,000 command occurrences. The private index retains
+up to 100,000 occurrence identities and 100,000 invocation fingerprints for 30
+days so replay and late conflicts can still be checked after export eviction.
+Conflicting names or completion times withdraw the invocation's original series. Conflict
+withdrawals take priority in the export. If withdrawals or identity storage
+overflow, a persistent time boundary excludes the affected older interval and
+coverage stays Partial for selections crossing that boundary.
+
 ### CWO CLI Review Artifacts
 
 Explicit review bundles require a matching hash-valid `dispatch_prepared` audit event recorded before launch and an explicit timezone-qualified start time. Completed bundles include a final Claude CLI result. Provenance bundles match the prompt hash and dispatch headers against the audit. Launch discovery instead reads recorded Claude or Codex commands and their saved output. Recognized attempts without final output remain visible with unavailable usage. Conflicting copies are omitted; repeated scans and copies preserve one result. See the [custom review adapter](../integrations/custom-review-adapter.md) for artifact fields.

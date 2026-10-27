@@ -11,6 +11,7 @@ from render_observability_dashboard import render_dashboard, walk_panels
 from traceonaut.cwo_audit_telemetry import METRICS as AUDIT
 from traceonaut.cwo_review_telemetry import METRICS as REVIEW
 from traceonaut.cwo_session_telemetry import METRICS as CWO
+from traceonaut.cwo_command_usage import METRICS as COMMANDS
 
 
 class CurrentCwoDashboardTests(unittest.TestCase):
@@ -41,7 +42,7 @@ class CurrentCwoDashboardTests(unittest.TestCase):
         session = {"cwo_codex_session_" + name for name in (
             "info", "state", "usage_tokens", "usage_state", "last_event_timestamp_seconds",
             "completed_turns", "failed_turns", "observed_turn_seconds")}
-        allowed = set(AUDIT) | set(REVIEW) | set(CWO) | session
+        allowed = set(AUDIT) | set(REVIEW) | set(CWO) | set(COMMANDS) | session
         for panel in self.panels.values():
             self.assertNotIn(panel["type"], ("text", "piechart"))
             for target in panel.get("targets", []):
@@ -108,7 +109,7 @@ class CurrentCwoDashboardTests(unittest.TestCase):
         self.assertIn('or max by (event_id, event_type)', query)
 
     def test_filters_cover_session_helper_and_review_panels(self):
-        for identity in (301, 302, 303, 304, 305, 310, 401):
+        for identity in (301, 302, 303, 304, 305, 310, 401, 411, 412):
             for target in self.panels[identity]["targets"]:
                 self.assertIn('project_id=~"${project:regex}"', target["expr"])
                 self.assertIn('session_id=~"${session:regex}"', target["expr"])
@@ -119,3 +120,18 @@ class CurrentCwoDashboardTests(unittest.TestCase):
         self.assertIn("all projects", self.panels[205]["title"])
         for identity in (309, 207):
             self.assertIn("Profile-wide", self.panels[identity]["description"])
+
+    def test_commands_chart_sorts_then_limits_and_keeps_partial_counts(self):
+        chart = self.panels[411]
+        self.assertEqual(chart['title'], 'Commands used')
+        self.assertEqual(chart['options']['orientation'], 'horizontal')
+        self.assertEqual(chart['options']['namePlacement'], 'left')
+        self.assertEqual([t['id'] for t in chart['transformations']],
+                         ['organize', 'sortBy', 'sortBy', 'limit', 'rowsToFields'])
+        self.assertEqual(chart['transformations'][1]['options']['sort'][0], {'field': 'Command', 'desc': False})
+        self.assertEqual(chart['transformations'][2]['options']['sort'][0], {'field': 'Occurrences', 'desc': True})
+        self.assertEqual(chart['transformations'][3]['options']['limitField'], 10)
+        self.assertIn('last_over_time', chart['targets'][0]['expr'])
+        self.assertNotIn('scan_ready', chart['targets'][0]['expr'])
+        self.assertIn('conditional branches', chart['description'])
+        self.assertEqual(self.panels[412]['gridPos']['h'], 2)

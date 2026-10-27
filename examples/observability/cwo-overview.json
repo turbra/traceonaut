@@ -65,7 +65,7 @@
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 8,
+        "w": 6,
         "h": 2
       },
       "fieldConfig": {
@@ -179,9 +179,9 @@
         "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
-        "x": 8,
+        "x": 6,
         "y": 0,
-        "w": 8,
+        "w": 6,
         "h": 2
       },
       "fieldConfig": {
@@ -295,9 +295,9 @@
         "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 0,
-        "w": 8,
+        "w": 6,
         "h": 2
       },
       "fieldConfig": {
@@ -375,6 +375,91 @@
       ],
       "transparent": false,
       "transformations": []
+    },
+    {
+      "id": 412,
+      "type": "stat",
+      "title": "Command coverage",
+      "description": "Complete means the selected command sources and shell syntax were read. Partial means sources are missing, syntax is unsupported or a collection limit was reached. Stale means no scan within 90 seconds. Not collected means command-name metrics are absent. Valid counts remain visible. See https://turbra.github.io/traceonaut/dashboards/reading-values/.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 2
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Partial",
+                  "color": "yellow"
+                },
+                "1": {
+                  "text": "Complete",
+                  "color": "#D8D9DA"
+                },
+                "2": {
+                  "text": "Stale",
+                  "color": "yellow"
+                },
+                "3": {
+                  "text": "Not collected",
+                  "color": "#D8D9DA"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 16,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(((min(cwo_codex_cwo_shell_session_complete{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or vector(1)) * min(cwo_codex_cwo_shell_scan_ready) * (1 - max(cwo_codex_cwo_shell_limit_reached)) * (scalar(max(last_over_time(cwo_codex_cwo_shell_history_floor_timestamp_seconds[30d])) or vector(0)) < bool ($__from / 1000))) and on() (time() - min(cwo_codex_cwo_shell_scan_timestamp_seconds) < 90)) or (vector(2) and on() (time() - min(last_over_time(cwo_codex_cwo_shell_scan_timestamp_seconds[30d])) >= 90)) or vector(3)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ],
+      "transparent": false
     },
     {
       "id": 300,
@@ -1369,6 +1454,136 @@
       ]
     },
     {
+      "id": 411,
+      "type": "bargauge",
+      "title": "Commands used",
+      "description": "Command names such as git, curl and python3, recorded in completed shell invocations during the selected interval. Each literal occurrence counts: git status; git diff contributes two git occurrences. Counts include commands written in pipelines and conditional branches; they do not prove every branch executed. Arguments, output and script bodies are excluded. Project and Session filters apply. Partial counts stay visible; Command coverage explains missing sources or unsupported shell syntax. See https://turbra.github.io/traceonaut/dashboards/reading-values/.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#A7B0BC"
+          },
+          "unit": "locale",
+          "decimals": 0,
+          "min": 0,
+          "displayName": "${__field.name}"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "minVizHeight": 18,
+        "minVizWidth": 8,
+        "valueMode": "text",
+        "namePlacement": "left",
+        "sizing": "manual",
+        "maxVizHeight": 18,
+        "text": {
+          "titleSize": 12,
+          "valueSize": 14
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "count by (command) ((min by (project_id, session_id, observation_id, command) (last_over_time(cwo_codex_cwo_shell_command_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d])) >= ($__from / 1000)) and (min by (project_id, session_id, observation_id, command) (last_over_time(cwo_codex_cwo_shell_command_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d])) <= ($__to / 1000)) and (min by (project_id, session_id, observation_id, command) (last_over_time(cwo_codex_cwo_shell_command_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d])) > 0) and (min by (project_id, session_id, observation_id, command) (last_over_time(cwo_codex_cwo_shell_command_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}[30d])) > scalar(max(last_over_time(cwo_codex_cwo_shell_history_floor_timestamp_seconds[30d])) or vector(0))))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "command": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "command": "Command",
+              "Value": "Occurrences"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Command",
+                "desc": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Occurrences",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 10
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Command",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Occurrences",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": 401,
       "type": "table",
       "title": "External contractor reviews",
@@ -1379,7 +1594,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 27,
+        "y": 37,
         "w": 24,
         "h": 7
       },

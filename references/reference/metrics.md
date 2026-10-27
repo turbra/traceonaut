@@ -196,6 +196,24 @@ These optional gauges come from Codex rollout records with `--cwo-sessions`. The
 
 Association sources: `skill_block`, `tool_execution`, `parent_session`. Command outcomes: `completed`, `failed`, `unknown`. Supported helper names: `build_contractor_packet`, `close_bead_with_summary`, `coach_prompt`, `dispatch_work`, `evaluate_return`, `normalize_contractor_return`, `render_execution_status_report`, `route_work`, `run_checked_command`, `supervise_native_pool`, `supervise_native_worker`, `validate_operator_handoff`, `validate_run_readiness_plan`.
 
+### CWO Shell Commands
+
+Enabled with `--cwo-sessions`. Command names come from completed shell invocations in associated sessions. Each literal occurrence has its own identity and original completion time. Arguments and program bodies are excluded.
+
+| Name | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `cwo_codex_cwo_shell_command_timestamp_seconds` | gauge | `project_id`, `session_id`, `observation_id`, `command` | Recorded completion time; zero withdraws a conflicting request. |
+| `cwo_codex_cwo_shell_session_complete` | gauge | `project_id`, `session_id` | 1 for complete command coverage; 0 for partial coverage, including missing files or unsupported syntax. |
+| `cwo_codex_cwo_shell_scan_timestamp_seconds` | gauge | None | Latest command source scan attempt, Unix seconds. |
+| `cwo_codex_cwo_shell_scan_ready` | gauge | None | Associated command sources are readable and caught up. |
+| `cwo_codex_cwo_shell_pending_files` | gauge | None | Associated rollout files with command records still to read. |
+| `cwo_codex_cwo_shell_source_errors` | gauge | None | Command source access or identity failures in the latest scan. |
+| `cwo_codex_cwo_shell_source_gaps` | gauge | None | Retained malformed, unsupported or conflicting command records. |
+| `cwo_codex_cwo_shell_limit_reached` | gauge | None | Command source or retained request bound reached. |
+| `cwo_codex_cwo_shell_history_floor_timestamp_seconds` | gauge | None | Exclude requests at or before this time after identity or withdrawal overflow. |
+
+Use the last sample for each request before filtering its value by the selected time interval. See the [Commands used panel](../dashboards/cwo.md#workflow-activity) for counting and coverage.
+
 ### CLI Review Results
 
 Optional review artifact collection uses gauges. Review usage is separate from Codex session and observed-dispatch accounting.

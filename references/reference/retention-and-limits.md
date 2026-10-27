@@ -70,6 +70,18 @@ The review table selects reviews by their original launch time, including review
 Incomplete session scans or unreadable sources can leave attribution Pending while review counts and usage remain visible. Expired or unsupported session sources leave reviews Unlinked; expanding the session export window can make older source histories eligible again.
 See [review artifact parsing and scan bounds](limits-and-internals.md#cwo-cli-review-artifacts).
 
+### Shell Commands
+
+CWO command collection retains the newest 10,000 command-name occurrences from
+the last 30 days, within the current session export selection. Reaching the bound makes Command
+coverage Partial. Previously scraped requests remain in Prometheus history.
+
+The first scan can recover commands from existing session files. Their recorded
+completion times let a range ending now include older commands; a range ending
+before the first scrape has no stored samples. Completed invocations before a
+session's first CWO association are excluded. Missing original session files
+leave historical command names unavailable.
+
 ## IBM Bob
 
 ### Export selection

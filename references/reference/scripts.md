@@ -43,13 +43,15 @@ Enable with `--codex-home` and `--snapshot-file`.
 | Option | Purpose |
 | --- | --- |
 | `--account-snapshot-file` | Adds the private numeric account snapshot. |
-| `--cwo-sessions` | Associates supported skill blocks and direct helper commands with Codex sessions. |
+| `--cwo-sessions` | Collects CWO session associations, helper commands and shell command names. |
+| `--command-history`, `--cwo-command-history` | Equivalent flags enabling sanitized command descriptions, recorded directories, readable names and supported curl network/upload-audit details as Prometheus metadata labels. Disabled by default. Labels follow Prometheus retention after opt-out. |
+| `--command-history-scope cwo\|all` | Defaults to `cwo`, which requires `--cwo-sessions` when history is enabled. `all` requires command history and Codex collection, but not CWO association; it covers the profile's current session export selection, including ordinary local-vLLM Codex sessions. Other CWO panels remain associated. |
 | `--cwo-audit-dir`, `--cwo-audit-file` | Adds selected read-only CWO workflow logs; repeat for multiple absolute paths. |
 | `--cwo-review-dir` | Reads saved review launch/result pairs or provenance bundles with matching audits; repeat for each absolute source directory. |
 | `--cwo-review-discovery` | Discovers external reviews from recorded CWO session launches and their literal output paths; requires `--cwo-sessions`. Disabled by default. |
 | `--state-dir` | Adds an existing read-only controller dispatch ledger. |
 
-Account and CWO options require Codex collection. Inputs must be separate from
+Account, command-history and CWO options require Codex collection. Inputs must be separate from
 collector output. `--once` includes health and counts for enabled optional inputs.
 See [account allowance](../optional/account-allowance.md),
 [CWO integration](../integrations/cwo.md) and the
@@ -61,7 +63,7 @@ See [account allowance](../optional/account-allowance.md),
 | --- | --- |
 | `render_codex_beta_dashboard.py` | Work Overview; optional `--labels-file` aliases. |
 | `render_codex_sessions_dashboard.py` | All Sessions or Codex TUI · Beta, selected by `--template`. |
-| `render_observability_dashboard.py` | CWO Overview; accepts `--session-snapshot-file` or `--presentation-file`. |
+| `render_observability_dashboard.py` | CWO Overview; accepts `--session-snapshot-file` or `--presentation-file`. Command history uses the existing Prometheus datasource and normal refresh. |
 
 ## IBM Bob
 

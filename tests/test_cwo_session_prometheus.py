@@ -21,7 +21,7 @@ class CwoSessionQueryTests(unittest.TestCase):
     def test_population_usage_commands_and_unavailable_states(self):
         dashboard=json.loads((ROOT/'examples/observability/cwo-overview.json').read_text())
         queries={p['id']:interpolate(p['targets'][0]['expr'])
-                 for p in dashboard['panels']+[c for r in dashboard['panels'] for c in r.get('panels',[])] if p.get('targets') and p['id']>=300}
+                 for p in dashboard['panels']+[c for r in dashboard['panels'] for c in r.get('panels',[])] if p.get('targets') and 'expr' in p['targets'][0] and p['id']>=300}
         coverage = next(p for p in dashboard['panels'] if p['id'] == 309)['targets'][1]['expr']
         queries["coverage"] = coverage
         table = next(p for p in dashboard['panels'] if p['id'] == 305)

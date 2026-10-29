@@ -42,6 +42,79 @@ Helper outcome and duration are recorded only when the helper is the sole comman
 
 Each pass reads at most 64 MiB, up to 32 MiB per file, from at most 4,096 selected rollout files. Candidate records over 8 MiB create a visible source gap. The private feature index stores opaque IDs and cursors. Helper detail is separately capped at 2,000 records within 30 days.
 
+### CWO Shell Commands
+
+The command reader uses independent cursors in the private CWO index. Its source
+is `event_msg` / `item_completed` with a `CommandExecution` item. Ownership must
+match the enclosing session. Session, turn and item IDs identify each invocation;
+the occurrence position identifies each command within it. Completion time comes
+from `completed_at_ms`. Repeated records retain one set of counts.
+
+Each scan reads at most 64 MiB, 32 MiB per file, across 4,096 selected files.
+The default `--command-history-scope cwo` requires completion at or after session
+creation and CWO association. An earlier discovered association triggers a replay.
+With `--command-history --command-history-scope all`, selection uses all Codex
+sessions in the profile's current session export, and the boundary is session
+creation. This includes ordinary local-vLLM Codex sessions without associating
+them with CWO. Other CWO panels retain their association rules. Candidate records
+over 8 MiB are gaps.
+
+The parser supports literal argv, shell `-c`/`-lc`, sequences, pipelines,
+conditional lists, assignments, redirects, heredocs and common `env`, `sudo`,
+`command` and `exec` wrappers. It reads at most 128 KiB of command text and emits
+128 occurrences per invocation. Quotes protect arguments and heredoc bodies are
+skipped. Dynamic executables, substitutions, loops and functions have partial
+coverage. Interpreter programs and subprocesses remain opaque. Without command
+history, only bounded executable basenames, action categories and accounting
+metadata enter the private index and metrics.
+
+The endpoint exposes up to 10,000 command occurrences. The private index retains
+up to 100,000 occurrence identities and 100,000 invocation fingerprints for 30
+days so replay and late conflicts can still be checked after export eviction.
+Conflicting names or completion times withdraw the invocation's original series. Conflict
+withdrawals take priority in the export. If withdrawals or identity storage
+overflow, a persistent time boundary excludes the affected older interval and
+coverage stays Partial for selections crossing that boundary.
+
+Action categories use a separate metric from executable names. Git global
+options are consumed before selecting its subcommand; unknown Git actions map
+to `git other`. Opt-in history stores one sanitized description per invocation,
+with recorded directory, qualified exit code, outcome and duration. A projection
+fingerprint detects changed arguments or metadata under the same identity;
+conflicts withdraw the original occurrence and history entry. Feature-owned
+cursors replay once after projection upgrades or history activation.
+
+History is bounded to 1,000 invocations within 30 days. Its invocation fingerprints
+can add up to 1,000 rows beyond the ordinary 100,000-run bound. The exporter
+publishes sanitized descriptions, recorded directories and session/project names
+in `cwo_codex_cwo_shell_invocation_info`. Network metadata uses
+`cwo_codex_cwo_shell_network_info`, capped at 1,000 rows across the retained
+invocations and eight rows per invocation. The existing Prometheus datasource
+joins these labels with completion times and results on normal dashboard refresh.
+The metadata labels follow Prometheus retention after export stops.
+
+The command snapshot's `scope` field and `cwo_codex_cwo_shell_scope{scope}`
+identify `cwo` or `all`. Existing metric names remain unchanged in either scope.
+
+Network projection recognizes literal HTTP(S) curl destinations and keeps only
+their origins. Config-file URLs, interpolated destinations and unsupported
+transfer syntax are omitted. Upload-audit metadata retains a bounded requested
+HTTP method, payload kind, canonical upload-option names and at most four literal
+file paths totaling 768 characters. Payload kinds are None, File, Inline, Stdin,
+Mixed and Unknown. Dynamic file paths remain unknown; inline values, stdin and
+file contents are not retained. No file read, size estimate or delivery inference
+is performed. The recorded outcome and duration cover the whole invocation,
+not an HTTP response. A local socket IP requires one unambiguous transfer,
+body output to `/dev/null`, and this exact curl `--write-out` format:
+
+```text
+TRACEONAUT_CONNECTION {"local_ip":"%{local_ip}"}\n
+```
+
+The completed command's standard output must contain only that report. Compound
+commands and conflicting reports leave the IP unavailable. This is recorded
+command-output evidence; it is not packet capture or public-egress discovery.
+
 ### CWO CLI Review Artifacts
 
 Explicit review bundles require a matching hash-valid `dispatch_prepared` audit event recorded before launch and an explicit timezone-qualified start time. Completed bundles include a final Claude CLI result. Provenance bundles match the prompt hash and dispatch headers against the audit. Launch discovery instead reads recorded Claude or Codex commands and their saved output. Recognized attempts without final output remain visible with unavailable usage. Conflicting copies are omitted; repeated scans and copies preserve one result. See the [custom review adapter](../integrations/custom-review-adapter.md) for artifact fields.

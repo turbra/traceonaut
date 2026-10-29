@@ -12,8 +12,9 @@ CWO workflow audits. Dispatch families describe optional controller observation.
 
 `untyped` means the endpoint omits a Prometheus TYPE declaration. Read those
 absolute snapshots as gauges. Use `rate()` and `increase()` with the counters
-listed below. Labels contain opaque identities and bounded categories; readable
-names stay in rendered dashboards.
+listed below. Labels normally contain opaque identities and bounded categories.
+Opt-in Codex command history also publishes sanitized descriptions, names, paths
+and network addresses in metadata labels.
 
 ## Codex
 
@@ -195,6 +196,36 @@ These optional gauges come from Codex rollout records with `--cwo-sessions`. The
 | `cwo_codex_cwo_command_duration_seconds` | gauge | `project_id`, `session_id`, `observation_id`, `tool`, `outcome` | Reported duration when the CWO helper is the sole command. |
 
 Association sources: `skill_block`, `tool_execution`, `parent_session`. Command outcomes: `completed`, `failed`, `unknown`. Supported helper names: `build_contractor_packet`, `close_bead_with_summary`, `coach_prompt`, `dispatch_work`, `evaluate_return`, `normalize_contractor_return`, `render_execution_status_report`, `route_work`, `run_checked_command`, `supervise_native_pool`, `supervise_native_worker`, `validate_operator_handoff`, `validate_run_readiness_plan`.
+
+### CWO Shell Commands
+
+Enabled for associated sessions with `--cwo-sessions`, or for all selected Codex sessions with `--command-history --command-history-scope all`. Command names come from completed shell invocations. Each literal occurrence has its own identity and original completion time. Command-name metrics exclude arguments and program bodies; opt-in metadata adds the sanitized fields below.
+
+Action categories distinguish commands such as `git status` and `git diff`. Conditional branches contribute their written commands; an occurrence records the invocation rather than proving that the branch executed.
+
+| Name | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `cwo_codex_cwo_shell_command_timestamp_seconds` | gauge | `project_id`, `session_id`, `observation_id`, `command` | Recorded completion time; zero withdraws a conflicting request. |
+| `cwo_codex_cwo_shell_action_timestamp_seconds` | gauge | `project_id`, `session_id`, `observation_id`, `action` | Completion time grouped by action, such as `git commit`; zero withdraws a conflicting occurrence. |
+| `cwo_codex_cwo_shell_invocation_timestamp_seconds` | gauge | `project_id`, `session_id`, `execution_id` | Completion time of an opt-in history entry; zero withdraws a conflict. |
+| `cwo_codex_cwo_shell_invocation_exit_code` | gauge | `project_id`, `session_id`, `execution_id` | Recorded exit code for the whole shell invocation. |
+| `cwo_codex_cwo_shell_invocation_duration_seconds` | gauge | `project_id`, `session_id`, `execution_id` | Recorded duration for the whole shell invocation. |
+| `cwo_codex_cwo_shell_invocation_outcome` | gauge | `project_id`, `session_id`, `execution_id` | 0 unknown, 1 completed, 2 failed. |
+| `cwo_codex_cwo_shell_invocation_info` | gauge | `project_id`, `session_id`, `execution_id`, `command_description`, `recorded_directory`, `session_name`, `project_name` | Value 1 supplies sanitized description, recorded directory and readable names for an opt-in history entry. |
+| `cwo_codex_cwo_shell_network_info` | gauge | `project_id`, `session_id`, `execution_id`, `command_description`, `session_name`, `project_name`, `destination`, `source_ip`, `source_ip_evidence`, `network_index`, `http_method`, `payload_kind`, `payload_files`, `upload_options` | Value 1 supplies a requested HTTP(S) curl origin, safe upload-audit fields and any explicitly reported local socket IP. `network_index` distinguishes entries within an invocation. |
+| `cwo_codex_cwo_shell_scope` | gauge | `scope` | Value 1 identifies the configured command scope: `cwo` or `all`. |
+| `cwo_codex_cwo_shell_session_complete` | gauge | `project_id`, `session_id` | 1 for complete command coverage; 0 for partial coverage, including missing files or unsupported syntax. |
+| `cwo_codex_cwo_shell_scan_timestamp_seconds` | gauge | None | Latest command source scan attempt, Unix seconds. |
+| `cwo_codex_cwo_shell_scan_ready` | gauge | None | Selected command sources are readable and caught up. |
+| `cwo_codex_cwo_shell_pending_files` | gauge | None | Selected rollout files with command records still to read. |
+| `cwo_codex_cwo_shell_source_errors` | gauge | None | Command source access or identity failures in the latest scan. |
+| `cwo_codex_cwo_shell_source_gaps` | gauge | None | Retained malformed, unsupported or conflicting command records. |
+| `cwo_codex_cwo_shell_limit_reached` | gauge | None | Command source or retained request bound reached. |
+| `cwo_codex_cwo_shell_history_floor_timestamp_seconds` | gauge | None | Exclude requests at or before this time after identity or withdrawal overflow. |
+
+Use the last sample for each occurrence before filtering its value by the selected time interval. Invocation and network metadata metrics require `--command-history` (alias `--cwo-command-history`). Scope defaults to CWO-associated sessions; `--command-history-scope all` includes all Codex sessions in the profile's current export selection. The existing metric names remain unchanged. Current export is bounded to 1,000 invocations within 30 days and 1,000 network rows, with at most eight network entries per invocation. Metadata labels follow Prometheus retention after export stops.
+
+`http_method` is `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `TRACE`, `CONNECT` or `Unknown`. `payload_kind` is `None`, `File`, `Inline`, `Stdin`, `Mixed` or `Unknown`. `payload_files` contains at most four literal paths, joined by `; ` and totaling 768 characters, or `Not recorded`; dynamic paths remain unknown. `upload_options` contains canonical option names without inline values, or `None` when absent. These fields do not report payload contents, file sizes, successful delivery or HTTP results. A source IP is never inferred from a requested endpoint or interface. See [Commands and History](../dashboards/cwo.md#commands-and-history).
 
 ### CLI Review Results
 

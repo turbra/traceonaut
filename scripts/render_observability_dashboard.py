@@ -70,12 +70,28 @@ def render_dashboard(
 ) -> dict[str, Any]:
     """Apply explicit labels only to presentation; all metric queries stay intact."""
     dashboard = copy.deepcopy(template)
+    from traceonaut.command_details import validate_history
+    history = (session_snapshot or {}).get('command_history')
+    if history is None:
+        history = (session_snapshot or {}).get('cwo_shell_commands', {}).get('history', {'enabled': False, 'rows': []})
+    history = validate_history(history)
+    all_commands = history['enabled'] and history.get('scope', 'cwo') == 'all'
     projects = {key: value["name"] for key, value in registry["projects"].items()}
     tasks = {key: value["task_name"] for key, value in registry["dispatches"].items()}
     workers = {key: value["agent_name"] for key, value in registry["dispatches"].items()}
     task_mapping = _mapping(tasks, "Task name not provided")
     worker_mapping = _mapping(workers, "Worker name not provided")
     variables = dashboard.get("templating", {}).get("list", [])
+    if all_commands:
+        for variable in variables:
+            if variable.get('name') in {'project', 'session'}:
+                query = variable.get('query')
+                if isinstance(query, dict) and isinstance(query.get('query'), str):
+                    query['query'] = query['query'].replace(
+                        'cwo_codex_session_cwo_association_timestamp_seconds', 'cwo_codex_session_info')
+                if isinstance(variable.get('definition'), str):
+                    variable['definition'] = variable['definition'].replace(
+                        'cwo_codex_session_cwo_association_timestamp_seconds', 'cwo_codex_session_info')
     session_selectors = any(variable.get("name") == "session" for variable in variables)
     for variable in variables:
         if variable["name"] == "project" and not session_selectors:
@@ -85,6 +101,11 @@ def render_dashboard(
             _named_variable(variable, tasks)
             variable["label"] = "Observed task"
     for panel in walk_panels(dashboard["panels"]):
+        if panel.get('id') == 412:
+            panel['title'] = 'Command coverage · ' + ('all Codex sessions' if all_commands else 'CWO sessions')
+        if panel.get('id') in {413, 414}:
+            panel['description'] = ('Scope: all collected Codex sessions. ' if all_commands
+                                    else 'Scope: CWO-associated sessions. ') + panel.get('description', '')
         # Technical diagnostics retain original identities for investigation.
         if panel.get("id", 0) < 100:
             continue
@@ -127,6 +148,14 @@ def render_dashboard(
                 else variable
                 for variable in named["templating"]["list"]
             ]
+    if not history['enabled']:
+        removed = [p for p in dashboard['panels'] if p.get('id') in {413, 414}]
+        dashboard['panels'] = [p for p in dashboard['panels'] if p.get('id') not in {413, 414}]
+        for panel in dashboard['panels']:
+            y = panel.get('gridPos', {}).get('y', 0)
+            if 'gridPos' in panel:
+                panel['gridPos']['y'] -= sum(p['gridPos']['h'] for p in removed
+                    if p['gridPos']['y'] + p['gridPos']['h'] <= y)
     if datasource_uid is not None:
         if re.fullmatch(r"[A-Za-z0-9_-]{1,128}", datasource_uid) is None:
             raise ValueError("invalid datasource UID")
@@ -194,7 +223,8 @@ def write_dashboard(path: Path, dashboard: dict[str, Any]) -> bool:
     """Replace only changed content so file provisioning does not churn."""
     payload = (json.dumps(dashboard, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     path = _validated_output_path(path)
-    if _matches_existing_output(path, payload):
+    mode = 0o640 if any(p.get('id') == 413 for p in walk_panels(dashboard['panels'])) else 0o644
+    if _matches_existing_output(path, payload) and stat.S_IMODE(path.stat().st_mode) == mode:
         return False
     descriptor, temporary = tempfile.mkstemp(prefix=".cwo-dashboard-", suffix=".tmp", dir=path.parent)
     try:
@@ -202,7 +232,7 @@ def write_dashboard(path: Path, dashboard: dict[str, Any]) -> bool:
             target.write(payload)
             target.flush()
             os.fsync(target.fileno())
-            os.fchmod(target.fileno(), 0o644)
+            os.fchmod(target.fileno(), mode)
         os.replace(temporary, path)
     finally:
         if os.path.exists(temporary):
@@ -232,8 +262,9 @@ def main(argv: list[str] | None = None) -> int:
             template = json.loads(args.template.read_text(encoding="utf-8"))
             registry = (safe_load_presentation_registry(args.presentation_file) if args.presentation_file
                         else {"version": 1, "projects": {}, "dispatches": {}})
-            session_snapshot = load_snapshot(args.session_snapshot_file) if args.session_snapshot_file else None
-            dashboard = render_dashboard(template, registry, datasource_uid=args.datasource_uid, session_snapshot=session_snapshot)
+            session_snapshot = load_snapshot(args.session_snapshot_file, include_command_history=True) if args.session_snapshot_file else None
+            dashboard = render_dashboard(template, registry, datasource_uid=args.datasource_uid,
+                session_snapshot=session_snapshot)
             changed = write_dashboard(args.output, dashboard)
             if changed or args.watch_seconds is None:
                 print(json.dumps({"status": "rendered", "changed": changed,

@@ -66,7 +66,7 @@ class ReleaseBundleTests(unittest.TestCase):
             self.assertNotIn("${DS_PROMETHEUS}", output.read_text())
             self.assertGreater(len(dashboard["panels"]), 0)
 
-    def test_beta_renders_nonempty_metadata_from_its_bundle(self):
+    def test_session_dashboards_render_nonempty_metadata_from_their_bundles(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             snapshot = root / "sessions.json"
@@ -74,12 +74,13 @@ class ReleaseBundleTests(unittest.TestCase):
                 "session_id": str(uuid4()), "project_id": str(uuid4()),
                 "title": "Synthetic work", "project_name": "Example project",
                 "agent_name": "", "kind": "session", "parent_id": None,
-            }]}))
+            }], 'cwo_shell_commands': {'history': {'enabled': True, 'scope': 'all', 'rows': []}}}))
             snapshot.chmod(0o600)
             self.assertEqual(build_release("sessions", root / "releases"),
                              build_release("account", root / "releases"))
             templates = {
                 "beta": "codex-work-overview-beta.json",
+                "stable": "codex-all-sessions.json",
             }
             for component, template_name in templates.items():
                 with self.subTest(component=component):
@@ -90,14 +91,18 @@ class ReleaseBundleTests(unittest.TestCase):
                         "import runpy,sys; p=sys.argv.pop(1); sys.path.insert(0,p); "
                         "sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name='__main__')",
                         str(release / "scripts"),
-                        str(release / f"scripts/render_codex_{component}_dashboard.py"),
+                        str(release / f"scripts/render_codex_{'sessions' if component == 'stable' else component}_dashboard.py"),
                         "--template", str(release / "examples" / "observability" / template_name),
                         "--snapshot-file", str(snapshot), "--datasource-uid", "synthetic-prometheus",
                         "--output", str(output),
                     ], cwd=root, capture_output=True, text=True, timeout=15)
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     dashboard = json.loads(output.read_text())
-                    self.assertEqual(dashboard["uid"], f"cwo-codex-{component}")
+                    self.assertEqual(dashboard["uid"], 'cwo-supervisor-observability-v1' if component == 'stable' else f"cwo-codex-{component}")
+                    if component == 'stable':
+                        audit=next(p for p in dashboard['panels'] if p['title']=='Command audit')
+                        self.assertTrue(audit['collapsed'])
+                        self.assertEqual([p['id'] for p in audit['panels']],[413,414])
                     self.assertIn("Synthetic work", output.read_text())
                     self.assertIn("synthetic-prometheus", output.read_text())
                     self.assertNotIn("${DS_PROMETHEUS}", output.read_text())

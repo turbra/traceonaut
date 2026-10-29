@@ -65,7 +65,7 @@
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 8,
+        "w": 6,
         "h": 2
       },
       "fieldConfig": {
@@ -179,9 +179,9 @@
         "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
-        "x": 8,
+        "x": 6,
         "y": 0,
-        "w": 8,
+        "w": 6,
         "h": 2
       },
       "fieldConfig": {
@@ -295,9 +295,9 @@
         "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 0,
-        "w": 8,
+        "w": 6,
         "h": 2
       },
       "fieldConfig": {
@@ -375,6 +375,91 @@
       ],
       "transparent": false,
       "transformations": []
+    },
+    {
+      "id": 412,
+      "type": "stat",
+      "title": "Command coverage",
+      "description": "Complete means the selected command sources and shell syntax were read. Partial means sources are missing, syntax is unsupported or a collection limit was reached. Stale means no scan within 90 seconds. Not collected means command-name metrics are absent. Valid counts remain visible. See https://turbra.github.io/traceonaut/dashboards/reading-values/.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 2
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#D8D9DA"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Partial",
+                  "color": "yellow"
+                },
+                "1": {
+                  "text": "Complete",
+                  "color": "#D8D9DA"
+                },
+                "2": {
+                  "text": "Stale",
+                  "color": "yellow"
+                },
+                "3": {
+                  "text": "Not collected",
+                  "color": "#D8D9DA"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "valueSize": 16,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(((min(cwo_codex_cwo_shell_session_complete{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"}) or vector(1)) * min(cwo_codex_cwo_shell_scan_ready) * (1 - max(cwo_codex_cwo_shell_limit_reached)) * (scalar(max(last_over_time(cwo_codex_cwo_shell_history_floor_timestamp_seconds[30d])) or vector(0)) < bool ($__from / 1000))) and on() (time() - min(cwo_codex_cwo_shell_scan_timestamp_seconds) < 90)) or (vector(2) and on() (time() - min(last_over_time(cwo_codex_cwo_shell_scan_timestamp_seconds[30d])) >= 90)) or vector(3)",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": ""
+        }
+      ],
+      "transparent": false
     },
     {
       "id": 300,
@@ -1369,6 +1454,575 @@
       ]
     },
     {
+      "id": 413,
+      "title": "Command history",
+      "type": "table",
+      "description": "Completed shell invocations from the latest retained history scraped by Prometheus. New commands and descriptions arrive on normal dashboard refresh. Filters use completion time, project and session. Up to 1,000 invocations from the last 30 days; the coverage tile shows collection gaps. Commands are sanitized; arguments may be omitted. Outcome and exit code describe the entire invocation, including compound shell commands. Reading the values: https://turbra.github.io/traceonaut/dashboards/reading-values/",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false,
+            "minWidth": 80,
+            "wrapText": false
+          },
+          "mappings": [],
+          "noValue": "Not recorded"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completed at"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 210
+              },
+              {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD HH:mm:ss"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Command"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 440
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Exit code"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 115
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outcome"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 105
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outcome"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unknown"
+                      },
+                      "1": {
+                        "text": "Completed"
+                      },
+                      "2": {
+                        "text": "Failed"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": true,
+        "sortBy": [
+          {
+            "displayName": "Completed at",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "1000 * (((max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) > 0) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) >= ($__from / 1000)) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) <= ($__to / 1000))) * on (execution_id) group_left (session_name, project_name, command_description, recorded_directory) label_replace(max by (execution_id, session_name, project_name, command_description, recorded_directory) ((cwo_codex_cwo_shell_invocation_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))), \"recorded_directory\", \"Not recorded\", \"recorded_directory\", \"^$\"))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "min by (execution_id) ((cwo_codex_cwo_shell_invocation_exit_code{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) and on (execution_id) ((max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) > 0) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) >= ($__from / 1000)) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) <= ($__to / 1000))) and on (execution_id) max by (execution_id) ((cwo_codex_cwo_shell_invocation_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90))))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "min by (execution_id) ((cwo_codex_cwo_shell_invocation_duration_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) and on (execution_id) ((max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) > 0) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) >= ($__from / 1000)) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) <= ($__to / 1000))) and on (execution_id) max by (execution_id) ((cwo_codex_cwo_shell_invocation_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90))))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "min by (execution_id) ((cwo_codex_cwo_shell_invocation_outcome{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) and on (execution_id) ((max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) > 0) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) >= ($__from / 1000)) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) <= ($__to / 1000))) and on (execution_id) max by (execution_id) ((cwo_codex_cwo_shell_invocation_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90))))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "execution_id",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Value #A",
+                "session_name",
+                "project_name",
+                "command_description",
+                "recorded_directory",
+                "Value #D",
+                "Value #B",
+                "Value #C"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Value #A": 0,
+              "session_name": 1,
+              "project_name": 2,
+              "command_description": 3,
+              "recorded_directory": 4,
+              "Value #D": 5,
+              "Value #B": 6,
+              "Value #C": 7
+            },
+            "renameByName": {
+              "Value #A": "Completed at",
+              "session_name": "Session",
+              "project_name": "Project",
+              "command_description": "Command",
+              "recorded_directory": "Recorded directory",
+              "Value #D": "Outcome",
+              "Value #B": "Exit code",
+              "Value #C": "Duration"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 414,
+      "title": "Network command history",
+      "type": "table",
+      "description": "Recorded curl commands: HTTP method, payload source, literal upload file references and upload option. File shows the supplied path; file contents are excluded. Requested endpoint shows scheme, host and port. Source IP shows the local socket address from an explicitly recorded curl connection report; it may differ from the public address after NAT. Unknown or omitted metadata is labeled. Outcome describes the complete shell invocation; successful delivery requires server-side evidence. Shares command-history retention and completion-time, project and session filters. Reading the values: https://turbra.github.io/traceonaut/dashboards/reading-values/",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false,
+            "minWidth": 80,
+            "wrapText": false
+          },
+          "mappings": [],
+          "noValue": "Not recorded"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completed at"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 185
+              },
+              {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD HH:mm:ss"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Command"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requested endpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outcome"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 105
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outcome"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unknown"
+                      },
+                      "1": {
+                        "text": "Completed"
+                      },
+                      "2": {
+                        "text": "Failed"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Session"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Project"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Method"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Payload source"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "File"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Upload option"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": true,
+        "sortBy": [
+          {
+            "displayName": "Completed at",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "label_join(1000 * (label_replace(label_replace(label_replace(label_replace(label_replace(max by (execution_id, network_index, session_name, project_name, command_description, http_method, payload_kind, payload_files, upload_options, destination, source_ip) ((cwo_codex_cwo_shell_network_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))), \"source_ip\", \"Not recorded\", \"source_ip\", \"^$\"), \"http_method\", \"Unknown\", \"http_method\", \"^$\"), \"payload_kind\", \"Unknown\", \"payload_kind\", \"^$\"), \"payload_files\", \"Not recorded\", \"payload_files\", \"^$\"), \"upload_options\", \"Not recorded\", \"upload_options\", \"^$\") * on (execution_id) group_left () ((max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) > 0) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) >= ($__from / 1000)) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) <= ($__to / 1000)))), \"network_row\", \"/\", \"execution_id\", \"network_index\")",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max by (network_row) (label_join((max by (execution_id, network_index) ((cwo_codex_cwo_shell_network_info{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) * on (execution_id) group_left () min by (execution_id) ((cwo_codex_cwo_shell_invocation_outcome{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90))))) and on (execution_id) ((max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) > 0) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) >= ($__from / 1000)) and (max by (execution_id) ((cwo_codex_cwo_shell_invocation_timestamp_seconds{project_id=~\"${project:regex}\",session_id=~\"${session:regex}\"} and on (job, instance) ((cwo_codex_collector_source_available == 1) and on (job, instance) (time() - cwo_codex_cwo_shell_scan_timestamp_seconds < 90)))) <= ($__to / 1000))), \"network_row\", \"/\", \"execution_id\", \"network_index\"))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "network_row",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Value #A",
+                "session_name",
+                "project_name",
+                "command_description",
+                "http_method",
+                "payload_kind",
+                "payload_files",
+                "upload_options",
+                "source_ip",
+                "destination",
+                "Value #B"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Value #A": 0,
+              "session_name": 1,
+              "project_name": 2,
+              "command_description": 3,
+              "http_method": 4,
+              "payload_kind": 5,
+              "payload_files": 6,
+              "upload_options": 7,
+              "source_ip": 8,
+              "destination": 9,
+              "Value #B": 10
+            },
+            "renameByName": {
+              "Value #A": "Completed at",
+              "session_name": "Session",
+              "project_name": "Project",
+              "command_description": "Command",
+              "http_method": "Method",
+              "payload_kind": "Payload source",
+              "payload_files": "File",
+              "upload_options": "Upload option",
+              "source_ip": "Source IP",
+              "destination": "Requested endpoint",
+              "Value #B": "Outcome"
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": 401,
       "type": "table",
       "title": "External contractor reviews",
@@ -1379,7 +2033,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 27,
+        "y": 48,
         "w": 24,
         "h": 7
       },

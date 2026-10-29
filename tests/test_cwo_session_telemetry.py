@@ -156,13 +156,18 @@ class CwoCollectionTests(unittest.TestCase):
         self.assertEqual(result['source_errors'],1);self.assertEqual(result['scan_ready'],0)
 
     def test_cli_feature_is_optional_and_state_paths_are_protected(self):
-        self.f.write(self.skill(),self.command())
+        self.f.write(self.skill(), self.command(), self.f.event('response_item', {
+            'type': 'function_call', 'call_id': 'tool-one', 'name': 'exec_command',
+            'arguments': 'SECRET_ARGUMENTS'}))
         self.cwo.close();self.f.collector.close()
         args=[sys.executable,str(ROOT/'scripts/collect_codex_sessions.py'),'--codex-home',str(self.f.home),
               '--session-state-dir',str(self.f.state),'--snapshot-file',str(self.f.root/'snapshot.json'),'--once','--cwo-sessions']
         try:
             result=subprocess.run(args,capture_output=True,text=True,check=True)
             self.assertEqual(json.loads(result.stdout)['cwo_sessions']['associated_sessions'],1)
+            self.assertEqual(json.loads(result.stdout)['cwo_shell_commands']['calls'], 1)
+            snapshot = json.loads((self.f.root/'snapshot.json').read_text())
+            self.assertEqual(snapshot['cwo_shell_commands']['calls'][0]['command'], 'python3')
             bad=args.copy();bad[bad.index('--snapshot-file')+1]=str(self.f.state/'cwo-sessions.sqlite3')
             self.assertEqual(subprocess.run(bad,capture_output=True).returncode,2)
         finally:

@@ -43,7 +43,18 @@ class HistoricalNameTests(unittest.TestCase):
                         field = override["matcher"].get("options")
                         if field not in ("Work", "Session", "Parent"):
                             continue
-                        mappings = next(p["value"] for p in override["properties"] if p["id"] == "mappings")
+                        mappings = next(
+                            (p["value"] for p in override["properties"] if p["id"] == "mappings"), None
+                        )
+                        if mappings is None:
+                            self.assertEqual(field, "Session")
+                            self.assertTrue(any(
+                                t.get("id") == "organize"
+                                and t.get("options", {}).get("renameByName", {}).get("session_name") == "Session"
+                                for t in panel.get("transformations", [])
+                            ))
+                            self.assertTrue(any("session_name" in t.get("expr", "") for t in panel.get("targets", [])))
+                            continue
                         self.assertTrue(identities <= mappings[0]["options"].keys())
                         identity_entries += len(identities & mappings[0]["options"].keys())
                 # Two ranked fields and at most three identity columns. This

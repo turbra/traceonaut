@@ -120,16 +120,22 @@ class DashboardPresentationTests(unittest.TestCase):
                 if "gridPos" not in p or p["type"] == "row":
                     continue
                 self.assertNotIn(p["type"], ("text", "piechart"))
-                self.assertEqual(p["fieldConfig"]["defaults"]["noValue"], "—")
+                expected_missing = 'Not recorded' if name in {'cwo-overview','codex-all-sessions'} and p['id'] in {413,414} else '—'
+                self.assertEqual(p["fieldConfig"]["defaults"]["noValue"], expected_missing)
                 if p["type"] == "stat":
                     self.assertEqual(p["options"]["colorMode"], "none")
                 if p["type"] == "bargauge":
                     self.assertEqual(p["options"]["namePlacement"], "left")
-                    self.assertEqual(p["gridPos"]["h"], 7)
+                    command_chart = name == 'cwo-overview' and p['id'] == 411
+                    self.assertEqual(p["gridPos"]["h"], 10 if command_chart else 7)
                     self.assertTrue(p["fieldConfig"]["defaults"].get("displayName"),
                                     "Grafana must retain labels for single-result bar charts")
                     self.assertEqual(p["options"]["minVizHeight"], p["options"]["maxVizHeight"])
-                    self.assertTrue(all(t["expr"].startswith("topk(10, ") for t in p["targets"]))
+                    if command_chart:
+                        # Stable label/value sorting resolves ties before taking ten bars.
+                        self.assertIn({'id': 'limit', 'options': {'limitField': 10}}, p['transformations'])
+                    else:
+                        self.assertTrue(all(t["expr"].startswith("topk(10, ") for t in p["targets"]))
             self.assertEqual(data["refresh"], "1m" if name == "cwo-overview" else "30s")
 
     def test_cwo_details_merge_projected_fields_into_four_readable_tables(self):

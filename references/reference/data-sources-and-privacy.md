@@ -6,9 +6,10 @@ description: See which local records the collector reads and which data stays pr
 
 # Data Sources and Privacy
 
-Enable each source explicitly. Prometheus receives numeric values and opaque
-IDs. Readable names remain in private snapshots and rendered dashboards. Protect
-those files, private indexes and Grafana access.
+Enable each source explicitly. By default, Prometheus receives numeric values,
+opaque IDs and bounded categories. Optional command history also exports
+sanitized descriptions, names, paths and network addresses as labels. Protect
+private files, indexes, metric access and Grafana access.
 
 ## Codex
 
@@ -29,7 +30,7 @@ Repeated response identities are deduplicated. Copied parent history stays with 
 
 ### Privacy
 
-The reader excludes prompts, prompt-derived titles, messages, command text, tool
+By default, the reader excludes prompts, prompt-derived titles, messages, command text, tool
 output and reasoning. Explicit session names, agent names/paths and project
 basenames remain in the protected snapshot. Missing names get a project/kind/time
 fallback. Source files remain unchanged. Each profile needs its own collection.
@@ -37,7 +38,8 @@ fallback. Source files remain unchanged. Each profile needs its own collection.
 ### Optional features
 
 [Account allowance](../optional/account-allowance.md) reads a separate account
-source. [CWO integration](../integrations/cwo.md) adds the following sources.
+source. Command history and [CWO integration](../integrations/cwo.md) add the
+optional sources below.
 
 #### CWO Workflow Audit Inputs
 
@@ -46,6 +48,18 @@ With `--cwo-audit-dir` or `--cwo-audit-file`, Traceonaut reads only the selected
 #### CWO Session Association
 
 With `--cwo-sessions`, Traceonaut adds supported CWO association signals to the selected Codex profile. It stores opaque session and command IDs, bounded categories, and numeric timestamps and durations. Skill text, command arguments and output are excluded. Association preserves the session accounting. See [CWO session association details](limits-and-internals.md#cwo-session-association).
+
+#### Command History
+
+`--command-history` (alias `--cwo-command-history`) saves sanitized command descriptions, working directories and supported curl endpoint origins in the private index and snapshot. It also publishes them as Prometheus metadata labels, together with session and project names. Explicit curl connection reports can supply a local socket IP; otherwise the IP remains unavailable. The existing Prometheus datasource supplies these fields to Grafana on normal refresh.
+
+The default scope is CWO-associated sessions. `--command-history-scope all` explicitly includes commands from all Codex sessions selected for export in the configured profile, including ordinary sessions using local vLLM. It does not inspect other applications or capture packets. Other CWO panels keep their association requirement.
+
+Curl upload-audit labels add a recognized HTTP method, payload kind, canonical upload-option names and up to four literal file paths, bounded to 768 characters together. Inline values, stdin contents and file contents are excluded. Files are not opened to determine their contents, size or existence. Dynamic file paths remain unknown. These fields describe the requested upload, not delivery; the recorded outcome belongs to the whole command invocation, not the HTTP response.
+
+Approved file operands, upload file paths, repository paths, branch names and remote names remain visible. Credential options, configuration values, environment assignments, commit messages, unknown arguments and program bodies are omitted. URL credentials, paths, query strings and fragments are omitted from network endpoints. Secrets embedded in a filename or branch name can still be displayed. Enable this only when readers of the metrics endpoint, Prometheus and Grafana may read those paths, names and addresses.
+
+Snapshots remain owner-only. The existing metrics credential protects the exported labels. Restrict Prometheus and Grafana datasource access, including Explore and query access, to the intended audience. Labels follow Prometheus retention, including configured remote storage. Disabling history stops future export; already scraped labels, backups and saved exports retain their data until removed by their own retention policies.
 
 #### CWO CLI Review Artifacts
 

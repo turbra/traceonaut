@@ -13,6 +13,7 @@ from traceonaut.codex_account_telemetry import render_account_metrics
 from traceonaut.cwo_audit_telemetry import render_audit_metrics
 from traceonaut.cwo_review_telemetry import render_review_metrics
 from traceonaut.cwo_session_telemetry import render_cwo_session_metrics
+from traceonaut.cwo_command_usage import render_command_usage_metrics
 from traceonaut.codex_session_telemetry import SessionCollector, render_session_metrics
 from traceonaut.observability_contract import METRIC_FAMILIES
 
@@ -62,6 +63,16 @@ class MetricsReferenceTests(unittest.TestCase):
             "reviews": [{"review_id": "b"*64, "timestamp": now, "outcome": "completed", "requested_model": "example",
                          "reported_model": "example", "effort": "high", "tokens": {"input": 2}, "duration": 1,
                          "source_session": ids, "attribution": "linked"}]})
+        payload += render_command_usage_metrics({'scan_timestamp_seconds': now, 'scan_ready': 1,
+            'pending_files': 0, 'source_errors': 0, 'source_gaps': 0, 'limit_reached': 0,
+            'history_floor_timestamp_seconds': 0,
+            'history': {'enabled': True, 'rows': [{'project_id': ids['project_id'], 'sid': ids['session_id'],
+                'id': 'd'*64, 'timestamp': now, 'exit_code': 0, 'duration': 1, 'outcome': 'completed',
+                'network': [{'destination': 'https://example.test', 'source_ip': None,
+                             'source_ip_evidence': 'not recorded'}]}]},
+            'sessions': [{**ids, 'complete': 1}],
+            'calls': [{'project_id': ids['project_id'], 'sid': ids['session_id'],
+                       'id': 'c'*64, 'command': 'git', 'action': 'git commit', 'timestamp': now}]})
         types = dict(re.findall(r"^# TYPE (\w+) (\w+)$", payload.decode(), re.M))
         actual = {}
         for line in payload.decode().splitlines():

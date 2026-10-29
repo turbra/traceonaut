@@ -10,7 +10,10 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from traceonaut.cwo_command_usage import CommandCollector, request, render_command_usage_metrics, RETENTION_SECONDS
+from traceonaut.cwo_command_usage import (
+    CommandCollector, FUTURE_RETRY_SECONDS, RETENTION_SECONDS,
+    render_command_usage_metrics, request,
+)
 from traceonaut.cwo_session_telemetry import CwoSessionCollector
 import test_codex_session_telemetry as fixtures
 
@@ -195,7 +198,8 @@ class CommandTests(unittest.TestCase):
 
     def test_invalid_unsupported_future_and_names_are_visible(self):
         invalid = self.event('missing-time'); invalid['payload']['completed_at_ms'] = None
-        events = [self.event('x', name='$DYNAMIC'), self.event('', name='git'), self.event('future', at=self.f.now + 60),
+        events = [self.event('x', name='$DYNAMIC'), self.event('', name='git'),
+                  self.event('future', at=self.f.now + FUTURE_RETRY_SECONDS + 1),
                   self.event('loop', command=['bash', '-lc', 'for x in a; do curl x; done']), invalid]
         self.f.write(*events)
         result = self.scan()
@@ -203,6 +207,32 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(result['source_gaps'], 5)
         self.assertEqual(result['sessions'][0]['complete'], 0)
         self.assertIsNone(request({'type': 'response_item', 'payload': {'type': 'function_call'}}, self.f.sid))
+
+    def test_near_future_completion_is_retried_without_duplicate(self):
+        self.commands = CommandCollector(self.cwo, history=True)
+        self.f.write(self.event('future', at=self.f.now + 2), self.event('after', at=self.f.now + 2))
+        early = self.scan()
+        self.assertEqual(early['calls'], [])
+        self.assertEqual(early['source_gaps'], 0)
+        self.assertEqual(early['pending_files'], 1)
+        self.cwo.close()
+        self.cwo = CwoSessionCollector(self.f.home, self.f.state)
+        self.commands = CommandCollector(self.cwo, history=True)
+        self.f.now += 2
+        current = self.scan()
+        self.assertEqual(len(current['calls']), 2)
+        self.assertEqual(len(current['history']['rows']), 2)
+        self.assertEqual(current['source_gaps'], 0)
+        self.assertEqual(current['pending_files'], 0)
+        self.assertEqual(current['sessions'][0]['complete'], 1)
+        self.assertEqual(self.scan()['calls'], current['calls'])
+
+    def test_far_future_completion_does_not_block_later_records(self):
+        self.f.write(self.event('far-future', at=self.f.now + FUTURE_RETRY_SECONDS + 1), self.event('current'))
+        result = self.scan()
+        self.assertEqual(len(result['calls']), 1)
+        self.assertEqual(result['source_gaps'], 1)
+        self.assertEqual(result['pending_files'], 0)
 
     def test_partial_append_and_bounded_reads(self):
         line = json.dumps(self.event())

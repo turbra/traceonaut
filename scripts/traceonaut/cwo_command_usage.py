@@ -15,6 +15,7 @@ from .command_network import network_details
 from .codex_session_telemetry import MAX_LINE, _open_source, _uuid, session_export_rows
 
 RETENTION_SECONDS = 30 * 86400
+FUTURE_RETRY_SECONDS = 300
 CALL_CAP = 10000
 INDEX_CAP = 100000
 HISTORY_CAP = 1000
@@ -144,7 +145,7 @@ class CommandCollector:
             if at < boundary or at < now - RETENTION_SECONDS:
                 return 0
             if at > now:
-                return 1
+                return -1 if at - now <= FUTURE_RETRY_SECONDS else 1
             execution = hashlib.sha256(json.dumps([sid, identity], separators=(",", ":")).encode()).hexdigest()
             fingerprint = hashlib.sha256(json.dumps([at, names], separators=(",", ":")).encode()).hexdigest()
             item = record['payload']['item']
@@ -261,6 +262,9 @@ class CommandCollector:
                                 skip = 0
                             else:
                                 added = self._consume(raw, sid, boundary, now)
+                                if added < 0:
+                                    offset = position
+                                    break
                                 gaps += added
                                 if added: gap_until = now + RETENTION_SECONDS
                             offset = stream.tell()
